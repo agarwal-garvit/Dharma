@@ -6,13 +6,32 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		6ECE260A2E8C978C00E8A288 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 6ECE26092E8C978C00E8A288 /* GoogleSignIn */; };
+		6ECE260C2E8C978C00E8A288 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6ECE260B2E8C978C00E8A288 /* GoogleSignInSwift */; };
+		6ECE26122E8C9B0C00E8A288 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 6ECE26112E8C9B0C00E8A288 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		6EEC10C02E8A1F530092E09E /* Dharma.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Dharma.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6ECE26102E8C997C00E8A288 /* Exceptions for "Dharma" folder in "Dharma" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6EEC10BF2E8A1F530092E09E /* Dharma */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		6EEC10C22E8A1F530092E09E /* Dharma */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6ECE26102E8C997C00E8A288 /* Exceptions for "Dharma" folder in "Dharma" target */,
+			);
 			path = Dharma;
 			sourceTree = "<group>";
 		};
@@ -23,6 +42,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6ECE260A2E8C978C00E8A288 /* GoogleSignIn in Frameworks */,
+				6ECE260C2E8C978C00E8A288 /* GoogleSignInSwift in Frameworks */,
+				6ECE26122E8C9B0C00E8A288 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +87,9 @@
 			);
 			name = Dharma;
 			packageProductDependencies = (
+				6ECE26092E8C978C00E8A288 /* GoogleSignIn */,
+				6ECE260B2E8C978C00E8A288 /* GoogleSignInSwift */,
+				6ECE26112E8C9B0C00E8A288 /* Supabase */,
 			);
 			productName = Dharma;
 			productReference = 6EEC10C02E8A1F530092E09E /* Dharma.app */;
@@ -94,6 +119,10 @@
 			);
 			mainGroup = 6EEC10B72E8A1F530092E09E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6ECE26072E8C975100E8A288 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				6ECE26082E8C978C00E8A288 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6EEC10C12E8A1F530092E09E /* Products */;
 			projectDirPath = "";
@@ -253,11 +282,13 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Dharma/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.educational-games";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIStatusBarStyle = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -284,11 +315,13 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Dharma/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.educational-games";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UIStatusBarStyle = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -328,6 +361,43 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6ECE26072E8C975100E8A288 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+		6ECE26082E8C978C00E8A288 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6ECE26092E8C978C00E8A288 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6ECE26082E8C978C00E8A288 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		6ECE260B2E8C978C00E8A288 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6ECE26082E8C978C00E8A288 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		6ECE26112E8C9B0C00E8A288 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6ECE26072E8C975100E8A288 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 6EEC10B82E8A1F530092E09E /* Project object */;
 }

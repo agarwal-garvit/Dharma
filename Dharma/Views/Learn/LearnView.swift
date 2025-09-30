@@ -14,6 +14,7 @@ struct LearnView: View {
     @State private var showingChapterDetail = false
     @State private var showingLessonPlayer = false
     @State private var selectedLesson: Lesson?
+    @State private var showingProfile = false
     
     // Create 18 chapters for the Bhagavad Gita
     private var chapters: [Chapter] {
@@ -45,7 +46,7 @@ struct LearnView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        // TODO: Navigate to settings
+                        showingProfile = true
                     }) {
                         ZStack {
                             Circle()
@@ -79,6 +80,9 @@ struct LearnView: View {
                     selectedLesson = nil
                 }
             }
+        }
+        .sheet(isPresented: $showingProfile) {
+            ProfileView()
         }
     }
     
