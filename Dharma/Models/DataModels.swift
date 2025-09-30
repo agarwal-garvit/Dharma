@@ -9,6 +9,81 @@ import Foundation
 
 // MARK: - Core Data Models
 
+enum SacredTextType: String, Codable, CaseIterable {
+    case bhagavadGita = "bhagavad_gita"
+    case ramayana = "ramayana"
+    case mahabharata = "mahabharata"
+    case upanishads = "upanishads"
+    case vedas = "vedas"
+    
+    var displayName: String {
+        switch self {
+        case .bhagavadGita: return "Bhagavad Gita"
+        case .ramayana: return "Ramayana"
+        case .mahabharata: return "Mahabharata"
+        case .upanishads: return "Upanishads"
+        case .vedas: return "Vedas"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .bhagavadGita: return "The Song of God - 700 verses of spiritual wisdom"
+        case .ramayana: return "The Epic of Rama - Journey of dharma and devotion"
+        case .mahabharata: return "The Great Epic - Including the Bhagavad Gita"
+        case .upanishads: return "Philosophical texts - The essence of Vedic wisdom"
+        case .vedas: return "Ancient scriptures - The foundation of Hindu philosophy"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .bhagavadGita: return "book.closed"
+        case .ramayana: return "book.pages"
+        case .mahabharata: return "books.vertical"
+        case .upanishads: return "lightbulb"
+        case .vedas: return "scroll"
+        }
+    }
+}
+
+struct SacredText: Identifiable, Codable {
+    let id: String
+    let type: SacredTextType
+    let title: String
+    let description: String
+    let totalChapters: Int
+    let totalVerses: Int
+    let isAvailable: Bool
+    
+    init(type: SacredTextType) {
+        self.id = type.rawValue
+        self.type = type
+        self.title = type.displayName
+        self.description = type.description
+        self.isAvailable = type == .bhagavadGita // Only Bhagavad Gita is available for now
+        
+        // Set chapter and verse counts based on text type
+        switch type {
+        case .bhagavadGita:
+            self.totalChapters = 18
+            self.totalVerses = 700
+        case .ramayana:
+            self.totalChapters = 7
+            self.totalVerses = 24000
+        case .mahabharata:
+            self.totalChapters = 18
+            self.totalVerses = 200000
+        case .upanishads:
+            self.totalChapters = 108
+            self.totalVerses = 1000
+        case .vedas:
+            self.totalChapters = 4
+            self.totalVerses = 20000
+        }
+    }
+}
+
 struct Chapter: Identifiable, Codable {
     let id: String
     let index: Int

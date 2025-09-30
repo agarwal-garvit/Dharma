@@ -19,10 +19,10 @@ struct MainTabView: View {
                 }
                 .tag(0)
             
-            BhagavadGitaView()
+            SacredTextView()
                 .tabItem {
                     Image(systemName: "scroll.fill")
-                    Text("Gita")
+                    Text("Sacred Texts")
                 }
                 .tag(1)
             
