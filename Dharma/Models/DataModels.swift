@@ -1,0 +1,224 @@
+//
+//  DataModels.swift
+//  Dharma
+//
+//  Created by Garvit Agarwal on 9/28/25.
+//
+
+import Foundation
+
+// MARK: - Core Data Models
+
+struct Chapter: Identifiable, Codable {
+    let id: String
+    let index: Int
+    let titleEn: String
+    let titleSa: String
+    
+    enum CodingKeys: String, CodingKey {
+        case id, index
+        case titleEn = "title_en"
+        case titleSa = "title_sa"
+    }
+}
+
+struct Verse: Identifiable, Codable {
+    let id: String
+    let chapterIndex: Int
+    let verseIndex: Int
+    let devanagariText: String
+    let iastText: String
+    let translationEn: String
+    let keywords: [String]
+    let audioURL: String?
+    let commentaryShort: String?
+    let themes: [String]
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case chapterIndex = "chapter_index"
+        case verseIndex = "verse_index"
+        case devanagariText = "devanagari_text"
+        case iastText = "iast_text"
+        case translationEn = "translation_en"
+        case keywords
+        case audioURL = "audio_url"
+        case commentaryShort = "commentary_short"
+        case themes
+    }
+    
+    var reference: String {
+        "\(chapterIndex).\(verseIndex)"
+    }
+}
+
+struct Lesson: Identifiable, Codable, Equatable {
+    let id: String
+    let unitId: String
+    let title: String
+    let objective: String
+    let exerciseIds: [String]
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case unitId = "unit_id"
+        case title, objective
+        case exerciseIds = "exercise_ids"
+    }
+}
+
+enum ExerciseType: String, Codable, CaseIterable {
+    case readReveal = "read_reveal"
+    case match = "match"
+    case fillBlank = "fill_blank"
+    case orderTokens = "order_tokens"
+    case multipleChoice = "multiple_choice"
+    case listening = "listening"
+    
+    var displayName: String {
+        switch self {
+        case .readReveal: return "Read & Reveal"
+        case .match: return "Match"
+        case .fillBlank: return "Fill in the Blank"
+        case .orderTokens: return "Order the Verse"
+        case .multipleChoice: return "Multiple Choice"
+        case .listening: return "Listening"
+        }
+    }
+}
+
+struct Exercise: Identifiable, Codable {
+    let id: String
+    let type: ExerciseType
+    let prompt: String
+    let options: [String]?
+    let correctAnswer: String?
+    let hints: [String]?
+    let assetRefs: [String]?
+    let verseRefs: [String]?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, type, prompt, options
+        case correctAnswer = "correct_answer"
+        case hints
+        case assetRefs = "asset_refs"
+        case verseRefs = "verse_refs"
+    }
+}
+
+// MARK: - User Progress Models
+
+struct UserProgress: Codable {
+    var streak: Int
+    var totalXP: Int
+    var hearts: Int
+    var completedLessons: Set<String>
+    var completedUnits: Set<String>
+    var lastStudyDate: Date?
+    
+    init() {
+        self.streak = 0
+        self.totalXP = 0
+        self.hearts = 5
+        self.completedLessons = []
+        self.completedUnits = []
+        self.lastStudyDate = nil
+    }
+}
+
+enum ReviewItemKind: String, Codable {
+    case word = "word"
+    case verse = "verse"
+    case qa = "qa"
+}
+
+struct ReviewItem: Identifiable, Codable {
+    let id: String
+    let kind: ReviewItemKind
+    let payloadRef: String
+    var box: Int
+    var lastReviewedAt: Date?
+    var nextDueAt: Date
+    var ease: Double
+    
+    init(id: String, kind: ReviewItemKind, payloadRef: String) {
+        self.id = id
+        self.kind = kind
+        self.payloadRef = payloadRef
+        self.box = 1
+        self.lastReviewedAt = nil
+        self.nextDueAt = Date()
+        self.ease = 2.5
+    }
+}
+
+// MARK: - User Preferences
+
+enum StudyGoal: String, Codable, CaseIterable {
+    case daily5Min = "daily_5_min"
+    case daily10Min = "daily_10_min"
+    case weekendOnly = "weekend_only"
+    
+    var displayName: String {
+        switch self {
+        case .daily5Min: return "Daily 5 min"
+        case .daily10Min: return "Daily 10 min"
+        case .weekendOnly: return "Weekend only"
+        }
+    }
+    
+    var durationMinutes: Int {
+        switch self {
+        case .daily5Min: return 5
+        case .daily10Min: return 10
+        case .weekendOnly: return 15
+        }
+    }
+}
+
+enum ScriptDisplay: String, Codable, CaseIterable {
+    case devanagari = "devanagari"
+    case iast = "iast"
+    case both = "both"
+    
+    var displayName: String {
+        switch self {
+        case .devanagari: return "Devanagari"
+        case .iast: return "IAST"
+        case .both: return "Both"
+        }
+    }
+}
+
+struct UserPreferences: Codable {
+    var studyGoal: StudyGoal
+    var scriptDisplay: ScriptDisplay
+    var preferredLanguage: String
+    var fontSize: Double
+    var playbackSpeed: Double
+    var soundEnabled: Bool
+    var hapticsEnabled: Bool
+    var notificationsEnabled: Bool
+    var studyTime: Date
+    
+    init() {
+        self.studyGoal = .daily10Min
+        self.scriptDisplay = .both
+        self.preferredLanguage = "en"
+        self.fontSize = 1.0
+        self.playbackSpeed = 1.0
+        self.soundEnabled = true
+        self.hapticsEnabled = true
+        self.notificationsEnabled = true
+        self.studyTime = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()
+    }
+}
+
+// MARK: - Seed Data Structure
+
+struct SeedData: Codable {
+    let chapters: [Chapter]
+    let verses: [Verse]
+    let lessons: [Lesson]
+    let exercises: [Exercise]
+}
