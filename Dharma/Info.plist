@@ -3,7 +3,15 @@
 <plist version="1.0">
 <dict>
 	<key>GIDClientID</key>
-	<string>61300230049-q2pqdu6eikukd7frofkt4uuokf7u19jc.apps.googleusercontent.com</string>
+	<string>$(GOOGLE_CLIENT_ID)</string>
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>OPENAI_API_KEY</key>
+	<string>$(OPENAI_API_KEY)</string>
+	<key>GOOGLE_CLIENT_ID</key>
+	<string>$(GOOGLE_CLIENT_ID)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -13,7 +21,7 @@
 			<string>googleSignIn</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.61300230049-q2pqdu6eikukd7frofkt4uuokf7u19jc</string>
+				<string>$(GOOGLE_URL_SCHEME)</string>
 			</array>
 		</dict>
 	</array>

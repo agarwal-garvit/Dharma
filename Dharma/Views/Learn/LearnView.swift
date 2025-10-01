@@ -20,6 +20,8 @@ struct LearnView: View {
     @State private var selectedLesson: Lesson?
     @State private var showingProfile = false
     @State private var chapterToShow: Int?
+    @State private var currentCourseTitle = "Bhagavad Gita"
+    @State private var currentCourseChapters = "18 Chapters"
     
     // Create 18 chapters for the Bhagavad Gita
     private var chapters: [Chapter] {
@@ -36,7 +38,10 @@ struct LearnView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Scrollable content area (includes course titles)
+                // Fixed course title card that changes based on visible content
+                courseTitleCard
+                
+                // Scrollable lessons area
                 if isLoading {
                     loadingView
                 } else {
@@ -91,12 +96,12 @@ struct LearnView: View {
     
     private var courseTitleCard: some View {
         VStack(spacing: 4) {
-            Text("Bhagavad Gita")
+            Text(currentCourseTitle)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
             
-            Text("18 Chapters")
+            Text(currentCourseChapters)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -140,9 +145,6 @@ struct LearnView: View {
     private var lessonsScrollView: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Course title card (scrolls with content)
-                courseTitleCard
-                
                 // Staggered layout for lessons
                 VStack(spacing: 0) {
                     ForEach(Array(chapters.enumerated()), id: \.element.id) { index, chapter in
@@ -150,6 +152,9 @@ struct LearnView: View {
                             if index % 2 == 0 {
                                 // Left position
                                 lessonCard(chapter: chapter, isLeft: true)
+                                    .onAppear {
+                                        updateCourseTitle(for: chapter.index)
+                                    }
                                 
                                 // Arrow next to left card
                                 if index < chapters.count - 1 {
@@ -175,11 +180,18 @@ struct LearnView: View {
                                 }
                                 
                                 lessonCard(chapter: chapter, isLeft: false)
+                                    .onAppear {
+                                        updateCourseTitle(for: chapter.index)
+                                    }
                             }
                         }
                     }
                 }
                 .padding(.horizontal)
+                
+                // Future: Additional courses will be added here
+                // For example, when you add Mahabharata:
+                // [Mahabharata lessons...]
             }
             .padding(.bottom, 20)
         }
@@ -276,6 +288,20 @@ struct LearnView: View {
     private func getChapterProgress(_ chapter: Chapter) -> Double {
         // For now, return 0 progress for all chapters
         return 0.0
+    }
+    
+    private func updateCourseTitle(for chapterIndex: Int) {
+        // For now, all chapters belong to Bhagavad Gita
+        // In the future, you can add logic to determine which course a chapter belongs to
+        if chapterIndex >= 1 && chapterIndex <= 18 {
+            currentCourseTitle = "Bhagavad Gita"
+            currentCourseChapters = "18 Chapters"
+        }
+        // Future: Add logic for other courses
+        // else if chapterIndex >= 19 && chapterIndex <= 36 {
+        //     currentCourseTitle = "Mahabharata"
+        //     currentCourseChapters = "18 Chapters"
+        // }
     }
     
     private func arrowNextToCard(for index: Int) -> some View {

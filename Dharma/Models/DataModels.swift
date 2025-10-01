@@ -289,6 +289,42 @@ struct UserPreferences: Codable {
     }
 }
 
+// MARK: - Chat Models
+
+struct ChatMessage: Identifiable, Codable {
+    let id: UUID
+    let content: String
+    let isUser: Bool
+    let timestamp: Date
+    let conversationId: UUID?
+    
+    init(id: UUID = UUID(), content: String, isUser: Bool, timestamp: Date = Date(), conversationId: UUID? = nil) {
+        self.id = id
+        self.content = content
+        self.isUser = isUser
+        self.timestamp = timestamp
+        self.conversationId = conversationId
+    }
+}
+
+struct ChatConversation: Identifiable, Codable {
+    let id: UUID
+    let userId: UUID
+    let title: String
+    let createdAt: Date
+    let updatedAt: Date
+    let messageCount: Int
+    
+    init(id: UUID = UUID(), userId: UUID, title: String, createdAt: Date = Date(), updatedAt: Date = Date(), messageCount: Int = 0) {
+        self.id = id
+        self.userId = userId
+        self.title = title
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.messageCount = messageCount
+    }
+}
+
 // MARK: - Seed Data Structure
 
 struct SeedData: Codable {
