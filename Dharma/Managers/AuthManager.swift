@@ -62,6 +62,9 @@ class DharmaAuthManager {
             // Initialize user in custom users table if needed
             await initializeUserIfNeeded()
             
+            // Record daily login activity
+            await recordDailyLogin()
+            
             print("Successfully signed in with email: \(email)")
         } catch {
             print("Email Sign In failed: \(error)")
@@ -77,6 +80,9 @@ class DharmaAuthManager {
             
             // Initialize user in custom users table
             await initializeUserIfNeeded(displayName: displayName)
+            
+            // Record daily login activity
+            await recordDailyLogin()
             
             print("Successfully signed up with email: \(email)")
         } catch {
@@ -115,6 +121,9 @@ class DharmaAuthManager {
             // Initialize user in custom users table if needed
             await initializeUserIfNeeded(displayName: user.profile?.name)
             
+            // Record daily login activity
+            await recordDailyLogin()
+            
             print("Successfully signed in with Google: \(session.user.email ?? "No email")")
             
         } catch {
@@ -134,6 +143,223 @@ class DharmaAuthManager {
         } catch {
             print("Sign out failed: \(error)")
             throw error
+        }
+    }
+    
+    // MARK: - User Stats Management
+    
+    @MainActor
+    func fetchUserStats() async -> UserStats? {
+        guard let currentUser = self.currentUser else { return nil }
+        
+        do {
+            let stats: [UserStats] = try await supabase.database
+                .from("user_stats")
+                .select()
+                .eq("user_id", value: currentUser.id)
+                .execute()
+                .value
+            
+            return stats.first
+        } catch {
+            print("Failed to fetch user stats: \(error)")
+            return nil
+        }
+    }
+    
+    @MainActor
+    func recordDailyLogin() async {
+        guard let currentUser = self.currentUser else { return }
+        
+        do {
+            // Check if user already logged in today
+            let today = Calendar.current.startOfDay(for: Date())
+            let todayString = ISO8601DateFormatter().string(from: today)
+            
+            // Record a minimal session to track daily login
+            let session = UserLessonSession(
+                id: UUID(),
+                user_id: currentUser.id,
+                lesson_id: UUID(), // Use a dummy lesson ID for daily login tracking
+                started_at: ISO8601DateFormatter().string(from: Date()),
+                completed_at: nil,
+                duration_seconds: nil
+            )
+            
+            try await supabase.database
+                .from("user_lesson_sessions")
+                .insert(session)
+                .execute()
+            
+            // Update user stats to reflect new streak
+            await updateUserStats()
+            
+            print("Successfully recorded daily login")
+        } catch {
+            print("Failed to record daily login: \(error)")
+        }
+    }
+    
+    @MainActor
+    func updateUserStats(xpToAdd: Int = 0, lessonCompleted: Bool = false) async {
+        guard let currentUser = self.currentUser else { return }
+        
+        do {
+            // First, get current stats
+            let currentStats = await fetchUserStats()
+            
+            // Calculate new values
+            let newXpTotal = (currentStats?.xp_total ?? 0) + xpToAdd
+            let newStreakCount = await calculateCurrentStreak()
+            let newLongestStreak = max(currentStats?.longest_streak ?? 0, newStreakCount)
+            let newLastActiveDate = ISO8601DateFormatter().string(from: Date())
+            
+            // Update or insert stats
+            let updatedStats = UserStats(
+                user_id: currentUser.id,
+                xp_total: newXpTotal,
+                streak_count: newStreakCount,
+                longest_streak: newLongestStreak,
+                last_active_date: newLastActiveDate
+            )
+            
+            if currentStats != nil {
+                // Update existing stats
+                try await supabase.database
+                    .from("user_stats")
+                    .update(updatedStats)
+                    .eq("user_id", value: currentUser.id)
+                    .execute()
+            } else {
+                // Insert new stats
+                try await supabase.database
+                    .from("user_stats")
+                    .insert(updatedStats)
+                    .execute()
+            }
+            
+            print("Successfully updated user stats")
+        } catch {
+            print("Failed to update user stats: \(error)")
+        }
+    }
+    
+    @MainActor
+    private func calculateCurrentStreak() async -> Int {
+        guard let currentUser = self.currentUser else { return 0 }
+        
+        do {
+            // Get all lesson sessions for the user, ordered by date
+            let sessions: [UserLessonSession] = try await supabase.database
+                .from("user_lesson_sessions")
+                .select()
+                .eq("user_id", value: currentUser.id)
+                .order("started_at", ascending: false)
+                .execute()
+                .value
+            
+            // Calculate streak based on consecutive days with activity
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            var streak = 0
+            var currentDate = today
+            
+            for session in sessions {
+                let sessionDate = calendar.startOfDay(for: ISO8601DateFormatter().date(from: session.started_at) ?? Date())
+                let daysDifference = calendar.dateComponents([.day], from: sessionDate, to: currentDate).day ?? 0
+                
+                if daysDifference == 0 {
+                    // Same day, continue
+                    continue
+                } else if daysDifference == 1 {
+                    // Consecutive day
+                    streak += 1
+                    currentDate = sessionDate
+                } else {
+                    // Streak broken
+                    break
+                }
+            }
+            
+            // If we have any sessions today, add 1 to streak
+            if !sessions.isEmpty {
+                let firstSessionDate = calendar.startOfDay(for: ISO8601DateFormatter().date(from: sessions[0].started_at) ?? Date())
+                if calendar.isDate(firstSessionDate, inSameDayAs: today) {
+                    streak += 1
+                }
+            }
+            
+            return max(streak, 1) // Minimum streak of 1 if user has any activity
+        } catch {
+            print("Failed to calculate streak: \(error)")
+            return 0
+        }
+    }
+    
+    @MainActor
+    func getCompletedLessonsCount() async -> Int {
+        guard let currentUser = self.currentUser else { return 0 }
+        
+        do {
+            let progress: [UserLessonProgress] = try await supabase.database
+                .from("user_lesson_progress")
+                .select()
+                .eq("user_id", value: currentUser.id)
+                .eq("status", value: "COMPLETED")
+                .execute()
+                .value
+            
+            return progress.count
+        } catch {
+            print("Failed to fetch completed lessons: \(error)")
+            return 0
+        }
+    }
+    
+    @MainActor
+    func recordLessonCompletion(lessonId: String) async {
+        guard let currentUser = self.currentUser else { return }
+        
+        do {
+            // Record lesson session
+            let session = UserLessonSession(
+                id: UUID(),
+                user_id: currentUser.id,
+                lesson_id: UUID(uuidString: lessonId) ?? UUID(),
+                started_at: ISO8601DateFormatter().string(from: Date()),
+                completed_at: ISO8601DateFormatter().string(from: Date()),
+                duration_seconds: nil
+            )
+            
+            try await supabase.database
+                .from("user_lesson_sessions")
+                .insert(session)
+                .execute()
+            
+            // Update lesson progress
+            let progress = UserLessonProgress(
+                user_id: currentUser.id,
+                lesson_id: UUID(uuidString: lessonId) ?? UUID(),
+                status: "COMPLETED",
+                started_at: ISO8601DateFormatter().string(from: Date()),
+                completed_at: ISO8601DateFormatter().string(from: Date()),
+                last_seen_at: ISO8601DateFormatter().string(from: Date()),
+                last_score_pct: nil,
+                best_score_pct: nil,
+                total_completions: 1
+            )
+            
+            try await supabase.database
+                .from("user_lesson_progress")
+                .upsert(progress)
+                .execute()
+            
+            // Award XP and update stats
+            await updateUserStats(xpToAdd: 20, lessonCompleted: true)
+            
+            print("Successfully recorded lesson completion for lesson: \(lessonId)")
+        } catch {
+            print("Failed to record lesson completion: \(error)")
         }
     }
     
@@ -237,6 +463,27 @@ struct UserStats: Codable {
     let streak_count: Int
     let longest_streak: Int
     let last_active_date: String?
+}
+
+struct UserLessonSession: Codable {
+    let id: UUID
+    let user_id: UUID
+    let lesson_id: UUID
+    let started_at: String
+    let completed_at: String?
+    let duration_seconds: Int?
+}
+
+struct UserLessonProgress: Codable {
+    let user_id: UUID
+    let lesson_id: UUID
+    let status: String
+    let started_at: String?
+    let completed_at: String?
+    let last_seen_at: String?
+    let last_score_pct: Double?
+    let best_score_pct: Double?
+    let total_completions: Int
 }
 
 // MARK: - Auth Errors

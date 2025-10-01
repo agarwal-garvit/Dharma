@@ -317,25 +317,7 @@ struct ExerciseView: View {
     
     private var listeningView: some View {
         VStack(spacing: 16) {
-            Button(action: {
-                // Play audio
-                if let verseRefs = exercise.verseRefs,
-                   let verseId = verseRefs.first,
-                   let verse = dataManager.getVerse(by: verseId) {
-                    AudioManager.shared.playVerse(verse)
-                }
-            }) {
-                HStack {
-                    Image(systemName: "play.circle.fill")
-                        .font(.title)
-                    Text("Play Audio")
-                        .font(.headline)
-                }
-                .foregroundColor(.orange)
-            }
-            .buttonStyle(PlainButtonStyle())
-            
-            Text("Listen to the verse and select the correct meaning")
+            Text("Select the correct meaning of the verse")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

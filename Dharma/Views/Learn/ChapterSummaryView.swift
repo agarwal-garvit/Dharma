@@ -15,13 +15,11 @@ struct ChapterSummaryView: View {
     @State private var showQuiz = false
     @State private var audioManager = AudioManager.shared
     @State private var lessonStartTime = Date()
+    @State private var showingExitConfirmation = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Audio player header
-                audioHeader
-                
                 // Summary content
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
@@ -87,21 +85,33 @@ struct ChapterSummaryView: View {
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
+                    }
+                    .padding()
+                    .background(Color(.systemBackground))
                 }
-                .padding()
-                .background(Color(.systemBackground))
             }
             .navigationTitle("Chapter \(chapterIndex)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Exit") {
-                        onDismiss()
+                        showingExitConfirmation = true
                     }
                 }
             }
-        }
-        .fullScreenCover(isPresented: $showQuiz) {
+            .navigationViewStyle(StackNavigationViewStyle()) // Force full screen on all devices
+            .onAppear {
+                print("ChapterSummaryView appeared for Chapter \(chapterIndex)")
+            }
+            .alert("Exit", isPresented: $showingExitConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Exit", role: .destructive) {
+                    onDismiss()
+                }
+            } message: {
+                Text("Your progress will be lost. Are you sure you want to exit?")
+            }
+            .fullScreenCover(isPresented: $showQuiz) {
                 QuizView(
                     chapterIndex: chapterIndex,
                     chapterTitle: chapterTitle,
@@ -111,55 +121,6 @@ struct ChapterSummaryView: View {
                 )
             }
         }
-    
-    private var audioHeader: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Button(action: {
-                    // TODO: Implement actual audio playback
-                    print("Audio playback placeholder - would play chapter \(chapterIndex) summary")
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "play.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.orange)
-                        
-                        Text("Listen to Summary")
-                            .font(.subheadline)
-                            .foregroundColor(.orange)
-                    }
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                Spacer()
-                
-                Text("3:20")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            // Audio progress bar
-            VStack(spacing: 4) {
-                ProgressView(value: 0.0, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: .orange))
-                    .frame(height: 4)
-                
-                HStack {
-                    Text("0:00")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("3:20")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-    }
     
 }
 

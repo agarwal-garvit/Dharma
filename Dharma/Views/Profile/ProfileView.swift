@@ -6,12 +6,16 @@
 //
 
 import SwiftUI
+internal import Auth
 
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var authManager = DharmaAuthManager.shared
     @State private var isLoading = false
     @State private var showingSignOutAlert = false
+    @State private var userStats: UserStats?
+    @State private var completedLessonsCount = 0
+    @State private var isLoadingStats = true
     
     var body: some View {
         NavigationView {
@@ -48,6 +52,9 @@ struct ProfileView: View {
         } message: {
             Text("Are you sure you want to sign out?")
         }
+        .onAppear {
+            loadUserStats()
+        }
     }
     
     private var profileHeader: some View {
@@ -80,7 +87,7 @@ struct ProfileView: View {
                 
                 if let email = authManager.user?.email {
                     Text(email)
-                        .font(.subheadline)
+                    .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 
@@ -109,28 +116,28 @@ struct ProfileView: View {
             ], spacing: 16) {
                 StatCard(
                     title: "Total XP",
-                    value: "1,250",
+                    value: isLoadingStats ? "..." : "\(userStats?.xp_total ?? 0)",
                     icon: "star.fill",
                     color: .orange
                 )
                 
                 StatCard(
                     title: "Current Streak",
-                    value: "7 days",
+                    value: isLoadingStats ? "..." : "\(userStats?.streak_count ?? 0) days",
                     icon: "flame.fill",
                     color: .red
                 )
                 
                 StatCard(
                     title: "Lessons Completed",
-                    value: "12",
+                    value: isLoadingStats ? "..." : "\(completedLessonsCount)",
                     icon: "checkmark.circle.fill",
                     color: .green
                 )
                 
                 StatCard(
                     title: "Longest Streak",
-                    value: "15 days",
+                    value: isLoadingStats ? "..." : "\(userStats?.longest_streak ?? 0) days",
                     icon: "trophy.fill",
                     color: .blue
                 )
@@ -144,44 +151,44 @@ struct ProfileView: View {
     }
     
     private var accountActionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 16) {
             Text("Account")
-                .font(.headline)
+                    .font(.headline)
                 .fontWeight(.semibold)
-                .foregroundColor(.primary)
-            
-            VStack(spacing: 12) {
+                    .foregroundColor(.primary)
+                
+                VStack(spacing: 12) {
                 // Settings Button
-                Button(action: {
+            Button(action: {
                     // TODO: Navigate to settings
-                }) {
-                    HStack {
+            }) {
+                HStack {
                         Image(systemName: "gearshape.fill")
                             .foregroundColor(.orange)
                             .frame(width: 24)
                         
                         Text("Settings")
-                            .foregroundColor(.primary)
+                        .foregroundColor(.primary)
                         
-                        Spacer()
+                    Spacer()
                         
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.secondary)
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.secondary)
                             .font(.caption)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemBackground))
-                    )
                 }
-                .buttonStyle(PlainButtonStyle())
-                
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemBackground))
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            
                 // Sign Out Button
-                Button(action: {
+            Button(action: {
                     showingSignOutAlert = true
-                }) {
-                    HStack {
+            }) {
+                HStack {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
                             .foregroundColor(.red)
                             .frame(width: 24)
@@ -189,22 +196,22 @@ struct ProfileView: View {
                         Text("Sign Out")
                             .foregroundColor(.red)
                         
-                        Spacer()
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemBackground))
-                    )
+                    Spacer()
                 }
-                .buttonStyle(PlainButtonStyle())
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemBackground))
+                )
             }
-        }
-        .padding()
-        .background(
+            .buttonStyle(PlainButtonStyle())
+            }
+                }
+                .padding()
+                .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemGray6))
-        )
+                        .fill(Color(.systemGray6))
+                )
     }
     
     private func getUserDisplayName() -> String {
@@ -234,14 +241,29 @@ struct ProfileView: View {
     }
     
     private func getMemberSinceText() -> String {
-        guard let user = authManager.user,
-              let createdAt = user.createdAt else {
+        guard let user = authManager.user else {
             return "Recently"
         }
         
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
-        return formatter.string(from: createdAt)
+        return formatter.string(from: user.createdAt)
+    }
+    
+    private func loadUserStats() {
+        isLoadingStats = true
+        
+        Task {
+            // Fetch user stats and completed lessons count
+            let stats = await authManager.fetchUserStats()
+            let completedCount = await authManager.getCompletedLessonsCount()
+            
+            await MainActor.run {
+                self.userStats = stats
+                self.completedLessonsCount = completedCount
+                self.isLoadingStats = false
+            }
+        }
     }
     
     private func signOut() {
@@ -281,9 +303,9 @@ struct StatCard: View {
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
             
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)

@@ -19,13 +19,11 @@ struct FinalThoughtsView: View {
     @State private var showPrayer = false
     @State private var showResults = false
     @State private var audioManager = AudioManager.shared
+    @State private var showingExitConfirmation = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-            // Audio player header
-            audioHeader
-            
             // Content
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
@@ -114,7 +112,7 @@ struct FinalThoughtsView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Exit") {
-                        onDismiss()
+                        showingExitConfirmation = true
                     }
                 }
             }
@@ -141,56 +139,16 @@ struct FinalThoughtsView: View {
                 onComplete: onComplete
             )
         }
+        .alert("Exit", isPresented: $showingExitConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Exit", role: .destructive) {
+                onComplete()
+            }
+        } message: {
+            Text("Your progress will be lost. Are you sure you want to exit?")
+        }
     }
     
-    private var audioHeader: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Button(action: {
-                    // TODO: Implement actual audio playback
-                    print("Audio playback placeholder - would play chapter \(chapterIndex) analysis")
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "play.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.orange)
-                        
-                        Text("Listen to Analysis")
-                            .font(.subheadline)
-                            .foregroundColor(.orange)
-                    }
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                Spacer()
-                
-                Text("2:45")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            // Audio progress bar
-            VStack(spacing: 4) {
-                ProgressView(value: 0.3, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: .orange))
-                    .frame(height: 4)
-                
-                HStack {
-                    Text("0:50")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("2:45")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .padding()
-        .background(Color(.systemGray6))
-    }
     
 }
 

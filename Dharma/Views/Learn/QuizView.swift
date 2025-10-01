@@ -21,6 +21,7 @@ struct QuizView: View {
     @State private var score = 0
     @State private var startTime = Date()
     @State private var showFinalThoughts = false
+    @State private var showingExitConfirmation = false
     
     private let questions = [
         QuizQuestion(
@@ -76,7 +77,8 @@ struct QuizView: View {
     ]
     
     var body: some View {
-        VStack(spacing: 0) {
+        NavigationView {
+            VStack(spacing: 0) {
                 // Progress bar
                 progressBar
                 
@@ -88,7 +90,7 @@ struct QuizView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Exit") {
-                        onDismiss()
+                        showingExitConfirmation = true
                     }
                 }
             }
@@ -103,7 +105,16 @@ struct QuizView: View {
                     onComplete: onComplete
                 )
             }
+            .alert("Exit", isPresented: $showingExitConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Exit", role: .destructive) {
+                    onComplete()
+                }
+            } message: {
+                Text("Your progress will be lost. Are you sure you want to exit?")
+            }
         }
+    }
     
     private var progressBar: some View {
         VStack(spacing: 8) {
@@ -155,22 +166,26 @@ struct QuizView: View {
                             
                             Spacer()
                             
-                            if selectedAnswer == index {
-                                Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                    .foregroundColor(isCorrect ? .green : .red)
+                            if showResult {
+                                if index == questions[currentQuestionIndex].correctAnswer {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                } else if selectedAnswer == index {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.red)
+                                }
+                            } else if selectedAnswer == index {
+                                Image(systemName: "circle.inset.filled")
+                                    .foregroundColor(.orange)
                             }
                         }
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(selectedAnswer == index ? 
-                                    (isCorrect ? Color.green.opacity(0.1) : Color.red.opacity(0.1)) : 
-                                    Color(.systemGray6))
+                                .fill(getAnswerBackgroundColor(for: index))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(selectedAnswer == index ? 
-                                            (isCorrect ? Color.green : Color.red) : 
-                                            Color.clear, lineWidth: 2)
+                                        .stroke(getAnswerBorderColor(for: index), lineWidth: 2)
                                 )
                         )
                     }
@@ -209,7 +224,7 @@ struct QuizView: View {
                 Button(action: {
                     nextQuestion()
                 }) {
-                    Text(currentQuestionIndex < questions.count - 1 ? "Next Question" : "View Final Thoughts")
+                    Text(currentQuestionIndex < questions.count - 1 ? "Next Question" : "Complete Quiz")
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -247,6 +262,32 @@ struct QuizView: View {
         } else {
             showFinalThoughts = true
         }
+    }
+    
+    private func getAnswerBackgroundColor(for index: Int) -> Color {
+        if showResult {
+            if index == questions[currentQuestionIndex].correctAnswer {
+                return Color.green.opacity(0.1)
+            } else if selectedAnswer == index {
+                return Color.red.opacity(0.1)
+            }
+        } else if selectedAnswer == index {
+            return Color.orange.opacity(0.1)
+        }
+        return Color(.systemGray6)
+    }
+    
+    private func getAnswerBorderColor(for index: Int) -> Color {
+        if showResult {
+            if index == questions[currentQuestionIndex].correctAnswer {
+                return Color.green
+            } else if selectedAnswer == index {
+                return Color.red
+            }
+        } else if selectedAnswer == index {
+            return Color.orange
+        }
+        return Color.clear
     }
 }
 

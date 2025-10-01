@@ -80,63 +80,21 @@ struct PrayerView: View {
                     .padding()
                 }
                 
-                // Audio and done buttons
-                VStack(spacing: 12) {
-                    VStack(spacing: 8) {
-                        Button(action: {
-                            // TODO: Implement actual audio playback
-                            print("Audio playback placeholder - would play prayer for chapter \(chapterIndex)")
-                        }) {
-                            HStack {
-                                Image(systemName: "play.circle.fill")
-                                Text("Listen to Prayer")
-                            }
-                            .font(.headline)
-                            .foregroundColor(.orange)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.orange, lineWidth: 2)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        
-                        // Audio progress bar
-                        VStack(spacing: 4) {
-                            ProgressView(value: 0.0, total: 1.0)
-                                .progressViewStyle(LinearProgressViewStyle(tint: .orange))
-                                .frame(height: 4)
-                            
-                            HStack {
-                                Text("0:00")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                
-                                Spacer()
-                                
-                                Text("1:30")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                    
-                    Button(action: {
-                        onComplete()
-                    }) {
-                        Text("Exit")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.orange)
-                            )
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                // Done button
+                Button(action: {
+                    onComplete()
+                }) {
+                    Text("Exit")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.orange)
+                        )
                 }
+                .buttonStyle(PlainButtonStyle())
                 .padding(.horizontal)
             }
     }

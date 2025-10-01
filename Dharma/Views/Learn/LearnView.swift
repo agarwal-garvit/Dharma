@@ -7,6 +7,10 @@
 
 import SwiftUI
 
+extension Int: Identifiable {
+    public var id: Int { self }
+}
+
 struct LearnView: View {
     @State private var dataManager = DataManager.shared
     @State private var isLoading = true
@@ -15,6 +19,7 @@ struct LearnView: View {
     @State private var showingLessonPlayer = false
     @State private var selectedLesson: Lesson?
     @State private var showingProfile = false
+    @State private var chapterToShow: Int?
     
     // Create 18 chapters for the Bhagavad Gita
     private var chapters: [Chapter] {
@@ -64,13 +69,14 @@ struct LearnView: View {
         .onAppear {
             loadContent()
         }
-        .sheet(isPresented: $showingChapterDetail) {
-            if let chapterIndex = selectedChapterIndex {
-                ChapterDetailView(chapterIndex: chapterIndex, onLessonSelected: { lesson in
-                    selectedLesson = lesson
-                    showingChapterDetail = false
-                    showingLessonPlayer = true
-                })
+        .fullScreenCover(item: $chapterToShow) { chapterIndex in
+            ChapterDetailView(chapterIndex: chapterIndex, onLessonSelected: { lesson in
+                selectedLesson = lesson
+                chapterToShow = nil
+                showingLessonPlayer = true
+            })
+            .onAppear {
+                print("Presenting ChapterDetailView for Chapter \(chapterIndex)")
             }
         }
         .fullScreenCover(isPresented: $showingLessonPlayer) {
@@ -166,9 +172,10 @@ struct LearnView: View {
     private func lessonCard(chapter: Chapter, isLeft: Bool) -> some View {
         Button(action: {
             print("Chapter \(chapter.index) tapped - isUnlocked: \(isChapterUnlocked(chapter))")
+            chapterToShow = chapter.index
             selectedChapterIndex = chapter.index
-            showingChapterDetail = true
-            print("State set - selectedChapterIndex: \(selectedChapterIndex), showingChapterDetail: \(showingChapterDetail)")
+            print("State set - chapterToShow: \(chapterToShow), selectedChapterIndex: \(selectedChapterIndex)")
+            print("Sheet presentation triggered - chapterToShow: \(chapterToShow)")
         }) {
             HStack(spacing: 16) {
                 // Chapter number with enhanced styling
@@ -378,10 +385,15 @@ struct ChapterDetailView: View {
             }
         }
         .onAppear {
+            print("ChapterDetailView appeared for Chapter \(chapterIndex)")
+            print("Initial state - isLoading: \(isLoading), showSummary: \(showSummary)")
+            
             // Simulate loading
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                print("Loading completed for Chapter \(chapterIndex)")
                 isLoading = false
                 showSummary = true
+                print("Final state - isLoading: \(isLoading), showSummary: \(showSummary)")
             }
         }
     }
