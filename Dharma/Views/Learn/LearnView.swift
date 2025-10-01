@@ -36,10 +36,7 @@ struct LearnView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Fixed header with prayer of the day
-                prayerOfTheDaySection
-                
-                // Scrollable lessons area
+                // Scrollable content area (includes course titles)
                 if isLoading {
                     loadingView
                 } else {
@@ -55,12 +52,12 @@ struct LearnView: View {
                     }) {
                         ZStack {
                             Circle()
-                                .fill(Color.orange.opacity(0.2))
+                                .fill(Color.blue.opacity(0.2))
                                 .frame(width: 36, height: 36)
                             
                             Image(systemName: "person.circle.fill")
                                 .font(.title2)
-                                .foregroundColor(.orange)
+                                .foregroundColor(.blue.opacity(0.7))
                         }
                     }
                 }
@@ -92,45 +89,40 @@ struct LearnView: View {
         }
     }
     
-    private var prayerOfTheDaySection: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("Prayer of the Day")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Text("Chapter 2, Verse 47")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+    private var courseTitleCard: some View {
+        VStack(spacing: 4) {
+            Text("Bhagavad Gita")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
             
-            VStack(alignment: .leading, spacing: 8) {
-                Text("कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।")
-                    .font(.title3)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                
-                Text("karmaṇy-evādhikāras te mā phaleṣu kadācana")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                Text("You have a right to action alone, not to its fruits.")
-                    .font(.body)
-                    .foregroundColor(.primary)
-                    .italic()
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Text("18 Chapters")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
-        .padding()
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemGray6))
+            RoundedRectangle(cornerRadius: 12)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.blue.opacity(0.1), Color.blue.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .shadow(
+                    color: Color.blue.opacity(0.2),
+                    radius: 6,
+                    x: 0,
+                    y: 3
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                )
         )
         .padding(.horizontal)
-        .padding(.bottom, 8)
     }
     
     private var loadingView: some View {
@@ -147,23 +139,47 @@ struct LearnView: View {
     
     private var lessonsScrollView: some View {
         ScrollView {
-            LazyVStack(spacing: 16) {
-                // Bhagavad Gita header
-                HStack {
-                    Text("Bhagavad Gita")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.secondary)
-                    Spacer()
+            VStack(spacing: 16) {
+                // Course title card (scrolls with content)
+                courseTitleCard
+                
+                // Staggered layout for lessons
+                VStack(spacing: 0) {
+                    ForEach(Array(chapters.enumerated()), id: \.element.id) { index, chapter in
+                        HStack {
+                            if index % 2 == 0 {
+                                // Left position
+                                lessonCard(chapter: chapter, isLeft: true)
+                                
+                                // Arrow next to left card
+                                if index < chapters.count - 1 {
+                                    arrowNextToCard(for: index)
+                                } else {
+                                    // Empty space for last card
+                                    Spacer()
+                                        .frame(width: 136) // Same width as arrow + padding
+                                }
+                                
+                                Spacer()
+                            } else {
+                                // Right position
+                                Spacer()
+                                
+                                // Arrow next to right card
+                                if index < chapters.count - 1 {
+                                    arrowNextToCard(for: index)
+                                } else {
+                                    // Empty space for last card
+                                    Spacer()
+                                        .frame(width: 136) // Same width as arrow + padding
+                                }
+                                
+                                lessonCard(chapter: chapter, isLeft: false)
+                            }
+                        }
+                    }
                 }
                 .padding(.horizontal)
-                .padding(.top, 8)
-                
-                // Straight vertical list of lessons
-                ForEach(chapters) { chapter in
-                    lessonCard(chapter: chapter, isLeft: false)
-                        .padding(.horizontal)
-                }
             }
             .padding(.bottom, 20)
         }
@@ -177,63 +193,34 @@ struct LearnView: View {
             print("State set - chapterToShow: \(chapterToShow), selectedChapterIndex: \(selectedChapterIndex)")
             print("Sheet presentation triggered - chapterToShow: \(chapterToShow)")
         }) {
-            HStack(spacing: 16) {
-                // Chapter number with enhanced styling
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: isChapterUnlocked(chapter) ? 
-                                    [Color.orange, Color.orange.opacity(0.8)] : 
-                                    [Color.gray, Color.gray.opacity(0.6)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 60, height: 60)
-                        .shadow(
-                            color: isChapterUnlocked(chapter) ? Color.orange.opacity(0.4) : Color.clear,
-                            radius: 4,
-                            x: 0,
-                            y: 2
-                        )
-                    
-                    Text("\(chapter.index)")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                }
-                
-                // Chapter title with better typography
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(chapter.titleEn)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(isChapterUnlocked(chapter) ? .primary : .secondary)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                    
-                    Text(chapter.titleSa)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                }
+            VStack(alignment: .leading, spacing: 8) {
+                // Chapter title only
+                Text(chapter.titleEn)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(isChapterUnlocked(chapter) ? .primary : .secondary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 
                 Spacer()
                 
-                // Arrow indicator
-                if isChapterUnlocked(chapter) {
-                    Image(systemName: "chevron.right")
-                        .font(.title3)
-                        .foregroundColor(.orange)
-                } else {
-                    Image(systemName: "lock.fill")
-                        .font(.title3)
-                        .foregroundColor(.gray)
+                // Arrow indicator at bottom
+                HStack {
+                    Spacer()
+                    if isChapterUnlocked(chapter) {
+                        Image(systemName: "chevron.right")
+                            .font(.subheadline)
+                            .foregroundColor(.blue.opacity(0.7))
+                    } else {
+                        Image(systemName: "lock.fill")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                    }
                 }
             }
-            .padding(20)
+            .padding(16)
+            .frame(width: 200, height: 120) // Fixed width and height for consistent card size
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(
@@ -246,7 +233,7 @@ struct LearnView: View {
                         )
                     )
                     .shadow(
-                        color: isChapterUnlocked(chapter) ? Color.orange.opacity(0.2) : Color.black.opacity(0.1),
+                        color: isChapterUnlocked(chapter) ? Color.blue.opacity(0.2) : Color.black.opacity(0.1),
                         radius: isChapterUnlocked(chapter) ? 8 : 4,
                         x: 0,
                         y: isChapterUnlocked(chapter) ? 4 : 2
@@ -254,7 +241,7 @@ struct LearnView: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                isChapterUnlocked(chapter) ? Color.orange.opacity(0.3) : Color.clear,
+                                isChapterUnlocked(chapter) ? Color.blue.opacity(0.3) : Color.clear,
                                 lineWidth: 1
                             )
                     )
@@ -289,6 +276,33 @@ struct LearnView: View {
     private func getChapterProgress(_ chapter: Chapter) -> Double {
         // For now, return 0 progress for all chapters
         return 0.0
+    }
+    
+    private func arrowNextToCard(for index: Int) -> some View {
+        let isLeftPosition = index % 2 == 0
+        let nextIsLeftPosition = (index + 1) % 2 == 0
+        
+        if isLeftPosition && !nextIsLeftPosition {
+            // Arrow from left card to right card (top-left to bottom-right)
+            return AnyView(
+                Image("downRight")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 120, height: 108) // Reduced width, same height
+                    .padding(.leading, 4) // Moved left
+                    .padding(.top, 40) // Moved lower
+            )
+        } else {
+            // Arrow from right card to left card (top-right to bottom-left)
+            return AnyView(
+                Image("downLeft")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 120, height: 108) // Reduced width, same height
+                    .padding(.trailing, 4) // Moved right
+                    .padding(.top, 40) // Moved lower
+            )
+        }
     }
     
     private static func getChapterTitle(_ index: Int) -> String {
