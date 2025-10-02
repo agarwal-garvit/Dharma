@@ -7,6 +7,7 @@
 
 import Foundation
 import Supabase
+import Combine
 
 @MainActor
 class ChatManager: ObservableObject {
@@ -28,7 +29,8 @@ class ChatManager: ObservableObject {
             id: UUID(),
             content: text,
             isUser: true,
-            timestamp: Date()
+            timestamp: Date(),
+            conversationId: nil
         )
         
         messages.append(userMessage)
@@ -42,7 +44,8 @@ class ChatManager: ObservableObject {
                     id: UUID(),
                     content: aiResponse,
                     isUser: false,
-                    timestamp: Date()
+                    timestamp: Date(),
+                    conversationId: nil
                 )
                 
                 await MainActor.run {
@@ -150,12 +153,6 @@ class ChatManager: ObservableObject {
     }
 }
 
-struct ChatMessage: Codable, Identifiable {
-    let id: UUID
-    let content: String
-    let isUser: Bool
-    let timestamp: Date
-}
 
 enum ChatError: Error, LocalizedError {
     case networkError

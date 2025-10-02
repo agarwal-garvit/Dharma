@@ -17,22 +17,19 @@ struct LearnView: View {
     @State private var selectedChapterIndex: Int?
     @State private var showingChapterDetail = false
     @State private var showingLessonPlayer = false
-    @State private var selectedLesson: Lesson?
+    @State private var selectedLesson: DBLesson?
     @State private var showingProfile = false
     @State private var chapterToShow: Int?
     @State private var currentCourseTitle = "Bhagavad Gita"
     @State private var currentCourseChapters = "18 Chapters"
+    @State private var selectedCourse: DBCourse?
     
-    // Create 18 chapters for the Bhagavad Gita
+    // Get chapters from database lessons
     private var chapters: [Chapter] {
-        (1...18).map { index in
-            Chapter(
-                id: "ch\(index)",
-                index: index,
-                titleEn: Self.getChapterTitle(index),
-                titleSa: Self.getChapterTitleSanskrit(index)
-            )
+        if dataManager.lessons.isEmpty {
+            return []
         }
+        return dataManager.convertLessonsToChapters()
     }
     
     var body: some View {
@@ -73,9 +70,12 @@ struct LearnView: View {
         }
         .fullScreenCover(item: $chapterToShow) { chapterIndex in
             ChapterDetailView(chapterIndex: chapterIndex, onLessonSelected: { lesson in
-                selectedLesson = lesson
-                chapterToShow = nil
-                showingLessonPlayer = true
+                // Find the corresponding DBLesson
+                if let dbLesson = dataManager.lessons.first(where: { $0.orderIdx == chapterIndex }) {
+                    selectedLesson = dbLesson
+                    chapterToShow = nil
+                    showingLessonPlayer = true
+                }
             })
             .onAppear {
                 print("Presenting ChapterDetailView for Chapter \(chapterIndex)")
@@ -83,7 +83,15 @@ struct LearnView: View {
         }
         .fullScreenCover(isPresented: $showingLessonPlayer) {
             if let lesson = selectedLesson {
-                LessonPlayerView(lesson: lesson) {
+                // Convert DBLesson to legacy Lesson for compatibility
+                let legacyLesson = Lesson(
+                    id: lesson.id.uuidString,
+                    unitId: lesson.courseId.uuidString,
+                    title: lesson.title,
+                    objective: "Learn about \(lesson.title)",
+                    exerciseIds: []
+                )
+                LessonPlayerView(lesson: legacyLesson) {
                     showingLessonPlayer = false
                     selectedLesson = nil
                 }
@@ -269,9 +277,26 @@ struct LearnView: View {
     private func loadContent() {
         isLoading = true
         
-        // Simulate loading from server
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            isLoading = false
+        Task {
+            // Load courses first
+            await dataManager.loadCourses()
+            
+            // If we have courses, load lessons for the first course (Bhagavad Gita)
+            if let firstCourse = dataManager.courses.first {
+                selectedCourse = firstCourse
+                currentCourseTitle = firstCourse.title
+                currentCourseChapters = "\(dataManager.lessons.count) Chapters"
+                
+                await dataManager.loadLessons(for: firstCourse.id)
+                
+                await MainActor.run {
+                    isLoading = false
+                }
+            } else {
+                await MainActor.run {
+                    isLoading = false
+                }
+            }
         }
     }
     
@@ -291,17 +316,14 @@ struct LearnView: View {
     }
     
     private func updateCourseTitle(for chapterIndex: Int) {
-        // For now, all chapters belong to Bhagavad Gita
-        // In the future, you can add logic to determine which course a chapter belongs to
-        if chapterIndex >= 1 && chapterIndex <= 18 {
+        // Update course title based on selected course
+        if let course = selectedCourse {
+            currentCourseTitle = course.title
+            currentCourseChapters = "\(dataManager.lessons.count) Chapters"
+        } else {
             currentCourseTitle = "Bhagavad Gita"
             currentCourseChapters = "18 Chapters"
         }
-        // Future: Add logic for other courses
-        // else if chapterIndex >= 19 && chapterIndex <= 36 {
-        //     currentCourseTitle = "Mahabharata"
-        //     currentCourseChapters = "18 Chapters"
-        // }
     }
     
     private func arrowNextToCard(for index: Int) -> some View {
@@ -387,8 +409,16 @@ struct ChapterDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isLoading = true
     @State private var showSummary = false
+    @State private var dataManager = DataManager.shared
+    @State private var lessonSections: [DBLessonSection] = []
     
     private var chapterTitle: String {
+        // Get title from database lesson
+        if let lesson = dataManager.lessons.first(where: { $0.orderIdx == chapterIndex }) {
+            return lesson.title
+        }
+        
+        // Fallback to hardcoded titles
         let titles = [
             1: "Arjuna's Despair",
             2: "Sankhya Yoga",
@@ -428,12 +458,23 @@ struct ChapterDetailView: View {
             print("ChapterDetailView appeared for Chapter \(chapterIndex)")
             print("Initial state - isLoading: \(isLoading), showSummary: \(showSummary)")
             
-            // Simulate loading
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                print("Loading completed for Chapter \(chapterIndex)")
-                isLoading = false
-                showSummary = true
-                print("Final state - isLoading: \(isLoading), showSummary: \(showSummary)")
+            // Load lesson sections from database
+            Task {
+                if let lesson = dataManager.lessons.first(where: { $0.orderIdx == chapterIndex }) {
+                    let sections = await dataManager.loadLessonSections(for: lesson.id)
+                    await MainActor.run {
+                        self.lessonSections = sections
+                        self.isLoading = false
+                        self.showSummary = true
+                        print("Loading completed for Chapter \(chapterIndex)")
+                        print("Final state - isLoading: \(isLoading), showSummary: \(showSummary)")
+                    }
+                } else {
+                    await MainActor.run {
+                        self.isLoading = false
+                        self.showSummary = true
+                    }
+                }
             }
         }
     }

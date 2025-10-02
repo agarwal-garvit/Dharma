@@ -7,45 +7,187 @@
 
 import Foundation
 import SwiftUI
+import Supabase
 
 @Observable
 class DataManager {
     static let shared = DataManager()
     
-    // Core data
+    // Core data from database
+    var courses: [DBCourse] = []
+    var lessons: [DBLesson] = []
+    var lessonSections: [DBLessonSection] = []
+    var quizQuestions: [DBQuizQuestion] = []
+    var quizOptions: [DBQuizOption] = []
+    
+    // Legacy data (for backward compatibility)
     var chapters: [Chapter] = []
     var verses: [Verse] = []
-    var lessons: [Lesson] = []
     var exercises: [Exercise] = []
     
     // User data
     var userProgress = UserProgress()
     var userPreferences = UserPreferences()
     var reviewItems: [ReviewItem] = []
+    var userStats: DBUserStats?
     
     // Spaced repetition
     private let spacedRepetitionManager = SpacedRepetitionManager()
+    private let databaseService = DatabaseService.shared
+    
+    // Loading states
+    var isLoadingCourses = false
+    var isLoadingLessons = false
+    var errorMessage: String?
     
     private init() {
         loadUserData()
         // Content will be loaded from server
-        loadContentFromServer()
+        Task {
+            await loadContentFromServer()
+        }
     }
     
     // MARK: - Server Data Loading
     
-    private func loadContentFromServer() {
-        // TODO: Implement server API calls
-        // For now, initialize with empty data
-        self.chapters = []
-        self.verses = []
-        self.lessons = []
-        self.exercises = []
+    private func loadContentFromServer() async {
+        await loadCourses()
     }
     
     func refreshContent() async {
-        // TODO: Implement server API calls to fetch latest content
-        // This will be called when the app starts or when user pulls to refresh
+        await loadCourses()
+    }
+    
+    // MARK: - Database Operations
+    
+    func loadCourses() async {
+        isLoadingCourses = true
+        errorMessage = nil
+        
+        do {
+            let fetchedCourses = try await databaseService.fetchAllCourses()
+            await MainActor.run {
+                self.courses = fetchedCourses
+                self.isLoadingCourses = false
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to load courses: \(error.localizedDescription)"
+                self.isLoadingCourses = false
+            }
+        }
+    }
+    
+    func loadLessons(for courseId: UUID) async {
+        isLoadingLessons = true
+        errorMessage = nil
+        
+        do {
+            let fetchedLessons = try await databaseService.fetchLessons(for: courseId)
+            await MainActor.run {
+                self.lessons = fetchedLessons
+                self.isLoadingLessons = false
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to load lessons: \(error.localizedDescription)"
+                self.isLoadingLessons = false
+            }
+        }
+    }
+    
+    func loadLessonSections(for lessonId: UUID) async -> [DBLessonSection] {
+        do {
+            let sections = try await databaseService.fetchLessonSections(for: lessonId)
+            await MainActor.run {
+                self.lessonSections = sections
+            }
+            return sections
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to load lesson sections: \(error.localizedDescription)"
+            }
+            return []
+        }
+    }
+    
+    func loadQuizData(for sectionId: UUID) async -> (questions: [DBQuizQuestion], options: [DBQuizOption]) {
+        do {
+            let questions = try await databaseService.fetchQuizQuestions(for: sectionId)
+            var allOptions: [DBQuizOption] = []
+            
+            for question in questions {
+                let options = try await databaseService.fetchQuizOptions(for: question.id)
+                allOptions.append(contentsOf: options)
+            }
+            
+            await MainActor.run {
+                self.quizQuestions = questions
+                self.quizOptions = allOptions
+            }
+            
+            return (questions, allOptions)
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to load quiz data: \(error.localizedDescription)"
+            }
+            return ([], [])
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    func getLessonsForCourse(_ courseId: UUID) -> [DBLesson] {
+        return lessons.filter { $0.courseId == courseId }
+    }
+    
+    func getSectionsForLesson(_ lessonId: UUID) -> [DBLessonSection] {
+        return lessonSections.filter { $0.lessonId == lessonId }
+    }
+    
+    func getQuestionsForSection(_ sectionId: UUID) -> [DBQuizQuestion] {
+        return quizQuestions.filter { $0.sectionId == sectionId }
+    }
+    
+    func getOptionsForQuestion(_ questionId: UUID) -> [DBQuizOption] {
+        return quizOptions.filter { $0.questionId == questionId }
+    }
+    
+    // MARK: - Legacy Chapter Conversion
+    
+    func convertLessonsToChapters() -> [Chapter] {
+        return lessons.enumerated().map { index, lesson in
+            Chapter(
+                id: lesson.id.uuidString,
+                index: lesson.orderIdx,
+                titleEn: lesson.title,
+                titleSa: getSanskritTitle(for: lesson.orderIdx)
+            )
+        }
+    }
+    
+    private func getSanskritTitle(for orderIdx: Int) -> String {
+        let titles = [
+            1: "अर्जुनविषादयोग",
+            2: "सांख्ययोग",
+            3: "कर्मयोग",
+            4: "ज्ञानयोग",
+            5: "कर्मसंन्यासयोग",
+            6: "ध्यानयोग",
+            7: "ज्ञानविज्ञानयोग",
+            8: "अक्षरब्रह्मयोग",
+            9: "राजविद्याराजगुह्ययोग",
+            10: "विभूतियोग",
+            11: "विश्वरूपदर्शनयोग",
+            12: "भक्तियोग",
+            13: "क्षेत्रक्षेत्रज्ञयोग",
+            14: "गुणत्रयविभागयोग",
+            15: "पुरुषोत्तमयोग",
+            16: "दैवासुरसम्पद्विभागयोग",
+            17: "श्रद्धात्रयविभागयोग",
+            18: "मोक्षसंन्यासयोग"
+        ]
+        return titles[orderIdx] ?? "अध्याय \(orderIdx)"
     }
     
     // MARK: - User Data Persistence
@@ -108,6 +250,49 @@ class DataManager {
         updateStreak()
         
         saveUserData()
+    }
+    
+    func completeLesson(_ lessonId: UUID) async {
+        // Update local progress
+        userProgress.completedLessons.insert(lessonId.uuidString)
+        userProgress.totalXP += 50 // Standard lesson completion XP
+        
+        // Update streak
+        updateStreak()
+        
+        // Save local data
+        saveUserData()
+        
+        // Update database if user is authenticated
+        if let userId = DharmaAuthManager.shared.user?.id {
+            do {
+                // Award XP
+                try await databaseService.awardXP(
+                    userId: userId,
+                    lessonId: lessonId,
+                    ruleCode: "LESSON_COMPLETE",
+                    xpAmount: 50
+                )
+                
+                // Update lesson progress
+                let progress = DBUserLessonProgress(
+                    userId: userId,
+                    lessonId: lessonId,
+                    status: .completed,
+                    startedAt: nil,
+                    completedAt: ISO8601DateFormatter().string(from: Date()),
+                    lastSeenAt: ISO8601DateFormatter().string(from: Date()),
+                    lastScorePct: nil,
+                    bestScorePct: nil,
+                    totalCompletions: 1
+                )
+                
+                try await databaseService.updateUserLessonProgress(progress)
+                
+            } catch {
+                print("Failed to update lesson progress in database: \(error)")
+            }
+        }
     }
     
     func completeUnit(_ unitId: String) {
@@ -178,7 +363,18 @@ class DataManager {
     }
     
     func getLesson(by id: String) -> Lesson? {
-        return lessons.first { $0.id == id }
+        // Convert DBLesson to legacy Lesson format
+        guard let dbLesson = lessons.first(where: { $0.id.uuidString == id }) else {
+            return nil
+        }
+        
+        return Lesson(
+            id: dbLesson.id.uuidString,
+            unitId: dbLesson.courseId.uuidString,
+            title: dbLesson.title,
+            objective: "Learn about \(dbLesson.title)",
+            exerciseIds: []
+        )
     }
     
     func getExercise(by id: String) -> Exercise? {

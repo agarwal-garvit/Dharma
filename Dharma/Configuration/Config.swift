@@ -9,47 +9,28 @@ import Foundation
 
 struct Config {
     
-    // MARK: - Environment Variables
+    // MARK: - Hardcoded Configuration (for development)
     
     static var supabaseURL: String {
-        guard let url = ProcessInfo.processInfo.environment["SUPABASE_URL"] ??
-                       Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String else {
-            fatalError("SUPABASE_URL not found in environment variables or Info.plist")
-        }
-        return url
+        return "https://cifjluhwhifwxiyzyrzx.supabase.co"
     }
     
     static var supabaseKey: String {
-        guard let key = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"] ??
-                       Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String else {
-            fatalError("SUPABASE_ANON_KEY not found in environment variables or Info.plist")
-        }
-        return key
+        return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpZmpsdWh3aGlmd3hpeXp5cnp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNjQ2NTcsImV4cCI6MjA3NDg0MDY1N30.rAZ55o33qeVsYkFoooIZt3LMB-3d2c5-7e0GgqnG_B4"
     }
     
     static var openAIAPIKey: String {
-        guard let key = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ??
-                       Bundle.main.object(forInfoDictionaryKey: "OPENAI_API_KEY") as? String else {
-            fatalError("OPENAI_API_KEY not found in environment variables or Info.plist")
-        }
-        return key
+        return "your_openai_api_key_here"
     }
     
     static var googleClientID: String {
-        guard let clientID = ProcessInfo.processInfo.environment["GOOGLE_CLIENT_ID"] ??
-                            Bundle.main.object(forInfoDictionaryKey: "GOOGLE_CLIENT_ID") as? String else {
-            fatalError("GOOGLE_CLIENT_ID not found in environment variables or Info.plist")
-        }
-        return clientID
+        return "61300230049-q2pqdu6eikukd7frofkt4uuokf7u19jc.apps.googleusercontent.com"
     }
     
     // MARK: - Computed Properties
     
     static var supabaseURLObject: URL {
-        guard let url = URL(string: supabaseURL) else {
-            fatalError("Invalid SUPABASE_URL format")
-        }
-        return url
+        return URL(string: supabaseURL)!
     }
     
     static var googleURLScheme: String {

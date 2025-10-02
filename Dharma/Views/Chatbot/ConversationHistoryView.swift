@@ -8,41 +8,42 @@
 import SwiftUI
 
 struct ConversationHistoryView: View {
-    @State private var chatManager = ChatManager.shared
+    @State private var chatManager = ChatManager()
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         NavigationView {
-            List {
-                if chatManager.conversations.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "bubble.left.and.bubble.right")
-                            .font(.system(size: 48))
-                            .foregroundColor(.orange.opacity(0.6))
-                        
-                        Text("No conversations yet")
+            VStack(spacing: 16) {
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.system(size: 48))
+                    .foregroundColor(.orange.opacity(0.6))
+                
+                Text("Chat History")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Text("Your conversation history is automatically saved. Start a new conversation with the Gita Guide to begin your spiritual journey.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                
+                if !chatManager.messages.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Current Conversation")
                             .font(.headline)
                             .foregroundColor(.primary)
                         
-                        Text("Start a conversation with the Gita Guide to see your chat history here.")
-                            .font(.body)
+                        Text("\(chatManager.messages.count) messages")
+                            .font(.caption)
                             .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
                     }
-                    .frame(maxWidth: .infinity)
                     .padding()
-                    .listRowBackground(Color.clear)
-                } else {
-                    ForEach(chatManager.conversations) { conversation in
-                        ConversationRow(conversation: conversation)
-                            .onTapGesture {
-                                chatManager.loadConversation(conversation.id)
-                                dismiss()
-                            }
-                    }
-                    .onDelete(perform: deleteConversations)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle("Chat History")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -54,56 +55,15 @@ struct ConversationHistoryView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("New Chat") {
-                        chatManager.startNewConversation()
+                        chatManager.clearConversation()
                         dismiss()
                     }
                 }
             }
         }
-        .onAppear {
-            chatManager.loadConversations()
-        }
-    }
-    
-    private func deleteConversations(offsets: IndexSet) {
-        for index in offsets {
-            let conversation = chatManager.conversations[index]
-            chatManager.deleteConversation(conversation.id)
-        }
     }
 }
 
-struct ConversationRow: View {
-    let conversation: ChatConversation
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(conversation.title)
-                .font(.headline)
-                .foregroundColor(.primary)
-                .lineLimit(2)
-            
-            HStack {
-                Text(formatDate(conversation.updatedAt))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                Text("\(conversation.messageCount) messages")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
-    }
-}
 
 #Preview {
     ConversationHistoryView()

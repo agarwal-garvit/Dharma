@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ChatbotView: View {
-    @State private var chatManager = ChatManager.shared
+    @State private var chatManager = ChatManager()
     @State private var currentMessage = ""
     @State private var showingSuggestions = true
     @State private var showingHistory = false
@@ -155,9 +155,7 @@ struct ChatbotView: View {
                 HStack(spacing: 12) {
                     ForEach(suggestedQuestions, id: \.self) { question in
                         Button(action: {
-                            Task {
-                                await sendMessage(question)
-                            }
+                            sendMessage(question)
                         }) {
                             Text(question)
                                 .font(.caption)
@@ -194,9 +192,7 @@ struct ChatbotView: View {
                     )
                 
                 Button(action: {
-                    Task {
-                        await sendMessage(currentMessage)
-                    }
+                    sendMessage(currentMessage)
                 }) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.title2)
@@ -217,14 +213,14 @@ struct ChatbotView: View {
         "Tell me about Arjuna's dilemma"
     ]
     
-    private func sendMessage(_ text: String) async {
-        await chatManager.sendMessage(text)
+    private func sendMessage(_ text: String) {
+        chatManager.sendMessage(text)
         currentMessage = ""
         showingSuggestions = false
     }
     
     private func clearChat() {
-        chatManager.startNewConversation()
+        chatManager.clearConversation()
         showingSuggestions = true
         currentMessage = ""
     }

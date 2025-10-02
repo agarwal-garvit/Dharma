@@ -245,9 +245,20 @@ struct HomeView: View {
     }
     
     private func findNextIncompleteLesson() -> Lesson? {
-        return dataManager.lessons.first { lesson in
-            !dataManager.userProgress.completedLessons.contains(lesson.id)
+        guard let dbLesson = dataManager.lessons.first(where: { lesson in
+            !dataManager.userProgress.completedLessons.contains(lesson.id.uuidString)
+        }) else {
+            return nil
         }
+        
+        // Convert DBLesson to legacy Lesson format
+        return Lesson(
+            id: dbLesson.id.uuidString,
+            unitId: dbLesson.courseId.uuidString,
+            title: dbLesson.title,
+            objective: "Learn about \(dbLesson.title)",
+            exerciseIds: []
+        )
     }
 }
 
