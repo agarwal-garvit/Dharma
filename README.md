@@ -1,228 +1,292 @@
-# Dharma - Bhagavad Gita Learning App
+# Dharma - Spiritual Learning iOS App
 
-A production-ready SwiftUI iOS app for learning the Bhagavad Gita, inspired by Duolingo's approach to language learning. Dharma combines daily scripture study with skill-tree lessons, bite-sized practice, and spaced repetition to make learning effortless and engaging.
+A comprehensive iOS application for learning spiritual texts, particularly the Bhagavad Gita, with interactive lessons, quizzes, and AI-powered chat functionality.
 
-## Features
+## 📱 Overview
 
-### 📚 Learn Tab
-- **Interactive Lessons**: Server-fetched content with progressive skill tree
-- **Mixed Exercise Types**: Read & Reveal, Match, Fill-in-the-blank, Multiple Choice, Listening
-- **Lesson Player**: Interactive exercises with immediate feedback
-- **Progress Tracking**: Visual progress indicators and completion states
+Dharma is a modern iOS app built with SwiftUI that provides an immersive learning experience for spiritual texts. The app features a beautiful staggered card layout, interactive lessons, spaced repetition learning, and an AI chatbot for spiritual guidance.
 
-### 📜 Bhagavad Gita Tab
-- **Complete Text Access**: All 18 chapters with verse-by-verse navigation
-- **Multiple Scripts**: Devanagari, IAST transliteration, and English translation
-- **Audio Playback**: High-quality audio with TTS fallback
-- **Search Functionality**: Find verses by reference, keywords, or themes
+## 🏗️ Project Structure
 
-### 🐄 Progress & Pet Tab
-- **Spiritual Companion**: Care for your cow pet (Gau Mata) representing your progress
-- **Pet Care System**: Feed, play, and meditate with your pet to increase happiness
-- **Progress Visualization**: XP, streaks, study time, and achievements
-- **Growth Tracking**: Pet level and happiness reflect your learning journey
-
-### 🏆 Leaderboard Tab
-- **Coming Soon**: Global rankings and competition features
-- **Progress Comparison**: Compare your journey with other learners
-- **Achievement System**: Unlockable badges and recognition
-- **Study Groups**: Compete with friends and family
-
-### 💬 Chatbot Tab
-- **AI Gita Guide**: Ask questions about the Bhagavad Gita
-- **Intelligent Responses**: Context-aware answers about verses, concepts, and teachings
-- **Conversational Interface**: Natural chat experience with suggested questions
-- **Learning Support**: Get help understanding complex concepts
-
-## Technical Architecture
-
-### Core Components
-
-#### Data Models
-- `Verse`: Core scripture data with Devanagari, IAST, and translations
-- `Exercise`: Interactive learning exercises with multiple types
-- `Lesson`: Structured learning units with objectives
-- `ReviewItem`: Spaced repetition items with scheduling data
-- `UserProgress`: User statistics and completion tracking
-
-#### Managers
-- `DataManager`: Centralized data management and persistence
-- `AudioManager`: Audio playback with TTS fallback
-- `HapticManager`: Tactile feedback for interactions
-- `SpacedRepetitionManager`: Leitner box scheduling algorithm
-
-#### Views
-- `OnboardingView`: First-time user setup and preferences
-- `MainTabView`: Primary navigation with 5 tabs
-- `HomeView`: Daily verse and progress overview
-- `LearnView`: Skill tree and lesson navigation
-- `ReviewView`: Spaced repetition review system
-- `SearchView`: Comprehensive verse search
-- `ProfileView`: User statistics and settings
-
-### Data Structure
-
-The app uses a JSON-based seed data system with the following structure:
-
-```json
-{
-  "chapters": [
-    {
-      "id": "ch1",
-      "index": 1,
-      "title_en": "Arjuna's Despair",
-      "title_sa": "अर्जुनविषादयोग"
-    }
-  ],
-  "verses": [
-    {
-      "id": "v2_47",
-      "chapter_index": 2,
-      "verse_index": 47,
-      "devanagari_text": "कर्मण्येवाधिकारस्ते...",
-      "iast_text": "karmaṇy-evādhikāras te ...",
-      "translation_en": "You have a right to action alone...",
-      "keywords": ["karma", "detachment"],
-      "audio_url": "bundle://audio/v2_47.mp3",
-      "commentary_short": "Focus on your action...",
-      "themes": ["duty", "equanimity"]
-    }
-  ],
-  "lessons": [...],
-  "exercises": [...]
-}
+```
+Dharma/
+├── Dharma/                          # Main iOS app source code
+│   ├── Assets.xcassets/            # App icons, images, and visual assets
+│   │   ├── downLeft.imageset/      # Custom arrow images for lesson flow
+│   │   ├── downRight.imageset/     # Custom arrow images for lesson flow
+│   │   └── google_logo.imageset/   # Google authentication logo
+│   │
+│   ├── Configuration/              # App configuration and environment setup
+│   │   └── Config.swift           # Supabase, OpenAI, and Google API configuration
+│   │
+│   ├── Managers/                   # Core business logic and data management
+│   │   ├── DataManager.swift      # Main data orchestrator and Supabase integration
+│   │   ├── DatabaseService.swift  # Supabase database operations
+│   │   ├── AuthManager.swift      # User authentication (Google OAuth)
+│   │   ├── ChatManager.swift      # AI chatbot functionality
+│   │   ├── AudioManager.swift     # Audio playback for lessons
+│   │   ├── HapticManager.swift    # Haptic feedback
+│   │   └── ThemeManager.swift     # App theming and colors
+│   │
+│   ├── Models/                     # Data models and structures
+│   │   ├── DatabaseModels.swift   # Supabase database models (DBCourse, DBLesson, etc.)
+│   │   ├── DataModels.swift       # Legacy app models (Chapter, Lesson, etc.)
+│   │   └── SpacedRepetition.swift # Spaced repetition algorithm
+│   │
+│   ├── Views/                      # SwiftUI user interface components
+│   │   ├── Auth/                  # Authentication screens
+│   │   ├── Home/                  # Home dashboard
+│   │   ├── Learn/                 # Learning interface with staggered cards
+│   │   ├── Chatbot/               # AI chat interface
+│   │   ├── Profile/               # User profile and settings
+│   │   ├── Progress/              # Learning progress tracking
+│   │   ├── Review/                # Spaced repetition review
+│   │   └── Components/            # Reusable UI components
+│   │
+│   ├── DharmaApp.swift            # Main app entry point
+│   └── ContentView.swift          # Root content view
+│
+├── database_setup.sql             # Supabase database schema setup
+├── populate_lessons_data.sql      # Sample data for Bhagavad Gita lessons
+├── ENVIRONMENT_SETUP.md           # Environment configuration guide
+├── SETUP_INSTRUCTIONS.md          # Development setup instructions
+└── README.md                      # This file
 ```
 
-### Spaced Repetition System
+## 🗄️ Database Architecture (Supabase)
 
-Implements a simplified Leitner box system:
+### Core Tables
 
-- **Box 1**: 1 day interval (new items)
-- **Box 2**: 3 day interval
-- **Box 3**: 7 day interval
-- **Box 4**: 14 day interval
-- **Box 5**: 30 day interval
+#### 1. **courses**
+```sql
+- id (UUID, Primary Key)
+- title (TEXT) - Course name (e.g., "Bhagavad Gita")
+- description (TEXT) - Course description
+```
 
-Items move up on correct answers, reset to Box 1 on incorrect answers.
+#### 2. **lessons**
+```sql
+- id (UUID, Primary Key)
+- course_id (UUID, Foreign Key) - References courses.id
+- order_idx (INTEGER) - Lesson order within course
+- title (TEXT) - Lesson/chapter title
+```
 
-### Audio System
+#### 3. **lesson_sections**
+```sql
+- id (UUID, Primary Key)
+- lesson_id (UUID, Foreign Key) - References lessons.id
+- kind (TEXT) - Section type: SUMMARY, QUIZ, FINAL_THOUGHTS, CLOSING_PRAYER, REPORT
+- content (JSONB) - Flexible content storage
+- order_idx (INTEGER) - Section order within lesson
+```
 
-- **Bundled Audio**: High-quality MP3 files for key verses
-- **TTS Fallback**: AVSpeechSynthesizer for missing audio
-- **Playback Controls**: Play, pause, speed adjustment
-- **Word-level Audio**: Individual word pronunciation
+#### 4. **quiz_questions**
+```sql
+- id (UUID, Primary Key)
+- lesson_id (UUID, Foreign Key) - References lessons.id
+- question (TEXT) - Quiz question text
+- order_idx (INTEGER) - Question order
+```
 
-## User Experience
+#### 5. **quiz_options**
+```sql
+- id (UUID, Primary Key)
+- question_id (UUID, Foreign Key) - References quiz_questions.id
+- text (TEXT) - Answer option text
+- is_correct (BOOLEAN) - Whether this option is correct
+- order_idx (INTEGER) - Option order
+```
 
-### Onboarding Flow
-1. **Welcome**: App introduction and value proposition
-2. **Study Goal**: Choose daily time commitment (5min, 10min, weekend)
-3. **Script Display**: Select Devanagari, IAST, or both
-4. **Study Time**: Set daily reminder time
-5. **Notifications**: Request permission for daily reminders
+#### 6. **chat_conversations**
+```sql
+- id (UUID, Primary Key)
+- user_id (UUID, Foreign Key) - References auth.users.id
+- title (TEXT) - Conversation title
+- created_at (TIMESTAMPTZ)
+- updated_at (TIMESTAMPTZ)
+- message_count (INTEGER)
+```
 
-### Learning Path
-1. **Daily Verse**: Start with Verse of the Day
-2. **Skill Tree**: Progress through chapters sequentially
-3. **Mixed Exercises**: Variety of exercise types per lesson
-4. **Review System**: Spaced repetition for retention
-5. **Search & Explore**: Find specific verses and themes
+#### 7. **chat_messages**
+```sql
+- id (UUID, Primary Key)
+- conversation_id (UUID, Foreign Key) - References chat_conversations.id
+- content (TEXT) - Message content
+- is_user (BOOLEAN) - True for user messages, false for AI
+- timestamp (TIMESTAMPTZ)
+```
 
-### Gamification
-- **Streaks**: Daily study consistency tracking
-- **XP System**: Points for lesson completion
-- **Achievements**: Unlockable badges for milestones
-- **Progress Visualization**: Clear completion indicators
+#### 8. **xp_rules**
+```sql
+- code (TEXT, Primary Key) - XP rule identifier
+- xp_amount (INTEGER) - XP points awarded
+```
 
-## Accessibility
+## 🔌 Supabase Integration
 
-- **Dynamic Type**: Supports all system font sizes
-- **VoiceOver**: Full screen reader support
-- **High Contrast**: Adapts to system accessibility settings
-- **Large Tap Targets**: Minimum 44pt touch targets
-- **Semantic Labels**: Proper accessibility traits
+### Configuration
+The app connects to Supabase using configuration in `Config.swift`:
 
-## Internationalization
+```swift
+static var supabaseURL: String = "https://cifjluhwhifwxiyzyrzx.supabase.co"
+static var supabaseKey: String = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
 
-- **English**: Primary language for translations
-- **Sanskrit**: Devanagari script support
-- **IAST**: Roman transliteration system
-- **RTL Ready**: Layout supports right-to-left languages
-- **Localizable**: All strings externalized for translation
+### Data Flow
 
-## Performance
+#### 1. **Course and Lesson Loading**
+```swift
+// DataManager.swift
+await loadCourses()           // Loads all courses from Supabase
+await loadLessons(for: courseId)  // Loads lessons for specific course
+```
 
-- **Offline First**: Core content works without internet
-- **Lazy Loading**: Views load content on demand
-- **Efficient Search**: Optimized search algorithms
-- **Memory Management**: Proper cleanup and lifecycle management
-- **Smooth Animations**: 60fps interactions and transitions
+#### 2. **Lesson Content Loading**
+```swift
+// Loads lesson sections (summary, quiz, etc.) from database
+let sections = await loadLessonSections(for: lessonId)
+```
 
-## Testing
+#### 3. **User Progress Tracking**
+- User progress is stored locally but can be synced to Supabase
+- XP points are calculated based on `xp_rules` table
+- Spaced repetition data is managed locally
 
-Comprehensive test suite covering:
+#### 4. **Chat Functionality**
+```swift
+// ChatManager.swift
+- Creates conversations in chat_conversations table
+- Stores messages in chat_messages table
+- Integrates with OpenAI for AI responses
+```
 
-- **Unit Tests**: Data models and business logic
-- **Integration Tests**: Manager interactions
-- **Performance Tests**: Search and spaced repetition algorithms
-- **UI Tests**: Critical user flows
-- **Accessibility Tests**: VoiceOver and dynamic type
+## 🎨 Key Features
 
-## Future Enhancements
+### 1. **Staggered Lesson Layout**
+- Beautiful zigzag card layout with alternating left/right positioning
+- Custom arrow images (`downLeft.png`, `downRight.png`) showing lesson flow
+- Fixed course title that updates based on visible lessons
+- Light blue color scheme with orange accents
 
-### Content
-- **Additional Translations**: Multiple language support
-- **Extended Commentary**: Deeper philosophical insights
-- **Audio Expansion**: More verses with native audio
-- **Video Content**: Visual explanations and context
+### 2. **Interactive Learning**
+- Chapter summaries with spiritual content
+- Interactive quizzes with multiple choice questions
+- Final thoughts and closing prayers
+- Progress tracking and XP system
 
-### Features
-- **Social Learning**: Study groups and sharing
-- **Advanced Analytics**: Detailed learning insights
-- **Custom Study Plans**: Personalized learning paths
-- **Offline Sync**: Cloud backup and sync
+### 3. **AI Chatbot**
+- Spiritual guidance and Q&A
+- Conversation history stored in Supabase
+- OpenAI integration for intelligent responses
+- Context-aware spiritual advice
 
-### Technical
-- **Core Data**: Migration to Core Data for better performance
-- **CloudKit**: Sync across devices
-- **Widgets**: Home screen verse widgets
-- **Apple Watch**: Quick verse access
+### 4. **Spaced Repetition**
+- Algorithm-based review scheduling
+- Optimized learning retention
+- Progress tracking and statistics
 
-## Getting Started
+### 5. **Authentication**
+- Google OAuth integration
+- Secure user management
+- Profile customization
 
-1. **Clone the repository**
-2. **Open in Xcode 15+**
-3. **Build and run on iOS 17+**
-4. **Complete onboarding flow**
-5. **Start learning!**
+## 🚀 Setup Instructions
 
-## Requirements
+### 1. **Environment Setup**
+```bash
+# Copy environment template
+cp env.example .env
 
-- **iOS 17.0+**
-- **Xcode 15.0+**
-- **Swift 5.9+**
-- **iPhone/iPad compatible**
+# Run setup script
+./setup_env_vars.sh
+```
 
-## License
+### 2. **Database Setup**
+1. Create a Supabase project
+2. Run `database_setup.sql` in Supabase SQL editor
+3. Run `populate_lessons_data.sql` to add sample data
+4. Update `Config.swift` with your Supabase credentials
 
-This project is for educational and personal use. The Bhagavad Gita content is in the public domain.
+### 3. **API Keys**
+- **Supabase**: Get URL and anon key from your project settings
+- **OpenAI**: Add your API key for chat functionality
+- **Google OAuth**: Configure Google Sign-In in Google Cloud Console
 
-## Contributing
+### 4. **iOS Development**
+```bash
+# Open project in Xcode
+open Dharma.xcodeproj
 
-Contributions are welcome! Please focus on:
+# Install dependencies (handled by Swift Package Manager)
+# Build and run on simulator or device
+```
 
-- **Bug fixes and improvements**
-- **Accessibility enhancements**
-- **Performance optimizations**
-- **Additional content and translations**
+## 📱 App Architecture
 
-## Acknowledgments
+### Data Flow
+```
+Supabase Database
+    ↓
+DatabaseService (Supabase client)
+    ↓
+DataManager (Business logic)
+    ↓
+SwiftUI Views (User interface)
+```
 
-- **Bhagavad Gita**: Sacred text in the public domain
-- **Duolingo**: Inspiration for gamified learning approach
-- **Manna**: Daily scripture flow concept
-- **SwiftUI Community**: For excellent resources and examples
+### Key Components
+
+#### **DataManager**
+- Central data orchestrator
+- Manages both database and legacy models
+- Handles loading states and error management
+- Coordinates between different data sources
+
+#### **DatabaseService**
+- Direct Supabase integration
+- Handles all database operations
+- Manages authentication state
+- Provides reactive data updates
+
+#### **LearnView**
+- Main learning interface
+- Implements staggered card layout
+- Manages course title updates
+- Handles lesson navigation
+
+## 🔧 Development Notes
+
+### Database Models
+The app uses two sets of models:
+- **DatabaseModels**: Direct mapping to Supabase schema (`DBCourse`, `DBLesson`, etc.)
+- **DataModels**: Legacy models for backward compatibility (`Chapter`, `Lesson`, etc.)
+
+### Migration Strategy
+The app is designed to gradually migrate from hardcoded data to database-driven content while maintaining backward compatibility.
+
+### Performance Considerations
+- Lazy loading of lesson content
+- Efficient image caching for arrow assets
+- Optimized database queries with proper indexing
+- Local caching for frequently accessed data
+
+## 🎯 Future Enhancements
+
+1. **Multiple Courses**: Support for Mahabharata, Upanishads, etc.
+2. **Offline Mode**: Download lessons for offline learning
+3. **Social Features**: Share progress, leaderboards
+4. **Advanced Analytics**: Detailed learning insights
+5. **Voice Integration**: Audio lessons and pronunciation guides
+
+## 📄 License
+
+This project is proprietary software. All rights reserved.
+
+## 🤝 Contributing
+
+For development questions or contributions, please contact the development team.
 
 ---
 
-*"You have a right to action alone, not to its fruits."* - Bhagavad Gita 2.47
+*Built with ❤️ for spiritual learning and growth*
