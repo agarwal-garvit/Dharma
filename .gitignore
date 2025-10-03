@@ -108,3 +108,6 @@ dharmaErrors/
 # API Keys and sensitive configuration
 config.plist
 secrets.plist
+
+# Xcode project file (contains build settings with API keys)
+Dharma.xcodeproj/project.pbxproj
