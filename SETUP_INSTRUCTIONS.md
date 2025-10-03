@@ -42,7 +42,7 @@ To complete the Google Sign-In setup, you need to add the following Swift Packag
 2. Navigate to Authentication → Providers
 3. Enable Google provider
 4. Add your Google OAuth client ID and client secret
-5. Set the redirect URL to: `https://cifjluhwhifwxiyzyrzx.supabase.co/auth/v1/callback`
+5. Set the redirect URL to: `https://your-project.supabase.co/auth/v1/callback`
 
 ## App Configuration
 

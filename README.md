@@ -129,8 +129,8 @@ Dharma/
 The app connects to Supabase using configuration in `Config.swift`:
 
 ```swift
-static var supabaseURL: String = "https://cifjluhwhifwxiyzyrzx.supabase.co"
-static var supabaseKey: String = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+static var supabaseURL: String = "YOUR_SUPABASE_URL_HERE"
+static var supabaseKey: String = "YOUR_SUPABASE_ANON_KEY_HERE"
 ```
 
 ### Data Flow

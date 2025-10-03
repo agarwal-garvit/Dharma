@@ -3,7 +3,7 @@
 ## Database Setup
 
 1. Go to your Supabase dashboard: https://supabase.com/dashboard
-2. Navigate to your project: https://cifjluhwhifwxiyzyrzx.supabase.co
+2. Navigate to your project: https://your-project.supabase.co
 3. Go to the SQL Editor
 4. Copy and paste the contents of `database_setup.sql` and run it
 

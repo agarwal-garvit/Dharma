@@ -28,8 +28,8 @@ class DharmaAuthManager {
     private init() {
         // Initialize Supabase client
         self.supabase = SupabaseClient(
-            supabaseURL: URL(string: "https://cifjluhwhifwxiyzyrzx.supabase.co")!,
-            supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpZmpsdWh3aGlmd3hpeXp5cnp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNjQ2NTcsImV4cCI6MjA3NDg0MDY1N30.rAZ55o33qeVsYkFoooIZt3LMB-3d2c5-7e0GgqnG_B4"
+            supabaseURL: Config.supabaseURLObject,
+            supabaseKey: Config.supabaseKey
         )
         
         // Check for existing session

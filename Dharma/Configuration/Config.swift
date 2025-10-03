@@ -9,22 +9,41 @@ import Foundation
 
 struct Config {
     
-    // MARK: - Hardcoded Configuration (for development)
+    // MARK: - Environment Variables from Build Settings
     
     static var supabaseURL: String {
-        return "https://cifjluhwhifwxiyzyrzx.supabase.co"
+        guard let url = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String else {
+            fatalError("SUPABASE_URL not found in build settings")
+        }
+        return url
     }
     
     static var supabaseKey: String {
-        return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpZmpsdWh3aGlmd3hpeXp5cnp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNjQ2NTcsImV4cCI6MjA3NDg0MDY1N30.rAZ55o33qeVsYkFoooIZt3LMB-3d2c5-7e0GgqnG_B4"
+        guard let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String else {
+            fatalError("SUPABASE_ANON_KEY not found in build settings")
+        }
+        return key
     }
     
     static var openAIAPIKey: String {
-        return "your_openai_api_key_here"
+        guard let key = Bundle.main.object(forInfoDictionaryKey: "OPENAI_API_KEY") as? String else {
+            fatalError("OPENAI_API_KEY not found in build settings")
+        }
+        return key
     }
     
     static var googleClientID: String {
-        return "61300230049-q2pqdu6eikukd7frofkt4uuokf7u19jc.apps.googleusercontent.com"
+        guard let clientID = Bundle.main.object(forInfoDictionaryKey: "GOOGLE_CLIENT_ID") as? String else {
+            fatalError("GOOGLE_CLIENT_ID not found in build settings")
+        }
+        return clientID
+    }
+    
+    static var googleURLScheme: String {
+        guard let scheme = Bundle.main.object(forInfoDictionaryKey: "GOOGLE_URL_SCHEME") as? String else {
+            fatalError("GOOGLE_URL_SCHEME not found in build settings")
+        }
+        return scheme
     }
     
     // MARK: - Computed Properties
@@ -33,16 +52,6 @@ struct Config {
         return URL(string: supabaseURL)!
     }
     
-    static var googleURLScheme: String {
-        // Convert Google Client ID to URL scheme format
-        // Example: 123456789-abcdefg.apps.googleusercontent.com -> com.googleusercontent.apps.123456789-abcdefg
-        let components = googleClientID.components(separatedBy: ".")
-        if components.count >= 3 {
-            let reversedComponents = Array(components.reversed())
-            return reversedComponents.joined(separator: ".")
-        }
-        return "com.googleusercontent.apps.\(googleClientID.replacingOccurrences(of: ".", with: "-"))"
-    }
     
     // MARK: - Validation
     
@@ -52,6 +61,7 @@ struct Config {
             _ = supabaseKey
             _ = openAIAPIKey
             _ = googleClientID
+            _ = googleURLScheme
             _ = supabaseURLObject
             return true
         } catch {
