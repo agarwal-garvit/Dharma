@@ -8,14 +8,13 @@
 import SwiftUI
 
 struct ChatbotView: View {
-    @State private var chatManager = ChatManager()
+    @StateObject private var chatManager = ChatManager()
     @State private var currentMessage = ""
-    @State private var showingSuggestions = true
-    @State private var showingHistory = false
     @State private var authManager = DharmaAuthManager.shared
     
     var body: some View {
         if !authManager.isAuthenticated {
+            // Sign in required view
             VStack(spacing: 20) {
                 Image(systemName: "person.circle")
                     .font(.system(size: 64))
@@ -34,21 +33,20 @@ struct ChatbotView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.systemBackground))
         } else {
+            // Chat interface
             NavigationView {
                 VStack(spacing: 0) {
-                // Messages list
-                ScrollViewReader { proxy in
+                    // Messages
                     ScrollView {
                         LazyVStack(spacing: 12) {
-                            // Welcome message
+                            // Welcome message when empty
                             if chatManager.messages.isEmpty {
-                                welcomeSection
+                                welcomeMessage
                             }
                             
                             // Chat messages
                             ForEach(chatManager.messages) { message in
                                 ChatBubble(message: message)
-                                    .id(message.id)
                             }
                             
                             // Loading indicator
@@ -62,61 +60,42 @@ struct ChatbotView: View {
                                 }
                                 .padding()
                             }
+                            
+                            // Error message
+                            if let errorMessage = chatManager.errorMessage {
+                                Text("Error: \(errorMessage)")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                                    .padding()
+                                    .background(Color.red.opacity(0.1))
+                                    .cornerRadius(8)
+                            }
                         }
                         .padding()
                     }
-                    .onChange(of: chatManager.messages.count) { _, _ in
-                        if let lastMessage = chatManager.messages.last {
-                            withAnimation {
-                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                            }
+                    
+                    // Input area
+                    inputArea
+                }
+                .navigationTitle("Gita Guide")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Clear") {
+                            chatManager.clearConversation()
                         }
+                        .disabled(chatManager.messages.isEmpty)
                     }
                 }
-                
-                // Suggestions
-                if showingSuggestions && chatManager.messages.isEmpty {
-                    suggestionsSection
-                }
-                
-                // Input area
-                inputSection
-            }
-            .navigationTitle("Gita Guide")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("History") {
-                        showingHistory = true
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Clear") {
-                        clearChat()
-                    }
-                    .disabled(chatManager.messages.isEmpty)
-                }
-            }
-            .sheet(isPresented: $showingHistory) {
-                ConversationHistoryView()
-            }
             }
         }
     }
     
-    private var welcomeSection: some View {
+    private var welcomeMessage: some View {
         VStack(spacing: 16) {
-            // Bot avatar
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(Color.orange.opacity(0.2))
                     .frame(width: 80, height: 80)
                 
                 Image(systemName: "brain.head.profile")
@@ -128,9 +107,8 @@ struct ChatbotView: View {
                 Text("Namaste! 🙏")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.primary)
                 
-                Text("I'm your guide to the Bhagavad Gita. Ask me anything about the sacred text, its teachings, or how to apply them in your daily life.")
+                Text("I'm your guide to the Bhagavad Gita. Ask me anything about the sacred text or its teachings.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -144,39 +122,7 @@ struct ChatbotView: View {
         )
     }
     
-    private var suggestionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Try asking:")
-                .font(.headline)
-                .foregroundColor(.primary)
-                .padding(.horizontal)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(suggestedQuestions, id: \.self) { question in
-                        Button(action: {
-                            sendMessage(question)
-                        }) {
-                            Text(question)
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(Color.orange.opacity(0.1))
-                                )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                }
-                .padding(.horizontal)
-            }
-        }
-        .padding(.bottom, 8)
-    }
-    
-    private var inputSection: some View {
+    private var inputArea: some View {
         VStack(spacing: 0) {
             Divider()
             
@@ -191,9 +137,7 @@ struct ChatbotView: View {
                             .fill(Color(.systemGray6))
                     )
                 
-                Button(action: {
-                    sendMessage(currentMessage)
-                }) {
+                Button(action: sendMessage) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.title2)
                         .foregroundColor(currentMessage.isEmpty ? .gray : .orange)
@@ -205,27 +149,13 @@ struct ChatbotView: View {
         .background(Color(.systemBackground))
     }
     
-    private let suggestedQuestions = [
-        "What is karma yoga?",
-        "Explain verse 2.47",
-        "How to practice detachment?",
-        "What is dharma?",
-        "Tell me about Arjuna's dilemma"
-    ]
-    
-    private func sendMessage(_ text: String) {
-        chatManager.sendMessage(text)
-        currentMessage = ""
-        showingSuggestions = false
-    }
-    
-    private func clearChat() {
-        chatManager.clearConversation()
-        showingSuggestions = true
+    private func sendMessage() {
+        guard !currentMessage.isEmpty else { return }
+        
+        chatManager.sendMessage(currentMessage)
         currentMessage = ""
     }
 }
-
 
 struct ChatBubble: View {
     let message: ChatMessage

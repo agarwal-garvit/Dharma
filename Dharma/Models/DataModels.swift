@@ -293,17 +293,34 @@ struct UserPreferences: Codable {
 
 struct ChatMessage: Identifiable, Codable {
     let id: UUID
+    let conversationId: UUID?
     let content: String
     let isUser: Bool
     let timestamp: Date
-    let conversationId: UUID?
     
-    init(id: UUID = UUID(), content: String, isUser: Bool, timestamp: Date = Date(), conversationId: UUID? = nil) {
+    init(id: UUID = UUID(), conversationId: UUID? = nil, content: String, isUser: Bool, timestamp: Date = Date()) {
         self.id = id
+        self.conversationId = conversationId
         self.content = content
         self.isUser = isUser
         self.timestamp = timestamp
-        self.conversationId = conversationId
+    }
+}
+
+// Database-specific model for chat messages
+struct ChatMessageForDB: Codable {
+    let id: UUID
+    let conversationId: UUID?
+    let content: String
+    let isUser: Bool
+    let timestamp: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case conversationId = "conversation_id"
+        case content
+        case isUser = "is_user"
+        case timestamp
     }
 }
 
@@ -322,6 +339,15 @@ struct ChatConversation: Identifiable, Codable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.messageCount = messageCount
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case title
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case messageCount = "message_count"
     }
 }
 

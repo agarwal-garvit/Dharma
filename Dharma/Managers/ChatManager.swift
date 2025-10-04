@@ -9,7 +9,6 @@ import Foundation
 import Supabase
 import Combine
 
-@MainActor
 class ChatManager: ObservableObject {
     @Published var messages: [ChatMessage] = []
     @Published var isLoading = false
@@ -20,43 +19,60 @@ class ChatManager: ObservableObject {
         supabaseKey: Config.supabaseKey
     )
     
+    private var currentConversationId: UUID?
+    private let authManager = DharmaAuthManager.shared
+    
     init() {
-        loadConversationHistory()
+        // Start with empty chat - will create conversation when first message is sent
     }
     
     func sendMessage(_ text: String) {
+        // Add user message immediately
         let userMessage = ChatMessage(
-            id: UUID(),
+            conversationId: currentConversationId,
             content: text,
-            isUser: true,
-            timestamp: Date(),
-            conversationId: nil
+            isUser: true
         )
-        
         messages.append(userMessage)
+        
+        // Set loading state
         isLoading = true
         errorMessage = nil
         
+        // Get AI response and save to database
         Task {
             do {
-                let aiResponse = try await getAIResponse(for: text, conversationHistory: messages)
+                // Create conversation if this is the first message
+                if currentConversationId == nil {
+                    currentConversationId = try await createConversation(title: text)
+                }
+                
+                // Save user message to database
+                try await saveMessageToDatabase(userMessage)
+                
+                // Get AI response
+                let aiResponse = try await getAIResponse(for: text)
+                
+                // Create AI message
                 let aiMessage = ChatMessage(
-                    id: UUID(),
+                    conversationId: currentConversationId,
                     content: aiResponse,
-                    isUser: false,
-                    timestamp: Date(),
-                    conversationId: nil
+                    isUser: false
                 )
                 
+                // Save AI message to database
+                try await saveMessageToDatabase(aiMessage)
+                
+                // Add AI response on main thread
                 await MainActor.run {
-                    messages.append(aiMessage)
-                    isLoading = false
-                    saveConversationHistory()
+                    self.messages.append(aiMessage)
+                    self.isLoading = false
                 }
             } catch {
+                // Handle error on main thread
                 await MainActor.run {
-                    errorMessage = "Failed to get AI response: \(error.localizedDescription)"
-                    isLoading = false
+                    self.errorMessage = "Failed to get AI response: \(error.localizedDescription)"
+                    self.isLoading = false
                 }
             }
         }
@@ -64,52 +80,81 @@ class ChatManager: ObservableObject {
     
     func clearConversation() {
         messages.removeAll()
-        saveConversationHistory()
+        currentConversationId = nil
+        errorMessage = nil
     }
     
-    private func getAIResponse(for userMessage: String, conversationHistory: [ChatMessage]) async throws -> String {
+    // MARK: - Future: Load Conversation History
+    
+    func loadConversation(conversationId: UUID) async throws {
+        // This can be implemented later to load previous conversations
+        // For now, we start fresh each time
+    }
+    
+    // MARK: - Database Functions
+    
+    private func createConversation(title: String) async throws -> UUID {
+        guard let userId = authManager.user?.id else {
+            throw ChatError.authenticationError
+        }
+        
+        let conversation = ChatConversation(
+            id: UUID(),
+            userId: userId,
+            title: String(title.prefix(50)), // Limit title length
+            createdAt: Date(),
+            updatedAt: Date(),
+            messageCount: 0
+        )
+        
+        let response: ChatConversation = try await supabase.database
+            .from("chat_conversations")
+            .insert(conversation)
+            .select()
+            .single()
+            .execute()
+            .value
+        
+        return response.id
+    }
+    
+    private func saveMessageToDatabase(_ message: ChatMessage) async throws {
+        // Create a proper message object for database insertion
+        let messageForDB = ChatMessageForDB(
+            id: message.id,
+            conversationId: message.conversationId,
+            content: message.content,
+            isUser: message.isUser,
+            timestamp: message.timestamp
+        )
+        
+        try await supabase.database
+            .from("chat_messages")
+            .insert(messageForDB)
+            .execute()
+    }
+    
+    private func getAIResponse(for userMessage: String) async throws -> String {
         let url = URL(string: "https://api.openai.com/v1/chat/completions")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(Config.openAIAPIKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        // Prepare messages for OpenAI
-        var openAIMessages: [[String: String]] = []
-        
-        // System prompt
-        openAIMessages.append([
-            "role": "system",
-            "content": """
-            You are a wise and compassionate spiritual guide specializing in Hindu philosophy, particularly the Bhagavad Gita. Your role is to help users understand and apply the teachings of the Gita in their daily lives.
-            
-            Guidelines:
-            - Provide thoughtful, practical advice based on Gita teachings
-            - Use simple, accessible language while maintaining depth
-            - Reference specific verses when relevant (e.g., "As Krishna says in Chapter 2, Verse 47...")
-            - Help users understand concepts like dharma, karma, and self-realization
-            - Encourage spiritual growth and self-reflection
-            - Be supportive and non-judgmental
-            - Keep responses concise but meaningful (2-3 paragraphs max)
-            - If asked about topics outside Hindu philosophy, gently redirect to relevant Gita teachings
-            
-            Remember: You are here to guide, not preach. Help users find their own path to wisdom.
-            """
-        ])
-        
-        // Add conversation history (last 10 messages to stay within token limits)
-        let recentHistory = Array(conversationHistory.suffix(10))
-        for message in recentHistory {
-            openAIMessages.append([
-                "role": message.isUser ? "user" : "assistant",
-                "content": message.content
-            ])
-        }
-        
+        // Simple request body
         let requestBody: [String: Any] = [
             "model": "gpt-3.5-turbo",
-            "messages": openAIMessages,
-            "max_tokens": 500,
+            "messages": [
+                [
+                    "role": "system",
+                    "content": "You are a wise spiritual guide specializing in the Bhagavad Gita. Provide helpful, concise responses about Hindu philosophy and the Gita's teachings."
+                ],
+                [
+                    "role": "user",
+                    "content": userMessage
+                ]
+            ],
+            "max_tokens": 300,
             "temperature": 0.7
         ]
         
@@ -132,31 +177,13 @@ class ChatManager: ObservableObject {
         
         return content.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    
-    private func saveConversationHistory() {
-        do {
-            let data = try JSONEncoder().encode(messages)
-            UserDefaults.standard.set(data, forKey: "conversation_history")
-        } catch {
-            print("Failed to save conversation history: \(error)")
-        }
-    }
-    
-    private func loadConversationHistory() {
-        guard let data = UserDefaults.standard.data(forKey: "conversation_history") else { return }
-        
-        do {
-            messages = try JSONDecoder().decode([ChatMessage].self, from: data)
-        } catch {
-            print("Failed to load conversation history: \(error)")
-        }
-    }
 }
-
 
 enum ChatError: Error, LocalizedError {
     case networkError
     case invalidResponse
+    case authenticationError
+    case databaseError
     
     var errorDescription: String? {
         switch self {
@@ -164,6 +191,10 @@ enum ChatError: Error, LocalizedError {
             return "Network error occurred"
         case .invalidResponse:
             return "Invalid response from AI service"
+        case .authenticationError:
+            return "User not authenticated"
+        case .databaseError:
+            return "Database error occurred"
         }
     }
 }

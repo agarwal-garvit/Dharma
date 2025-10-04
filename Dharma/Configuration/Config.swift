@@ -81,4 +81,22 @@ struct Config {
         print("Google URL Scheme: \(googleURLScheme)")
         print("==========================")
     }
+    
+    static func debugInfoPlist() {
+        print("=== Info.plist Debug ===")
+        if let infoDict = Bundle.main.infoDictionary {
+            print("All keys in Info.plist:")
+            for key in infoDict.keys.sorted() {
+                if key.contains("SUPABASE") || key.contains("OPENAI") || key.contains("GOOGLE") {
+                    let value = infoDict[key] as? String ?? "nil"
+                    let maskedValue = key.contains("KEY") || key.contains("ID") ? 
+                        "\(value.prefix(10))..." : value
+                    print("  \(key): \(maskedValue)")
+                }
+            }
+        } else {
+            print("No Info.plist found!")
+        }
+        print("========================")
+    }
 }

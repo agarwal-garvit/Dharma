@@ -53,6 +53,11 @@ struct DharmaApp: App {
             .onAppear {
                 // Check initial auth state
                 isAuthenticated = authManager.isAuthenticated
+                
+                // Debug configuration (remove in production)
+                #if DEBUG
+                Config.debugInfoPlist()
+                #endif
             }
         }
     }
