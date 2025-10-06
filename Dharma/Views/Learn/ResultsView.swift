@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ResultsView: View {
     let chapterIndex: Int
-    let chapterTitle: String
+    let lessonTitle: String
     let score: Int
     let totalQuestions: Int
     let timeElapsed: TimeInterval
@@ -37,7 +37,7 @@ struct ResultsView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
                     
-                    Text("Chapter \(chapterIndex): \(chapterTitle)")
+                    Text(lessonTitle)
                         .font(.title2)
                         .foregroundColor(.orange)
                         .fontWeight(.semibold)
@@ -149,7 +149,7 @@ struct ResultsView: View {
                     Button(action: {
                         onComplete()
                     }) {
-                        Text("Exit")
+                        Text("Close lesson")
                             .font(.headline)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -197,7 +197,7 @@ struct ResultsView: View {
 #Preview {
     ResultsView(
         chapterIndex: 2,
-        chapterTitle: "Sankhya Yoga",
+        lessonTitle: "Sankhya Yoga",
         score: 4,
         totalQuestions: 5,
         timeElapsed: 180,

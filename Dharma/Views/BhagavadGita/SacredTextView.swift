@@ -161,7 +161,7 @@ struct SacredTextView: View {
         ScrollView {
             LazyVStack(spacing: 20) {
                 // Chapter title
-                chapterTitle
+                lessonTitle
                 
                 // Verses
                 versesList
@@ -170,7 +170,7 @@ struct SacredTextView: View {
         }
     }
     
-    private var chapterTitle: some View {
+    private var lessonTitle: some View {
         VStack(spacing: 8) {
             Text("Chapter \(selectedChapter)")
                 .font(.largeTitle)

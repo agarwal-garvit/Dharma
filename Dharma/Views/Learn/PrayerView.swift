@@ -9,44 +9,50 @@ import SwiftUI
 
 struct PrayerView: View {
     let chapterIndex: Int
-    let chapterTitle: String
+    let lessonTitle: String
+    let score: Int
+    let totalQuestions: Int
+    let timeElapsed: TimeInterval
     let onDismiss: () -> Void
     let onComplete: () -> Void
     
     @State private var audioManager = AudioManager.shared
+    @State private var showResults = false
     
     var body: some View {
-        VStack(spacing: 24) {
-                // Gau Mata logo
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+        VStack(spacing: 0) {
+            // Content
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Gau Mata logo
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                        .frame(width: 100, height: 100)
+                            .frame(width: 100, height: 100)
+                        
+                        Text("🐄")
+                            .font(.system(size: 50))
+                    }
                     
-                    Text("🐄")
-                        .font(.system(size: 50))
-                }
-                
-                // Prayer content
-                VStack(spacing: 16) {
-                    Text("Closing Prayer")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
+                    // Prayer content
+                    VStack(spacing: 16) {
+                        Text("Closing Prayer")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        
+                        Text(lessonTitle)
+                            .font(.headline)
+                            .foregroundColor(.orange)
+                    }
                     
-                    Text("Chapter \(chapterIndex): \(chapterTitle)")
-                        .font(.headline)
-                        .foregroundColor(.orange)
-                }
-                
-                // Prayer text
-                ScrollView {
+                    // Prayer text
                     VStack(spacing: 16) {
                         Text("Om Namo Bhagavate Vasudevaya")
                             .font(.title3)
@@ -77,14 +83,16 @@ struct PrayerView: View {
                             .italic()
                             .multilineTextAlignment(.center)
                     }
-                    .padding()
                 }
-                
-                // Done button
+                .padding()
+            }
+            
+            // Done button
+            VStack {
                 Button(action: {
-                    onComplete()
+                    showResults = true  // Open ResultsView
                 }) {
-                    Text("Exit")
+                    Text("Om Shanti, Shanti, Shanti")
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -95,8 +103,24 @@ struct PrayerView: View {
                         )
                 }
                 .buttonStyle(PlainButtonStyle())
-                .padding(.horizontal)
             }
+            .padding()
+            .background(Color(.systemBackground))
+        }
+        .fullScreenCover(isPresented: $showResults) {
+            ResultsView(
+                chapterIndex: chapterIndex,
+                lessonTitle: lessonTitle,
+                score: score,
+                totalQuestions: totalQuestions,
+                timeElapsed: timeElapsed,
+                onDismiss: { showResults = false },
+                onComplete: { 
+                    showResults = false
+                    onComplete()
+                }
+            )
+        }
     }
     
 }
@@ -104,7 +128,10 @@ struct PrayerView: View {
 #Preview {
     PrayerView(
         chapterIndex: 2,
-        chapterTitle: "Sankhya Yoga",
+        lessonTitle: "Sankhya Yoga",
+        score: 4,
+        totalQuestions: 5,
+        timeElapsed: 180,
         onDismiss: {},
         onComplete: {}
     )

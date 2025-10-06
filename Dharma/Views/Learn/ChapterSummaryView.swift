@@ -7,9 +7,10 @@
 
 import SwiftUI
 
-struct ChapterSummaryView: View {
-    let chapterIndex: Int
-    let chapterTitle: String
+struct LessonSummaryView: View {
+    let lessonIndex: Int
+    let lessonTitle: String
+    let lessonSections: [DBLessonSection]
     let onDismiss: () -> Void
     
     @State private var showQuiz = false
@@ -17,20 +18,34 @@ struct ChapterSummaryView: View {
     @State private var lessonStartTime = Date()
     @State private var showingExitConfirmation = false
     
+    // Helper methods to extract content from lesson sections
+    private var summarySection: DBLessonSection? {
+        lessonSections.first { $0.kind == .summary }
+    }
+    
+    private var summaryContent: String {
+        guard let section = summarySection,
+              let content = section.content,
+              let contentString = content["content"]?.value as? String else {
+            return "No summary content available for this chapter."
+        }
+        return contentString
+    }
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
                 // Summary content
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        // Chapter header
+                        // Lesson header
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Chapter \(chapterIndex)")
+                            Text("Lesson \(lessonIndex + 1)")
                                 .font(.title2)
                                 .foregroundColor(.orange)
                                 .fontWeight(.semibold)
                             
-                            Text(chapterTitle)
+                            Text(lessonTitle)
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
@@ -43,24 +58,11 @@ struct ChapterSummaryView: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             
-                        Text("Chapter summary content will be loaded from the database...")
-                            .font(.body)
-                            .lineSpacing(4)
-                            .foregroundColor(.secondary)
-                            .italic()
-                        }
-                        
-                        // Key concepts
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Key Concepts")
+                            Text(summaryContent)
                                 .font(.title3)
-                                .fontWeight(.semibold)
+                                .fontWeight(.medium)
+                                .lineSpacing(4)
                                 .foregroundColor(.primary)
-                            
-                        Text("Key concepts will be loaded from the database...")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .italic()
                         }
                     }
                     .padding()
@@ -85,12 +87,11 @@ struct ChapterSummaryView: View {
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
-                    }
-                    .padding()
-                    .background(Color(.systemBackground))
                 }
+                .padding()
+                .background(Color(.systemBackground))
             }
-            .navigationTitle("Chapter \(chapterIndex)")
+            .navigationTitle("Lesson \(lessonIndex + 1)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -99,35 +100,34 @@ struct ChapterSummaryView: View {
                     }
                 }
             }
-            .navigationViewStyle(StackNavigationViewStyle()) // Force full screen on all devices
-            .onAppear {
-                print("ChapterSummaryView appeared for Chapter \(chapterIndex)")
-            }
-            .alert("Exit", isPresented: $showingExitConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("Exit", role: .destructive) {
-                    onDismiss()
-                }
-            } message: {
-                Text("Your progress will be lost. Are you sure you want to exit?")
-            }
-            .fullScreenCover(isPresented: $showQuiz) {
-                QuizView(
-                    chapterIndex: chapterIndex,
-                    chapterTitle: chapterTitle,
-                    lessonStartTime: lessonStartTime,
-                    onDismiss: { showQuiz = false },
-                    onComplete: { onDismiss() }
-                )
-            }
         }
-    
+        .onAppear {
+            print("LessonSummaryView appeared for Lesson \(lessonIndex)")
+        }
+        .alert("Exit", isPresented: $showingExitConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Exit", role: .destructive) {
+                onDismiss()
+            }
+        } message: {
+            Text("Your progress will be lost. Are you sure you want to exit?")
+        }
+        .fullScreenCover(isPresented: $showQuiz) {
+            QuizView(
+                chapterIndex: lessonIndex,
+                lessonTitle: lessonTitle,
+                lessonStartTime: lessonStartTime,
+                onDismiss: { showQuiz = false },
+                onComplete: { onDismiss() }
+            )
+        }
+    }
 }
-
 #Preview {
-    ChapterSummaryView(
-        chapterIndex: 2,
-        chapterTitle: "Sankhya Yoga",
+    LessonSummaryView(
+        lessonIndex: 1,
+        lessonTitle: "Sankhya Yoga",
+        lessonSections: [],
         onDismiss: {}
     )
 }

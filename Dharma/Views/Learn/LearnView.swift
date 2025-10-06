@@ -7,29 +7,32 @@
 
 import SwiftUI
 
-extension Int: Identifiable {
-    public var id: Int { self }
+struct LessonIndex: Identifiable {
+    let id: Int
+    let value: Int
+    
+    init(_ value: Int) {
+        self.id = value
+        self.value = value
+    }
 }
 
 struct LearnView: View {
     @State private var dataManager = DataManager.shared
     @State private var isLoading = true
-    @State private var selectedChapterIndex: Int?
-    @State private var showingChapterDetail = false
+    @State private var selectedLessonIndex: Int?
+    @State private var showingLessonDetail = false
     @State private var showingLessonPlayer = false
     @State private var selectedLesson: DBLesson?
     @State private var showingProfile = false
-    @State private var chapterToShow: Int?
+    @State private var lessonToShow: LessonIndex?
     @State private var currentCourseTitle = "Bhagavad Gita"
-    @State private var currentCourseChapters = "18 Chapters"
+    @State private var currentCourseLessons = "Lessons"
     @State private var selectedCourse: DBCourse?
     
-    // Get chapters from database lessons
-    private var chapters: [Chapter] {
-        if dataManager.lessons.isEmpty {
-            return []
-        }
-        return dataManager.convertLessonsToChapters()
+    // Get lessons from database (already sorted by order_idx)
+    private var lessons: [DBLesson] {
+        return dataManager.lessons
     }
     
     var body: some View {
@@ -68,17 +71,18 @@ struct LearnView: View {
         .onAppear {
             loadContent()
         }
-        .fullScreenCover(item: $chapterToShow) { chapterIndex in
-            ChapterDetailView(chapterIndex: chapterIndex, onLessonSelected: { lesson in
-                // Find the corresponding DBLesson
-                if let dbLesson = dataManager.lessons.first(where: { $0.orderIdx == chapterIndex }) {
+        .fullScreenCover(item: $lessonToShow) { lessonIndexWrapper in
+            LessonDetailView(lessonIndex: lessonIndexWrapper.value, onLessonSelected: { lesson in
+                // Find the corresponding DBLesson by array index
+                if lessonIndexWrapper.value < dataManager.lessons.count {
+                    let dbLesson = dataManager.lessons[lessonIndexWrapper.value]
                     selectedLesson = dbLesson
-                    chapterToShow = nil
+                    lessonToShow = nil
                     showingLessonPlayer = true
                 }
             })
             .onAppear {
-                print("Presenting ChapterDetailView for Chapter \(chapterIndex)")
+                print("Presenting LessonDetailView for Lesson \(lessonIndexWrapper.value)")
             }
         }
         .fullScreenCover(isPresented: $showingLessonPlayer) {
@@ -109,7 +113,7 @@ struct LearnView: View {
                 .fontWeight(.bold)
                 .foregroundColor(.primary)
             
-            Text(currentCourseChapters)
+            Text(currentCourseLessons)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -155,17 +159,17 @@ struct LearnView: View {
             VStack(spacing: 16) {
                 // Staggered layout for lessons
                 VStack(spacing: 0) {
-                    ForEach(Array(chapters.enumerated()), id: \.element.id) { index, chapter in
+                    ForEach(Array(lessons.enumerated()), id: \.element.id) { index, lesson in
                         HStack {
                             if index % 2 == 0 {
                                 // Left position
-                                lessonCard(chapter: chapter, isLeft: true)
+                                lessonCard(lesson: lesson, isLeft: true)
                                     .onAppear {
-                                        updateCourseTitle(for: chapter.index)
+                                        updateCourseTitle(for: index)
                                     }
                                 
                                 // Arrow next to left card
-                                if index < chapters.count - 1 {
+                                if index < lessons.count - 1 {
                                     arrowNextToCard(for: index)
                                 } else {
                                     // Empty space for last card
@@ -179,7 +183,7 @@ struct LearnView: View {
                                 Spacer()
                                 
                                 // Arrow next to right card
-                                if index < chapters.count - 1 {
+                                if index < lessons.count - 1 {
                                     arrowNextToCard(for: index)
                                 } else {
                                     // Empty space for last card
@@ -187,9 +191,9 @@ struct LearnView: View {
                                         .frame(width: 136) // Same width as arrow + padding
                                 }
                                 
-                                lessonCard(chapter: chapter, isLeft: false)
+                                lessonCard(lesson: lesson, isLeft: false)
                                     .onAppear {
-                                        updateCourseTitle(for: chapter.index)
+                                        updateCourseTitle(for: index)
                                     }
                             }
                         }
@@ -205,20 +209,23 @@ struct LearnView: View {
         }
     }
     
-    private func lessonCard(chapter: Chapter, isLeft: Bool) -> some View {
+    private func lessonCard(lesson: DBLesson, isLeft: Bool) -> some View {
         Button(action: {
-            print("Chapter \(chapter.index) tapped - isUnlocked: \(isChapterUnlocked(chapter))")
-            chapterToShow = chapter.index
-            selectedChapterIndex = chapter.index
-            print("State set - chapterToShow: \(chapterToShow), selectedChapterIndex: \(selectedChapterIndex)")
-            print("Sheet presentation triggered - chapterToShow: \(chapterToShow)")
+            // Find the array index of this lesson
+            if let arrayIndex = lessons.firstIndex(where: { $0.id == lesson.id }) {
+                print("Lesson \(lesson.title) tapped (array index: \(arrayIndex)) - isUnlocked: \(isLessonUnlocked(lesson))")
+                lessonToShow = LessonIndex(arrayIndex)
+                selectedLessonIndex = arrayIndex
+                print("State set - lessonToShow: \(lessonToShow?.value ?? -1), selectedLessonIndex: \(selectedLessonIndex ?? -1)")
+                print("Sheet presentation triggered - lessonToShow: \(lessonToShow?.value ?? -1)")
+            }
         }) {
             VStack(alignment: .leading, spacing: 8) {
-                // Chapter title only
-                Text(chapter.titleEn)
+                // Lesson title only
+                Text(lesson.title)
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(isChapterUnlocked(chapter) ? .primary : .secondary)
+                    .foregroundColor(isLessonUnlocked(lesson) ? .primary : .secondary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(3)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -228,7 +235,7 @@ struct LearnView: View {
                 // Arrow indicator at bottom
                 HStack {
                     Spacer()
-                    if isChapterUnlocked(chapter) {
+                    if isLessonUnlocked(lesson) {
                         Image(systemName: "chevron.right")
                             .font(.subheadline)
                             .foregroundColor(.blue.opacity(0.7))
@@ -245,7 +252,7 @@ struct LearnView: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(
                         LinearGradient(
-                            colors: isChapterUnlocked(chapter) ? 
+                            colors: isLessonUnlocked(lesson) ? 
                                 [Color(.systemBackground), Color(.systemBackground).opacity(0.95)] : 
                                 [Color(.systemGray6), Color(.systemGray6).opacity(0.8)],
                             startPoint: .topLeading,
@@ -253,24 +260,24 @@ struct LearnView: View {
                         )
                     )
                     .shadow(
-                        color: isChapterUnlocked(chapter) ? Color.blue.opacity(0.2) : Color.black.opacity(0.1),
-                        radius: isChapterUnlocked(chapter) ? 8 : 4,
+                        color: isLessonUnlocked(lesson) ? Color.blue.opacity(0.2) : Color.black.opacity(0.1),
+                        radius: isLessonUnlocked(lesson) ? 8 : 4,
                         x: 0,
-                        y: isChapterUnlocked(chapter) ? 4 : 2
+                        y: isLessonUnlocked(lesson) ? 4 : 2
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                isChapterUnlocked(chapter) ? Color.blue.opacity(0.3) : Color.clear,
+                                isLessonUnlocked(lesson) ? Color.blue.opacity(0.3) : Color.clear,
                                 lineWidth: 1
                             )
                     )
             )
         }
         .buttonStyle(PlainButtonStyle())
-        .disabled(!isChapterUnlocked(chapter))
-        .scaleEffect(isChapterUnlocked(chapter) ? 1.0 : 0.98)
-        .animation(.easeInOut(duration: 0.2), value: isChapterUnlocked(chapter))
+        .disabled(!isLessonUnlocked(lesson))
+        .scaleEffect(isLessonUnlocked(lesson) ? 1.0 : 0.98)
+        .animation(.easeInOut(duration: 0.2), value: isLessonUnlocked(lesson))
     }
     
     
@@ -285,7 +292,7 @@ struct LearnView: View {
             if let firstCourse = dataManager.courses.first {
                 selectedCourse = firstCourse
                 currentCourseTitle = firstCourse.title
-                currentCourseChapters = "\(dataManager.lessons.count) Chapters"
+                currentCourseLessons = "\(dataManager.lessons.count) Lessons"
                 
                 await dataManager.loadLessons(for: firstCourse.id)
                 
@@ -315,15 +322,21 @@ struct LearnView: View {
         return 0.0
     }
     
-    private func updateCourseTitle(for chapterIndex: Int) {
+    private func updateCourseTitle(for lessonIndex: Int) {
         // Update course title based on selected course
         if let course = selectedCourse {
             currentCourseTitle = course.title
-            currentCourseChapters = "\(dataManager.lessons.count) Chapters"
+            currentCourseLessons = "\(dataManager.lessons.count) Lessons"
         } else {
             currentCourseTitle = "Bhagavad Gita"
-            currentCourseChapters = "18 Chapters"
+            currentCourseLessons = "\(lessons.count) Lessons"
         }
+    }
+    
+    private func isLessonUnlocked(_ lesson: DBLesson) -> Bool {
+        // For now, all lessons are unlocked
+        // You can implement your own logic here based on user progress
+        return true
     }
     
     private func arrowNextToCard(for index: Int) -> some View {
@@ -403,8 +416,8 @@ struct LearnView: View {
 }
 
 
-struct ChapterDetailView: View {
-    let chapterIndex: Int
+struct LessonDetailView: View {
+    let lessonIndex: Int
     let onLessonSelected: (Lesson) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var isLoading = true
@@ -412,61 +425,42 @@ struct ChapterDetailView: View {
     @State private var dataManager = DataManager.shared
     @State private var lessonSections: [DBLessonSection] = []
     
-    private var chapterTitle: String {
-        // Get title from database lesson
-        if let lesson = dataManager.lessons.first(where: { $0.orderIdx == chapterIndex }) {
-            return lesson.title
+    private var lessonTitle: String {
+        // Get title from database lesson by array index
+        if lessonIndex < dataManager.lessons.count {
+            return dataManager.lessons[lessonIndex].title
         }
         
-        // Fallback to hardcoded titles
-        let titles = [
-            1: "Arjuna's Despair",
-            2: "Sankhya Yoga",
-            3: "Karma Yoga",
-            4: "Jnana Yoga",
-            5: "Karma Sannyasa Yoga",
-            6: "Dhyana Yoga",
-            7: "Jnana Vijnana Yoga",
-            8: "Akshara Brahma Yoga",
-            9: "Raja Vidya Yoga",
-            10: "Vibhuti Yoga",
-            11: "Vishvarupa Darshana Yoga",
-            12: "Bhakti Yoga",
-            13: "Kshetra Kshetrajna Yoga",
-            14: "Gunatraya Vibhaga Yoga",
-            15: "Purushottama Yoga",
-            16: "Daivasura Sampad Vibhaga Yoga",
-            17: "Shraddhatraya Vibhaga Yoga",
-            18: "Moksha Sannyasa Yoga"
-        ]
-        return titles[chapterIndex] ?? "Chapter \(chapterIndex)"
+        return "Lesson \(lessonIndex + 1)"
     }
     
     var body: some View {
-        NavigationView {
+        Group {
             if isLoading {
                 loadingView
             } else if showSummary {
-                ChapterSummaryView(
-                    chapterIndex: chapterIndex,
-                    chapterTitle: chapterTitle,
+                LessonSummaryView(
+                    lessonIndex: lessonIndex,
+                    lessonTitle: lessonTitle,
+                    lessonSections: lessonSections,
                     onDismiss: { dismiss() }
                 )
             }
         }
         .onAppear {
-            print("ChapterDetailView appeared for Chapter \(chapterIndex)")
+            print("LessonDetailView appeared for Lesson \(lessonIndex)")
             print("Initial state - isLoading: \(isLoading), showSummary: \(showSummary)")
             
             // Load lesson sections from database
             Task {
-                if let lesson = dataManager.lessons.first(where: { $0.orderIdx == chapterIndex }) {
+                if lessonIndex < dataManager.lessons.count {
+                    let lesson = dataManager.lessons[lessonIndex]
                     let sections = await dataManager.loadLessonSections(for: lesson.id)
                     await MainActor.run {
                         self.lessonSections = sections
                         self.isLoading = false
                         self.showSummary = true
-                        print("Loading completed for Chapter \(chapterIndex)")
+                        print("Loading completed for Lesson \(lessonIndex)")
                         print("Final state - isLoading: \(isLoading), showSummary: \(showSummary)")
                     }
                 } else {
@@ -498,13 +492,13 @@ struct ChapterDetailView: View {
             }
             
             VStack(spacing: 16) {
-                Text(chapterTitle)
+                Text(lessonTitle)
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                 
-                Text("Chapter \(chapterIndex)")
+                Text("Lesson \(lessonIndex + 1)")
                     .font(.title2)
                     .foregroundColor(.secondary)
             }

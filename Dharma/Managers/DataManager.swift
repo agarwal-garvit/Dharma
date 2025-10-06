@@ -85,7 +85,8 @@ class DataManager {
         do {
             let fetchedLessons = try await databaseService.fetchLessons(for: courseId)
             await MainActor.run {
-                self.lessons = fetchedLessons
+                // Sort lessons by order_idx
+                self.lessons = fetchedLessons.sorted { $0.orderIdx < $1.orderIdx }
                 self.isLoadingLessons = false
             }
         } catch {

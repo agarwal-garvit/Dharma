@@ -9,7 +9,7 @@ import SwiftUI
 
 struct FinalThoughtsView: View {
     let chapterIndex: Int
-    let chapterTitle: String
+    let lessonTitle: String
     let score: Int
     let totalQuestions: Int
     let timeElapsed: TimeInterval
@@ -34,7 +34,7 @@ struct FinalThoughtsView: View {
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
                         
-                        Text("Chapter \(chapterIndex): \(chapterTitle)")
+                        Text(lessonTitle)
                             .font(.title2)
                             .foregroundColor(.orange)
                             .fontWeight(.semibold)
@@ -117,26 +117,32 @@ struct FinalThoughtsView: View {
                 }
             }
         }
-        .sheet(isPresented: $showPrayer) {
+        .fullScreenCover(isPresented: $showPrayer) {
             PrayerView(
                 chapterIndex: chapterIndex,
-                chapterTitle: chapterTitle,
+                lessonTitle: lessonTitle,
+                score: score,
+                totalQuestions: totalQuestions,
+                timeElapsed: timeElapsed,
                 onDismiss: { showPrayer = false },
                 onComplete: { 
                     showPrayer = false
-                    showResults = true
+                    onComplete()
                 }
             )
         }
         .fullScreenCover(isPresented: $showResults) {
             ResultsView(
                 chapterIndex: chapterIndex,
-                chapterTitle: chapterTitle,
+                lessonTitle: lessonTitle,
                 score: score,
                 totalQuestions: totalQuestions,
                 timeElapsed: timeElapsed,
                 onDismiss: onDismiss,
-                onComplete: onComplete
+                onComplete: { 
+                    showResults = false
+                    onComplete()
+                }
             )
         }
         .alert("Exit", isPresented: $showingExitConfirmation) {
@@ -155,7 +161,7 @@ struct FinalThoughtsView: View {
 #Preview {
     FinalThoughtsView(
         chapterIndex: 2,
-        chapterTitle: "Sankhya Yoga",
+        lessonTitle: "Sankhya Yoga",
         score: 4,
         totalQuestions: 5,
         timeElapsed: 180,

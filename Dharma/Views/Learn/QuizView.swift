@@ -9,7 +9,7 @@ import SwiftUI
 
 struct QuizView: View {
     let chapterIndex: Int
-    let chapterTitle: String
+    let lessonTitle: String
     let lessonStartTime: Date
     let onDismiss: () -> Void
     let onComplete: () -> Void
@@ -97,7 +97,7 @@ struct QuizView: View {
             .fullScreenCover(isPresented: $showFinalThoughts) {
                 FinalThoughtsView(
                     chapterIndex: chapterIndex,
-                    chapterTitle: chapterTitle,
+                    lessonTitle: lessonTitle,
                     score: score,
                     totalQuestions: questions.count,
                     timeElapsed: Date().timeIntervalSince(lessonStartTime),
@@ -139,18 +139,21 @@ struct QuizView: View {
     }
     
     private var questionContent: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            // Question
-            VStack(spacing: 16) {
-                Text(questions[currentQuestionIndex].question)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
+        ScrollView {
+            VStack(spacing: 24) {
+                // Add some top spacing
+                Spacer()
+                    .frame(height: 20)
+                
+                // Question
+                VStack(spacing: 16) {
+                    Text(questions[currentQuestionIndex].question)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
             
             // Answer options
             VStack(spacing: 12) {
@@ -217,8 +220,6 @@ struct QuizView: View {
                 .padding(.horizontal)
             }
             
-            Spacer()
-            
             // Next button
             if showResult {
                 Button(action: {
@@ -237,8 +238,9 @@ struct QuizView: View {
                 .buttonStyle(PlainButtonStyle())
                 .padding(.horizontal)
             }
+            }
+            .padding(.bottom)
         }
-        .padding(.bottom)
     }
     
     private func selectAnswer(_ index: Int) {
@@ -300,7 +302,7 @@ struct QuizQuestion {
 #Preview {
     QuizView(
         chapterIndex: 2,
-        chapterTitle: "Sankhya Yoga",
+        lessonTitle: "Sankhya Yoga",
         lessonStartTime: Date(),
         onDismiss: {},
         onComplete: {}
