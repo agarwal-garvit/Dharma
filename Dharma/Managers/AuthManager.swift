@@ -95,7 +95,8 @@ class DharmaAuthManager {
     
     @MainActor
     func signInWithGoogle() async throws {
-        guard let presentingViewController = await UIApplication.shared.windows.first?.rootViewController else {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let presentingViewController = windowScene.windows.first?.rootViewController else {
             throw DharmaAuthError.noPresentingViewController
         }
         
@@ -174,7 +175,7 @@ class DharmaAuthManager {
         do {
             // Check if user already logged in today
             let today = Calendar.current.startOfDay(for: Date())
-            let todayString = ISO8601DateFormatter().string(from: today)
+            _ = ISO8601DateFormatter().string(from: today)
             
             // Record a minimal session to track daily login
             let session = UserLessonSession(
@@ -384,7 +385,7 @@ class DharmaAuthManager {
                     id: currentUser.id,
                     email: currentUser.email ?? "",
                     password_hash: "", // Not needed for OAuth users
-                    display_name: displayName ?? currentUser.userMetadata["full_name"] as? String,
+                    display_name: displayName ?? (currentUser.userMetadata["full_name"] as? String),
                     created_at: ISO8601DateFormatter().string(from: Date()),
                     status: "active"
                 )

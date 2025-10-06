@@ -73,7 +73,7 @@ struct SacredTextView: View {
         .onAppear {
             loadChapterContent()
         }
-        .onChange(of: selectedText) { _ in
+        .onChange(of: selectedText) {
             selectedChapter = 1
             selectedVerse = 1
             loadChapterContent()

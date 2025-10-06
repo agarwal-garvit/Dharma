@@ -56,18 +56,13 @@ struct Config {
     // MARK: - Validation
     
     static func validateConfiguration() -> Bool {
-        do {
-            _ = supabaseURL
-            _ = supabaseKey
-            _ = openAIAPIKey
-            _ = googleClientID
-            _ = googleURLScheme
-            _ = supabaseURLObject
-            return true
-        } catch {
-            print("Configuration validation failed: \(error)")
-            return false
-        }
+        _ = supabaseURL
+        _ = supabaseKey
+        _ = openAIAPIKey
+        _ = googleClientID
+        _ = googleURLScheme
+        _ = supabaseURLObject
+        return true
     }
     
     // MARK: - Debug Information (Remove in production)

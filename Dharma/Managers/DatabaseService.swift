@@ -220,6 +220,7 @@ class DatabaseService: ObservableObject {
         return SectionWithQuestions(section: section, questions: fetchedQuestions)
     }
     
+    @MainActor
     func fetchQuestionWithOptions(questionId: UUID) async throws -> QuestionWithOptions {
         async let question: DBQuizQuestion = supabase.database
             .from("quiz_questions")
