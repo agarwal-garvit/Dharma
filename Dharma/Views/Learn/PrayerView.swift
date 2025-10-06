@@ -115,10 +115,7 @@ struct PrayerView: View {
                 totalQuestions: totalQuestions,
                 timeElapsed: timeElapsed,
                 onDismiss: { showResults = false },
-                onComplete: { 
-                    showResults = false
-                    onComplete()
-                }
+                onComplete: onComplete  // Direct pass-through, no complex logic
             )
         }
     }

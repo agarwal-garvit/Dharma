@@ -147,6 +147,7 @@ struct ResultsView: View {
                     .buttonStyle(PlainButtonStyle())
                     
                     Button(action: {
+                        // Close lesson works exactly like exit button - direct onComplete call
                         onComplete()
                     }) {
                         Text("Close lesson")

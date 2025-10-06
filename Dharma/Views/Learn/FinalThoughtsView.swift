@@ -17,7 +17,6 @@ struct FinalThoughtsView: View {
     let onComplete: () -> Void
     
     @State private var showPrayer = false
-    @State private var showResults = false
     @State private var audioManager = AudioManager.shared
     @State private var showingExitConfirmation = false
     
@@ -125,24 +124,7 @@ struct FinalThoughtsView: View {
                 totalQuestions: totalQuestions,
                 timeElapsed: timeElapsed,
                 onDismiss: { showPrayer = false },
-                onComplete: { 
-                    showPrayer = false
-                    onComplete()
-                }
-            )
-        }
-        .fullScreenCover(isPresented: $showResults) {
-            ResultsView(
-                chapterIndex: chapterIndex,
-                lessonTitle: lessonTitle,
-                score: score,
-                totalQuestions: totalQuestions,
-                timeElapsed: timeElapsed,
-                onDismiss: onDismiss,
-                onComplete: { 
-                    showResults = false
-                    onComplete()
-                }
+                onComplete: onComplete  // Direct pass-through, no complex logic
             )
         }
         .alert("Exit", isPresented: $showingExitConfirmation) {
