@@ -16,6 +16,7 @@ class DharmaAuthManager {
     
     private let supabase: SupabaseClient
     private var currentUser: Auth.User?
+    private var authStateListenerStarted = false
     
     var isAuthenticated: Bool {
         return currentUser != nil
@@ -143,10 +144,35 @@ class DharmaAuthManager {
         do {
             try await supabase.auth.signOut()
             self.currentUser = nil
+            
+            // Post notification to update UI state
+            NotificationCenter.default.post(name: .authStateChanged, object: nil)
+            
             print("Successfully signed out")
         } catch {
             print("Sign out failed: \(error)")
             throw error
+        }
+    }
+    
+    // MARK: - User Profile Management
+    
+    @MainActor
+    func fetchUserDisplayName() async -> String? {
+        guard let currentUser = self.currentUser else { return nil }
+        
+        do {
+            let users: [UserRecord] = try await supabase.database
+                .from("users")
+                .select()
+                .eq("id", value: currentUser.id)
+                .execute()
+                .value
+            
+            return users.first?.display_name
+        } catch {
+            print("Failed to fetch user display name: \(error)")
+            return nil
         }
     }
     
@@ -424,6 +450,10 @@ class DharmaAuthManager {
     // MARK: - Session Management
     
     func startAuthStateListener() {
+        // Prevent multiple listeners from being started
+        guard !authStateListenerStarted else { return }
+        authStateListenerStarted = true
+        
         Task {
             for await state in supabase.auth.authStateChanges {
                 await MainActor.run {

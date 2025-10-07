@@ -16,6 +16,7 @@ struct ProfileView: View {
     @State private var userStats: UserStats?
     @State private var completedLessonsCount = 0
     @State private var isLoadingStats = true
+    @State private var userDisplayName: String?
     
     var body: some View {
         NavigationView {
@@ -54,6 +55,7 @@ struct ProfileView: View {
         }
         .onAppear {
             loadUserStats()
+            loadUserDisplayName()
         }
     }
     
@@ -215,7 +217,12 @@ struct ProfileView: View {
     }
     
     private func getUserDisplayName() -> String {
-        // Try to get display name from user metadata or email
+        // First try to get display name from our custom users table
+        if let displayName = userDisplayName, !displayName.isEmpty {
+            return displayName
+        }
+        
+        // Fallback to Supabase user metadata or email
         if let user = authManager.user {
             if let fullName = user.userMetadata["full_name"] as? String {
                 return fullName
@@ -233,11 +240,8 @@ struct ProfileView: View {
     private func getUserInitials() -> String {
         let displayName = getUserDisplayName()
         let components = displayName.components(separatedBy: " ")
-        if components.count >= 2 {
-            return String(components[0].prefix(1)) + String(components[1].prefix(1))
-        } else {
-            return String(displayName.prefix(2))
-        }
+        // Return only the first letter of the first name
+        return String(components[0].prefix(1)).uppercased()
     }
     
     private func getMemberSinceText() -> String {
@@ -262,6 +266,15 @@ struct ProfileView: View {
                 self.userStats = stats
                 self.completedLessonsCount = completedCount
                 self.isLoadingStats = false
+            }
+        }
+    }
+    
+    private func loadUserDisplayName() {
+        Task {
+            let displayName = await authManager.fetchUserDisplayName()
+            await MainActor.run {
+                self.userDisplayName = displayName
             }
         }
     }

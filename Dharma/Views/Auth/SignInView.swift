@@ -9,7 +9,8 @@ import SwiftUI
 import GoogleSignIn
 
 struct SignInView: View {
-    @State private var isLoading = false
+    @State private var isEmailLoading = false
+    @State private var isGoogleLoading = false
     @State private var errorMessage: String?
     @State private var showingError = false
     @State private var isSignUpMode = false
@@ -18,6 +19,15 @@ struct SignInView: View {
     @State private var displayName = ""
     
     private let authManager = DharmaAuthManager.shared
+    
+    private var loadingMessage: String {
+        if isEmailLoading {
+            return isSignUpMode ? "Creating your account..." : "Signing you in..."
+        } else if isGoogleLoading {
+            return "Connecting with Google..."
+        }
+        return ""
+    }
     
     var body: some View {
         GeometryReader { geometry in
@@ -86,7 +96,7 @@ struct SignInView: View {
                         // Email Sign In/Up Button
                         Button(action: isSignUpMode ? signUpWithEmail : signInWithEmail) {
                             HStack(spacing: 12) {
-                                if isLoading {
+                                if isEmailLoading {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .scaleEffect(0.8)
@@ -102,11 +112,11 @@ struct SignInView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(Color.orange)
+                            .background(isEmailLoading ? Color.orange.opacity(0.7) : Color.orange)
                             .cornerRadius(12)
                             .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                         }
-                        .disabled(isLoading || email.isEmpty || password.isEmpty)
+                        .disabled(isEmailLoading || isGoogleLoading || email.isEmpty || password.isEmpty)
                         .padding(.horizontal, 32)
                         
                         // Toggle Sign Up/Sign In
@@ -114,6 +124,8 @@ struct SignInView: View {
                             withAnimation {
                                 isSignUpMode.toggle()
                                 errorMessage = nil
+                                isEmailLoading = false
+                                isGoogleLoading = false
                             }
                         }) {
                             Text(isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
@@ -141,7 +153,7 @@ struct SignInView: View {
                         // Google Sign In Button
                         Button(action: signInWithGoogle) {
                             HStack(spacing: 12) {
-                                if isLoading {
+                                if isGoogleLoading {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .scaleEffect(0.8)
@@ -165,12 +177,36 @@ struct SignInView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(Color.blue)
+                            .background(isGoogleLoading ? Color.blue.opacity(0.7) : Color.blue)
                             .cornerRadius(12)
                             .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
                         }
-                        .disabled(isLoading)
+                        .disabled(isEmailLoading || isGoogleLoading)
                         .padding(.horizontal, 32)
+                        
+                        // Loading Status Message
+                        if isEmailLoading || isGoogleLoading {
+                            VStack(spacing: 8) {
+                                HStack(spacing: 8) {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .orange))
+                                        .scaleEffect(0.8)
+                                    
+                                    Text(loadingMessage)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                if isGoogleLoading {
+                                    Text("This may take a moment for first-time users...")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .multilineTextAlignment(.center)
+                                        .transition(.opacity)
+                                }
+                            }
+                            .padding(.horizontal, 32)
+                        }
                         
                         // Terms and Privacy
                         VStack(spacing: 8) {
@@ -212,7 +248,7 @@ struct SignInView: View {
     }
     
     private func signInWithEmail() {
-        isLoading = true
+        isEmailLoading = true
         errorMessage = nil
         
         Task {
@@ -221,7 +257,7 @@ struct SignInView: View {
                 // Authentication success is handled by the auth state listener
             } catch {
                 await MainActor.run {
-                    isLoading = false
+                    isEmailLoading = false
                     errorMessage = error.localizedDescription
                     showingError = true
                 }
@@ -230,7 +266,7 @@ struct SignInView: View {
     }
     
     private func signUpWithEmail() {
-        isLoading = true
+        isEmailLoading = true
         errorMessage = nil
         
         Task {
@@ -243,7 +279,7 @@ struct SignInView: View {
                 // Authentication success is handled by the auth state listener
             } catch {
                 await MainActor.run {
-                    isLoading = false
+                    isEmailLoading = false
                     errorMessage = error.localizedDescription
                     showingError = true
                 }
@@ -252,7 +288,7 @@ struct SignInView: View {
     }
     
     private func signInWithGoogle() {
-        isLoading = true
+        isGoogleLoading = true
         errorMessage = nil
         
         Task {
@@ -261,7 +297,7 @@ struct SignInView: View {
                 // Authentication success is handled by the auth state listener
             } catch {
                 await MainActor.run {
-                    isLoading = false
+                    isGoogleLoading = false
                     errorMessage = error.localizedDescription
                     showingError = true
                 }

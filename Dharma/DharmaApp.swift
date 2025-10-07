@@ -23,8 +23,6 @@ struct DharmaApp: App {
                         .onAppear {
                             // Initialize Google Sign In
                             setupGoogleSignIn()
-                            // Start listening for auth state changes
-                            authManager.startAuthStateListener()
                         }
                 } else if hasCompletedOnboarding {
                     MainTabView()
@@ -53,6 +51,9 @@ struct DharmaApp: App {
             .onAppear {
                 // Check initial auth state
                 isAuthenticated = authManager.isAuthenticated
+                
+                // Start listening for auth state changes (only once)
+                authManager.startAuthStateListener()
                 
                 // Debug configuration (remove in production)
                 #if DEBUG
