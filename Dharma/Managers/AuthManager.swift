@@ -85,6 +85,9 @@ class DharmaAuthManager {
             await recordDailyLogin()
             
             print("Successfully signed up with email: \(email)")
+            
+            // Post notification to update UI state
+            NotificationCenter.default.post(name: .authStateChanged, object: nil)
         } catch {
             print("Email Sign Up failed: \(error)")
             throw error
