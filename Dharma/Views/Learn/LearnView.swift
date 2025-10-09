@@ -220,58 +220,98 @@ struct LearnView: View {
                 print("Sheet presentation triggered - lessonToShow: \(lessonToShow?.value ?? -1)")
             }
         }) {
-            VStack(alignment: .leading, spacing: 8) {
-                // Lesson title only
-                Text(lesson.title)
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(isLessonUnlocked(lesson) ? .primary : .secondary)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            ZStack {
+                // Background - Image or Gradient
+                if let imageUrlString = lesson.imageUrl, let imageUrl = URL(string: imageUrlString) {
+                    CachedAsyncImage(url: imageUrl) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 200, height: 120)
+                            .clipped()
+                    } placeholder: {
+                        Rectangle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.3)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .overlay(
+                                ProgressView()
+                                    .tint(.white)
+                            )
+                    }
+                } else {
+                    // Fallback gradient if no image
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.blue.opacity(0.4), Color.purple.opacity(0.4)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .overlay(
+                            Image(systemName: "book.fill")
+                                .font(.largeTitle)
+                                .foregroundColor(.white.opacity(0.6))
+                        )
+                }
                 
-                Spacer()
+                // Translucent gradient overlay behind text (left to right fade)
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.6),
+                        Color.black.opacity(0.4),
+                        Color.black.opacity(0.2),
+                        Color.clear
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
                 
-                // Arrow indicator at bottom
-                HStack {
+                // Overlay - Text content
+                VStack(alignment: .leading, spacing: 8) {
+                    // Lesson title
+                    Text(lesson.title)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
                     Spacer()
-                    if isLessonUnlocked(lesson) {
-                        Image(systemName: "chevron.right")
-                            .font(.subheadline)
-                            .foregroundColor(.blue.opacity(0.7))
-                    } else {
-                        Image(systemName: "lock.fill")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
+                    
+                    // Arrow indicator at bottom
+                    HStack {
+                        Spacer()
+                        if isLessonUnlocked(lesson) {
+                            Image(systemName: "chevron.right")
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                        } else {
+                            Image(systemName: "lock.fill")
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
                     }
                 }
+                .padding(16)
             }
-            .padding(16)
-            .frame(width: 200, height: 120) // Fixed width and height for consistent card size
-            .background(
+            .frame(width: 200, height: 120)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: isLessonUnlocked(lesson) ? 
-                                [Color(.systemBackground), Color(.systemBackground).opacity(0.95)] : 
-                                [Color(.systemGray6), Color(.systemGray6).opacity(0.8)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .shadow(
-                        color: isLessonUnlocked(lesson) ? Color.blue.opacity(0.2) : Color.black.opacity(0.1),
-                        radius: isLessonUnlocked(lesson) ? 8 : 4,
-                        x: 0,
-                        y: isLessonUnlocked(lesson) ? 4 : 2
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(
-                                isLessonUnlocked(lesson) ? Color.blue.opacity(0.3) : Color.clear,
-                                lineWidth: 1
-                            )
-                    )
+                    .stroke(Color.blue.opacity(0.9), lineWidth: 4)
+            )
+            .shadow(
+                color: isLessonUnlocked(lesson) ? Color.blue.opacity(0.2) : Color.black.opacity(0.1),
+                radius: isLessonUnlocked(lesson) ? 8 : 4,
+                x: 0,
+                y: isLessonUnlocked(lesson) ? 4 : 2
             )
         }
         .buttonStyle(PlainButtonStyle())

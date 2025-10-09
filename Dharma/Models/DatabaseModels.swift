@@ -24,12 +24,14 @@ struct DBLesson: Identifiable, Codable {
     let courseId: UUID
     let orderIdx: Int
     let title: String
+    let imageUrl: String?
     
     enum CodingKeys: String, CodingKey {
         case id
         case courseId = "course_id"
         case orderIdx = "order_idx"
         case title
+        case imageUrl = "image_url"
     }
 }
 
