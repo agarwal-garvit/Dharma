@@ -13,6 +13,8 @@ struct PrayerView: View {
     let score: Int
     let totalQuestions: Int
     let timeElapsed: TimeInterval
+    let lessonStartTime: Date
+    let questionsAnswered: [String: Any]?
     let onDismiss: () -> Void
     let onComplete: () -> Void
     
@@ -114,6 +116,8 @@ struct PrayerView: View {
                 score: score,
                 totalQuestions: totalQuestions,
                 timeElapsed: timeElapsed,
+                lessonStartTime: lessonStartTime,
+                questionsAnswered: questionsAnswered,
                 onDismiss: { showResults = false },
                 onComplete: onComplete  // Direct pass-through, no complex logic
             )
@@ -129,6 +133,8 @@ struct PrayerView: View {
         score: 4,
         totalQuestions: 5,
         timeElapsed: 180,
+        lessonStartTime: Date(),
+        questionsAnswered: [:],
         onDismiss: {},
         onComplete: {}
     )

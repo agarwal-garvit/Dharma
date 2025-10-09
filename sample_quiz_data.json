@@ -1,0 +1,120 @@
+{
+  "title": "Understanding Arjuna's Dilemma",
+  "questions": [
+    {
+      "id": "q1",
+      "question": "What is Arjuna's main concern at the beginning of the Bhagavad Gita?",
+      "type": "MCQ_SINGLE",
+      "options": [
+        "He is afraid of losing the battle",
+        "He doesn't want to fight his relatives and teachers",
+        "He is not prepared for war",
+        "He wants to negotiate peace"
+      ],
+      "correctAnswer": 1,
+      "explanation": "Arjuna is overwhelmed by the prospect of fighting against his own relatives, teachers, and friends. This moral dilemma forms the foundation of the entire Bhagavad Gita."
+    },
+    {
+      "id": "q2",
+      "question": "True or False: Arjuna wants to fight the battle from the beginning.",
+      "type": "TRUEFALSE",
+      "options": ["True", "False"],
+      "correctAnswer": 1,
+      "explanation": "False. Arjuna is reluctant to fight and wants to abandon the battle. He is filled with compassion and confusion about his duty."
+    },
+    {
+      "id": "q3",
+      "question": "What does Krishna represent in the Bhagavad Gita?",
+      "type": "MCQ_SINGLE",
+      "options": [
+        "A warrior prince",
+        "A divine teacher and guide",
+        "A charioteer",
+        "A king"
+      ],
+      "correctAnswer": 1,
+      "explanation": "Krishna represents the divine teacher and guide who helps Arjuna understand his duty and the nature of reality. While he appears as a charioteer, his true role is as the supreme spiritual teacher."
+    },
+    {
+      "id": "q4",
+      "question": "What is the setting of the Bhagavad Gita?",
+      "type": "MCQ_SINGLE",
+      "options": [
+        "A peaceful meditation retreat",
+        "The battlefield of Kurukshetra",
+        "A royal palace",
+        "A forest hermitage"
+      ],
+      "correctAnswer": 1,
+      "explanation": "The Bhagavad Gita takes place on the battlefield of Kurukshetra, just before the great war between the Pandavas and Kauravas begins."
+    },
+    {
+      "id": "q5",
+      "question": "True or False: Arjuna's dilemma is purely about military strategy.",
+      "type": "TRUEFALSE",
+      "options": ["True", "False"],
+      "correctAnswer": 1,
+      "explanation": "False. Arjuna's dilemma is deeply philosophical and moral. He questions the righteousness of war, the nature of duty, and the meaning of life itself."
+    },
+    {
+      "id": "q6",
+      "question": "What does Arjuna see on the battlefield that causes his crisis?",
+      "type": "MCQ_SINGLE",
+      "options": [
+        "The enemy's superior weapons",
+        "His own relatives, teachers, and friends on both sides",
+        "The vastness of the battlefield",
+        "The approaching storm"
+      ],
+      "correctAnswer": 1,
+      "explanation": "Arjuna sees his own relatives, teachers, and friends on both sides of the battlefield, which causes him to question the morality of the war and his duty to fight."
+    },
+    {
+      "id": "q7",
+      "question": "What is the main theme that Krishna will teach Arjuna?",
+      "type": "MCQ_SINGLE",
+      "options": [
+        "How to win battles",
+        "The nature of duty (dharma) and the eternal soul",
+        "Military tactics and strategy",
+        "The importance of wealth and power"
+      ],
+      "correctAnswer": 1,
+      "explanation": "Krishna will teach Arjuna about the nature of duty (dharma), the eternal soul, and how to live a righteous life while fulfilling one's responsibilities."
+    },
+    {
+      "id": "q8",
+      "question": "True or False: The Bhagavad Gita is a standalone text, not part of a larger work.",
+      "type": "TRUEFALSE",
+      "options": ["True", "False"],
+      "correctAnswer": 1,
+      "explanation": "False. The Bhagavad Gita is part of the Mahabharata, one of the world's longest epic poems. It appears in the Bhishma Parva (Book of Bhishma) of the Mahabharata."
+    },
+    {
+      "id": "q9",
+      "question": "What does the word 'Gita' mean?",
+      "type": "MCQ_SINGLE",
+      "options": [
+        "Battle",
+        "Song",
+        "Wisdom",
+        "Teaching"
+      ],
+      "correctAnswer": 1,
+      "explanation": "The word 'Gita' means 'song' in Sanskrit. The Bhagavad Gita is literally 'The Song of God' or 'The Song of the Lord.'"
+    },
+    {
+      "id": "q10",
+      "question": "How many chapters does the Bhagavad Gita contain?",
+      "type": "MCQ_SINGLE",
+      "options": [
+        "12 chapters",
+        "18 chapters",
+        "24 chapters",
+        "36 chapters"
+      ],
+      "correctAnswer": 1,
+      "explanation": "The Bhagavad Gita contains 18 chapters, each dealing with different aspects of spiritual wisdom and the path to enlightenment."
+    }
+  ]
+}

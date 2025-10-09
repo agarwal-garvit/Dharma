@@ -67,7 +67,7 @@ struct DBLessonSection: Identifiable, Codable {
     }
 }
 
-enum QuizQuestionType: String, Codable, CaseIterable {
+enum DBQuizQuestionType: String, Codable, CaseIterable {
     case mcqSingle = "MCQ_SINGLE"
     case mcqMulti = "MCQ_MULTI"
     case trueFalse = "TRUEFALSE"
@@ -86,7 +86,7 @@ struct DBQuizQuestion: Identifiable, Codable {
     let sectionId: UUID
     let idx: Int
     let stem: String
-    let qtype: QuizQuestionType
+    let qtype: DBQuizQuestionType
     let explanation: String?
     
     enum CodingKeys: String, CodingKey {
@@ -220,6 +220,62 @@ struct DBUserStats: Codable {
         case streakCount = "streak_count"
         case longestStreak = "longest_streak"
         case lastActiveDate = "last_active_date"
+    }
+}
+
+struct DBLessonCompletion: Identifiable, Codable {
+    let id: UUID
+    let userId: UUID
+    let lessonId: UUID
+    let attemptNumber: Int
+    let score: Int
+    let totalQuestions: Int
+    let scorePercentage: Double
+    let timeElapsedSeconds: Int
+    let questionsAnswered: [String: AnyCodable]?
+    let startedAt: String
+    let completedAt: String
+    let createdAt: String?
+    let updatedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case lessonId = "lesson_id"
+        case attemptNumber = "attempt_number"
+        case score
+        case totalQuestions = "total_questions"
+        case scorePercentage = "score_percentage"
+        case timeElapsedSeconds = "time_elapsed_seconds"
+        case questionsAnswered = "questions_answered"
+        case startedAt = "started_at"
+        case completedAt = "completed_at"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct DBLessonCompletionStats: Codable {
+    let userId: UUID
+    let lessonId: UUID
+    let lessonTitle: String
+    let totalAttempts: Int
+    let bestScore: Double
+    let averageScore: Double
+    let fastestCompletion: Int
+    let averageCompletionTime: Double
+    let lastAttemptDate: String
+    
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case lessonId = "lesson_id"
+        case lessonTitle = "lesson_title"
+        case totalAttempts = "total_attempts"
+        case bestScore = "best_score"
+        case averageScore = "average_score"
+        case fastestCompletion = "fastest_completion"
+        case averageCompletionTime = "average_completion_time"
+        case lastAttemptDate = "last_attempt_date"
     }
 }
 

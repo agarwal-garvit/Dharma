@@ -13,18 +13,24 @@ struct ResultsView: View {
     let score: Int
     let totalQuestions: Int
     let timeElapsed: TimeInterval
+    let lessonStartTime: Date
+    let questionsAnswered: [String: Any]?
     let onDismiss: () -> Void
     let onComplete: () -> Void
     
     @State private var showChatbot = false
+    @State private var dataManager = DataManager.shared
     
     private var percentage: Int {
-        Int((Double(score) / Double(totalQuestions)) * 100)
+        let percentage = Int((Double(score) / Double(totalQuestions)) * 100)
+        print("📊 ResultsView: Score = \(score)/\(totalQuestions) = \(percentage)%")
+        return percentage
     }
     
     private var timeString: String {
         let minutes = Int(timeElapsed) / 60
         let seconds = Int(timeElapsed) % 60
+        print("⏱️ ResultsView: timeElapsed = \(timeElapsed) seconds, formatted as \(minutes):\(String(format: "%02d", seconds))")
         return String(format: "%d:%02d", minutes, seconds)
     }
     
@@ -147,7 +153,8 @@ struct ResultsView: View {
                     .buttonStyle(PlainButtonStyle())
                     
                     Button(action: {
-                        // Close lesson works exactly like exit button - direct onComplete call
+                        // Complete the lesson and then close
+                        completeLesson()
                         onComplete()
                     }) {
                         Text("Close lesson")
@@ -167,6 +174,38 @@ struct ResultsView: View {
             .padding()
         .sheet(isPresented: $showChatbot) {
             ChatbotView()
+        }
+    }
+    
+    private func completeLesson() {
+        Task {
+            // Get the lesson ID from the chapter index
+            if chapterIndex < dataManager.lessons.count {
+                let lesson = dataManager.lessons[chapterIndex]
+                
+                // Record comprehensive lesson completion
+                if let userId = dataManager.currentUserId {
+                    do {
+                        let _ = try await dataManager.recordLessonCompletion(
+                            userId: userId,
+                            lessonId: lesson.id,
+                            score: score,
+                            totalQuestions: totalQuestions,
+                            timeElapsedSeconds: Int(timeElapsed),
+                            questionsAnswered: questionsAnswered ?? [:],
+                            startedAt: lessonStartTime,
+                            completedAt: Date()
+                        )
+                        print("✅ Comprehensive lesson completion recorded for \(lesson.title)")
+                    } catch {
+                        print("❌ Failed to record lesson completion: \(error)")
+                    }
+                }
+                
+                // Also update the existing lesson completion system
+                await dataManager.completeLesson(lesson.id)
+                print("✅ Lesson \(lesson.title) marked as completed")
+            }
         }
     }
     
@@ -202,6 +241,8 @@ struct ResultsView: View {
         score: 4,
         totalQuestions: 5,
         timeElapsed: 180,
+        lessonStartTime: Date(),
+        questionsAnswered: [:],
         onDismiss: {},
         onComplete: {}
     )

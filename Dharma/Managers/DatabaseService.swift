@@ -23,6 +23,11 @@ class DatabaseService: ObservableObject {
             supabaseURL: Config.supabaseURLObject,
             supabaseKey: Config.supabaseKey
         )
+        
+        // Debug configuration
+        print("🔧 DatabaseService initialized")
+        print("📍 Supabase URL: \(Config.supabaseURL)")
+        print("🔑 Supabase Key: \(Config.supabaseKey.prefix(20))...")
     }
     
     // MARK: - Course Operations
@@ -142,6 +147,70 @@ class DatabaseService: ObservableObject {
     
     // MARK: - Quiz Operations
     
+    func fetchQuizContent(for sectionId: UUID) async throws -> QuizContent {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let section: DBLessonSection = try await supabase.database
+                .from("lesson_sections")
+                .select()
+                .eq("id", value: sectionId)
+                .single()
+                .execute()
+                .value
+            
+            guard let content = section.content,
+                  let title = content["title"]?.value as? String,
+                  let questionsData = content["questions"]?.value else {
+                throw NSError(domain: "QuizError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid quiz content format"])
+            }
+            
+            // Parse questions from JSON
+            let questions = try parseQuizQuestions(from: questionsData)
+            
+            isLoading = false
+            return QuizContent(title: title, questions: questions)
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to fetch quiz content: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    private func parseQuizQuestions(from data: Any) throws -> [QuizQuestion] {
+        guard let questionsArray = data as? [[String: Any]] else {
+            throw NSError(domain: "QuizError", code: 2, userInfo: [NSLocalizedDescriptionKey: "Questions must be an array"])
+        }
+        
+        var questions: [QuizQuestion] = []
+        
+        for questionData in questionsArray {
+            guard let id = questionData["id"] as? String,
+                  let question = questionData["question"] as? String,
+                  let typeString = questionData["type"] as? String,
+                  let type = JSONQuizQuestionType(rawValue: typeString),
+                  let options = questionData["options"] as? [String],
+                  let correctAnswer = questionData["correctAnswer"] as? Int,
+                  let explanation = questionData["explanation"] as? String else {
+                throw NSError(domain: "QuizError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Invalid question format"])
+            }
+            
+            let quizQuestion = QuizQuestion(
+                id: id,
+                question: question,
+                type: type,
+                options: options,
+                correctAnswer: correctAnswer,
+                explanation: explanation
+            )
+            questions.append(quizQuestion)
+        }
+        
+        return questions
+    }
+    
+    // Legacy methods for backward compatibility
     func fetchQuizQuestions(for sectionId: UUID) async throws -> [DBQuizQuestion] {
         isLoading = true
         errorMessage = nil
@@ -182,6 +251,133 @@ class DatabaseService: ObservableObject {
         } catch {
             isLoading = false
             errorMessage = "Failed to fetch quiz options: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    // MARK: - Lesson Completion Operations
+    
+    func recordLessonCompletion(
+        userId: UUID,
+        lessonId: UUID,
+        score: Int,
+        totalQuestions: Int,
+        timeElapsedSeconds: Int,
+        questionsAnswered: [String: Any],
+        startedAt: Date,
+        completedAt: Date
+    ) async throws -> DBLessonCompletion {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            // Get next attempt number
+            let attemptNumber = try await getNextAttemptNumber(userId: userId, lessonId: lessonId)
+            
+            let scorePercentage = Double(score) / Double(totalQuestions) * 100
+            
+            let completion = DBLessonCompletion(
+                id: UUID(),
+                userId: userId,
+                lessonId: lessonId,
+                attemptNumber: attemptNumber,
+                score: score,
+                totalQuestions: totalQuestions,
+                scorePercentage: scorePercentage,
+                timeElapsedSeconds: timeElapsedSeconds,
+                questionsAnswered: questionsAnswered.mapValues { AnyCodable($0) },
+                startedAt: ISO8601DateFormatter().string(from: startedAt),
+                completedAt: ISO8601DateFormatter().string(from: completedAt),
+                createdAt: nil,
+                updatedAt: nil
+            )
+            
+            let result: DBLessonCompletion = try await supabase.database
+                .from("lesson_completions")
+                .insert(completion)
+                .select()
+                .single()
+                .execute()
+                .value
+            
+            isLoading = false
+            print("✅ Lesson completion recorded: \(score)/\(totalQuestions) (\(String(format: "%.1f", scorePercentage))%) in \(timeElapsedSeconds)s")
+            return result
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to record lesson completion: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    private func getNextAttemptNumber(userId: UUID, lessonId: UUID) async throws -> Int {
+        do {
+            let result: [String: Int] = try await supabase.database
+                .rpc("get_next_attempt_number", params: [
+                    "p_user_id": userId.uuidString,
+                    "p_lesson_id": lessonId.uuidString
+                ])
+                .execute()
+                .value
+            
+            return result["get_next_attempt_number"] ?? 1
+        } catch {
+            // Fallback: manually count attempts
+            let completions: [DBLessonCompletion] = try await supabase.database
+                .from("lesson_completions")
+                .select("attempt_number")
+                .eq("user_id", value: userId)
+                .eq("lesson_id", value: lessonId)
+                .order("attempt_number", ascending: false)
+                .limit(1)
+                .execute()
+                .value
+            
+            return (completions.first?.attemptNumber ?? 0) + 1
+        }
+    }
+    
+    func getLessonCompletionStats(userId: UUID, lessonId: UUID) async throws -> DBLessonCompletionStats? {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let stats: [DBLessonCompletionStats] = try await supabase.database
+                .from("lesson_completion_stats")
+                .select()
+                .eq("user_id", value: userId)
+                .eq("lesson_id", value: lessonId)
+                .execute()
+                .value
+            
+            isLoading = false
+            return stats.first
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to fetch lesson completion stats: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func getUserLessonCompletions(userId: UUID, lessonId: UUID) async throws -> [DBLessonCompletion] {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let completions: [DBLessonCompletion] = try await supabase.database
+                .from("lesson_completions")
+                .select()
+                .eq("user_id", value: userId)
+                .eq("lesson_id", value: lessonId)
+                .order("attempt_number", ascending: true)
+                .execute()
+                .value
+            
+            isLoading = false
+            return completions
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to fetch lesson completions: \(error.localizedDescription)"
             throw error
         }
     }

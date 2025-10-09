@@ -8,82 +8,66 @@
 import SwiftUI
 
 struct QuizView: View {
+    let sectionId: UUID
     let chapterIndex: Int
     let lessonTitle: String
     let lessonStartTime: Date
     let onDismiss: () -> Void
     let onComplete: () -> Void
     
-    @State private var currentQuestionIndex = 0
+    @State private var dataManager = DataManager.shared
+    @State private var quizSession: QuizSession?
     @State private var selectedAnswer: Int? = nil
     @State private var showResult = false
     @State private var isCorrect = false
-    @State private var score = 0
-    @State private var startTime = Date()
     @State private var showFinalThoughts = false
     @State private var showingExitConfirmation = false
-    
-    private let questions = [
-        QuizQuestion(
-            question: "What is the main teaching of Karma Yoga?",
-            options: [
-                "Perform actions without attachment to results",
-                "Avoid all actions completely",
-                "Only perform religious actions",
-                "Focus only on personal gain"
-            ],
-            correctAnswer: 0
-        ),
-        QuizQuestion(
-            question: "According to Krishna, what is the nature of the soul?",
-            options: [
-                "Temporary and destructible",
-                "Eternal and indestructible",
-                "Created at birth",
-                "Destroyed at death"
-            ],
-            correctAnswer: 1
-        ),
-        QuizQuestion(
-            question: "What does 'dharma' mean in the context of the Gita?",
-            options: [
-                "Religious rituals",
-                "One's righteous duty",
-                "Meditation practice",
-                "Sacred texts"
-            ],
-            correctAnswer: 1
-        ),
-        QuizQuestion(
-            question: "How should one perform their duties according to Krishna?",
-            options: [
-                "With attachment to results",
-                "Without attachment to results",
-                "Only for personal benefit",
-                "Avoiding all responsibilities"
-            ],
-            correctAnswer: 1
-        ),
-        QuizQuestion(
-            question: "What is the key to inner peace according to the Gita?",
-            options: [
-                "Avoiding all challenges",
-                "Performing duties with detachment",
-                "Seeking only pleasure",
-                "Isolating from society"
-            ],
-            correctAnswer: 1
-        )
-    ]
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @State private var questionsAnswered: [String: Any] = [:]
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Progress bar
-                progressBar
-                
-                // Question content
-                questionContent
+            Group {
+                if isLoading {
+                    VStack {
+                        ProgressView()
+                        Text("Loading quiz...")
+                            .foregroundColor(.secondary)
+                    }
+                } else if let errorMessage = errorMessage {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.largeTitle)
+                            .foregroundColor(.orange)
+                        Text("Error loading quiz")
+                            .font(.headline)
+                        Text(errorMessage)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button("Try Again") {
+                            loadQuiz()
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding()
+                } else if let session = quizSession {
+                    VStack(spacing: 0) {
+                        // Progress bar
+                        progressBar(session: session)
+                        
+                        // Question content
+                        questionContent(session: session)
+                    }
+                } else {
+                    VStack {
+                        Text("No quiz available")
+                            .font(.headline)
+                        Text("This lesson doesn't have a quiz yet.")
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             .navigationTitle("Quiz")
             .navigationBarTitleDisplayMode(.inline)
@@ -95,15 +79,19 @@ struct QuizView: View {
                 }
             }
             .fullScreenCover(isPresented: $showFinalThoughts) {
-                FinalThoughtsView(
-                    chapterIndex: chapterIndex,
-                    lessonTitle: lessonTitle,
-                    score: score,
-                    totalQuestions: questions.count,
-                    timeElapsed: Date().timeIntervalSince(lessonStartTime),
-                    onDismiss: onDismiss,
-                    onComplete: onComplete
-                )
+                if let session = quizSession {
+                    FinalThoughtsView(
+                        chapterIndex: chapterIndex,
+                        lessonTitle: lessonTitle,
+                        score: session.score,
+                        totalQuestions: session.totalQuestions,
+                        timeElapsed: Date().timeIntervalSince(lessonStartTime),
+                        lessonStartTime: lessonStartTime,
+                        questionsAnswered: questionsAnswered,
+                        onDismiss: onDismiss,
+                        onComplete: onComplete
+                    )
+                }
             }
             .alert("Exit", isPresented: $showingExitConfirmation) {
                 Button("Cancel", role: .cancel) { }
@@ -114,31 +102,31 @@ struct QuizView: View {
                 Text("Your progress will be lost. Are you sure you want to exit?")
             }
         }
+        .onAppear {
+            loadQuiz()
+        }
     }
     
-    private var progressBar: some View {
-        VStack(spacing: 8) {
+    private func progressBar(session: QuizSession) -> some View {
+        VStack(spacing: 12) {
             HStack {
-                Text("Question \(currentQuestionIndex + 1) of \(questions.count)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
                 Spacer()
                 
-                Text("\(score)/\(questions.count)")
+                Text("\(session.score)/\(session.totalQuestions)")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.orange)
             }
             
-            ProgressView(value: Double(currentQuestionIndex), total: Double(questions.count))
+            ProgressView(value: Double(session.currentQuestionIndex), total: Double(session.totalQuestions))
                 .progressViewStyle(LinearProgressViewStyle(tint: .orange))
+                .scaleEffect(y: 2.0) // Make progress bar thicker
         }
         .padding()
         .background(Color(.systemGray6))
     }
     
-    private var questionContent: some View {
+    private func questionContent(session: QuizSession) -> some View {
         ScrollView {
             VStack(spacing: 24) {
                 // Add some top spacing
@@ -147,7 +135,7 @@ struct QuizView: View {
                 
                 // Question
                 VStack(spacing: 16) {
-                    Text(questions[currentQuestionIndex].question)
+                    Text(session.currentQuestion.question)
                         .font(.title2)
                         .fontWeight(.semibold)
                         .foregroundColor(.primary)
@@ -157,12 +145,12 @@ struct QuizView: View {
             
             // Answer options
             VStack(spacing: 12) {
-                ForEach(0..<questions[currentQuestionIndex].options.count, id: \.self) { index in
+                ForEach(0..<session.currentQuestion.options.count, id: \.self) { index in
                     Button(action: {
-                        selectAnswer(index)
+                        selectAnswer(index, session: session)
                     }) {
                         HStack {
-                            Text(questions[currentQuestionIndex].options[index])
+                            Text(session.currentQuestion.options[index])
                                 .font(.body)
                                 .foregroundColor(.primary)
                                 .multilineTextAlignment(.leading)
@@ -170,7 +158,7 @@ struct QuizView: View {
                             Spacer()
                             
                             if showResult {
-                                if index == questions[currentQuestionIndex].correctAnswer {
+                                if index == session.currentQuestion.correctAnswer {
                                     Image(systemName: "checkmark.circle.fill")
                                         .foregroundColor(.green)
                                 } else if selectedAnswer == index {
@@ -185,10 +173,10 @@ struct QuizView: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(getAnswerBackgroundColor(for: index))
+                                .fill(getAnswerBackgroundColor(for: index, session: session))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(getAnswerBorderColor(for: index), lineWidth: 2)
+                                        .stroke(getAnswerBorderColor(for: index, session: session), lineWidth: 2)
                                 )
                         )
                     }
@@ -206,11 +194,18 @@ struct QuizView: View {
                         .foregroundColor(isCorrect ? .green : .red)
                     
                     if !isCorrect {
-                        Text("The correct answer is: \(questions[currentQuestionIndex].options[questions[currentQuestionIndex].correctAnswer])")
+                        Text("The correct answer is: \(session.currentQuestion.options[session.currentQuestion.correctAnswer])")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                     }
+                    
+                    // Show explanation
+                    Text(session.currentQuestion.explanation)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 4)
                 }
                 .padding()
                 .background(
@@ -223,9 +218,9 @@ struct QuizView: View {
             // Next button
             if showResult {
                 Button(action: {
-                    nextQuestion()
+                    nextQuestion(session: session)
                 }) {
-                    Text(currentQuestionIndex < questions.count - 1 ? "Next Question" : "Complete Quiz")
+                    Text(session.currentQuestionIndex < session.totalQuestions - 1 ? "Next Question" : "Complete Quiz")
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -243,12 +238,48 @@ struct QuizView: View {
         }
     }
     
-    private func selectAnswer(_ index: Int) {
+    private func loadQuiz() {
+        Task {
+            isLoading = true
+            errorMessage = nil
+            
+            do {
+                if let quizContent = await dataManager.loadQuizContent(for: sectionId) {
+                    await MainActor.run {
+                        self.quizSession = QuizSession(questions: quizContent.questions, maxQuestions: 5)
+                        self.isLoading = false
+                    }
+                } else {
+                    await MainActor.run {
+                        self.errorMessage = "Failed to load quiz content"
+                        self.isLoading = false
+                    }
+                }
+            }
+        }
+    }
+    
+    private func selectAnswer(_ index: Int, session: QuizSession) {
         selectedAnswer = index
-        isCorrect = index == questions[currentQuestionIndex].correctAnswer
+        isCorrect = index == session.currentQuestion.correctAnswer
         
-        if isCorrect {
-            score += 1
+        // Update the session score - ensure we're using the current session
+        if var currentSession = quizSession {
+            let oldScore = currentSession.score
+            currentSession.selectAnswer(index)
+            quizSession = currentSession
+            
+            // Track the question and answer for comprehensive logging
+            let question = currentSession.currentQuestion
+            questionsAnswered[question.id] = [
+                "question": question.question,
+                "selectedAnswer": index,
+                "correctAnswer": question.correctAnswer,
+                "isCorrect": index == question.correctAnswer,
+                "options": question.options
+            ]
+            
+            print("🎯 QuizView: Answer \(index) selected, Score: \(oldScore) → \(currentSession.score)")
         }
         
         withAnimation {
@@ -256,19 +287,22 @@ struct QuizView: View {
         }
     }
     
-    private func nextQuestion() {
-        if currentQuestionIndex < questions.count - 1 {
-            currentQuestionIndex += 1
+    private func nextQuestion(session: QuizSession) {
+        if session.currentQuestionIndex < session.totalQuestions - 1 {
+            quizSession?.currentQuestionIndex += 1
             selectedAnswer = nil
             showResult = false
         } else {
+            let totalTime = Date().timeIntervalSince(lessonStartTime)
+            print("🏁 Quiz completed! Final score: \(session.score)/\(session.totalQuestions) (\(String(format: "%.1f", session.scorePercentage))%)")
+            print("⏱️ Total time elapsed: \(Int(totalTime)) seconds (\(Int(totalTime/60)):\(String(format: "%02d", Int(totalTime.truncatingRemainder(dividingBy: 60))))")
             showFinalThoughts = true
         }
     }
     
-    private func getAnswerBackgroundColor(for index: Int) -> Color {
+    private func getAnswerBackgroundColor(for index: Int, session: QuizSession) -> Color {
         if showResult {
-            if index == questions[currentQuestionIndex].correctAnswer {
+            if index == session.currentQuestion.correctAnswer {
                 return Color.green.opacity(0.1)
             } else if selectedAnswer == index {
                 return Color.red.opacity(0.1)
@@ -279,9 +313,9 @@ struct QuizView: View {
         return Color(.systemGray6)
     }
     
-    private func getAnswerBorderColor(for index: Int) -> Color {
+    private func getAnswerBorderColor(for index: Int, session: QuizSession) -> Color {
         if showResult {
-            if index == questions[currentQuestionIndex].correctAnswer {
+            if index == session.currentQuestion.correctAnswer {
                 return Color.green
             } else if selectedAnswer == index {
                 return Color.red
@@ -293,14 +327,9 @@ struct QuizView: View {
     }
 }
 
-struct QuizQuestion {
-    let question: String
-    let options: [String]
-    let correctAnswer: Int
-}
-
 #Preview {
     QuizView(
+        sectionId: UUID(),
         chapterIndex: 2,
         lessonTitle: "Sankhya Yoga",
         lessonStartTime: Date(),

@@ -11,11 +11,11 @@ struct LessonSummaryView: View {
     let lessonIndex: Int
     let lessonTitle: String
     let lessonSections: [DBLessonSection]
+    let lessonStartTime: Date
     let onDismiss: () -> Void
     
     @State private var showQuiz = false
     @State private var audioManager = AudioManager.shared
-    @State private var lessonStartTime = Date()
     @State private var showingExitConfirmation = false
     
     // Helper methods to extract content from lesson sections
@@ -30,6 +30,10 @@ struct LessonSummaryView: View {
             return "No summary content available for this chapter."
         }
         return contentString
+    }
+    
+    private var quizSectionId: UUID? {
+        lessonSections.first { $0.kind == .quiz }?.id
     }
     
     var body: some View {
@@ -113,13 +117,28 @@ struct LessonSummaryView: View {
             Text("Your progress will be lost. Are you sure you want to exit?")
         }
         .fullScreenCover(isPresented: $showQuiz) {
-            QuizView(
-                chapterIndex: lessonIndex,
-                lessonTitle: lessonTitle,
-                lessonStartTime: lessonStartTime,
-                onDismiss: { showQuiz = false },
-                onComplete: { onDismiss() }
-            )
+            if let quizSectionId = quizSectionId {
+                QuizView(
+                    sectionId: quizSectionId,
+                    chapterIndex: lessonIndex,
+                    lessonTitle: lessonTitle,
+                    lessonStartTime: lessonStartTime,
+                    onDismiss: { showQuiz = false },
+                    onComplete: { onDismiss() }
+                )
+            } else {
+                VStack {
+                    Text("Quiz not available")
+                        .font(.headline)
+                    Text("This lesson doesn't have a quiz section.")
+                        .foregroundColor(.secondary)
+                    Button("Close") {
+                        showQuiz = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding()
+            }
         }
     }
 }
@@ -128,6 +147,7 @@ struct LessonSummaryView: View {
         lessonIndex: 1,
         lessonTitle: "Sankhya Yoga",
         lessonSections: [],
+        lessonStartTime: Date(),
         onDismiss: {}
     )
 }

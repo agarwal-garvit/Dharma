@@ -61,6 +61,8 @@ struct FinalThoughtsView: View {
     let score: Int
     let totalQuestions: Int
     let timeElapsed: TimeInterval
+    let lessonStartTime: Date
+    let questionsAnswered: [String: Any]?
     let onDismiss: () -> Void
     let onComplete: () -> Void
     
@@ -127,6 +129,8 @@ struct FinalThoughtsView: View {
                 score: score,
                 totalQuestions: totalQuestions,
                 timeElapsed: timeElapsed,
+                lessonStartTime: lessonStartTime,
+                questionsAnswered: questionsAnswered,
                 onDismiss: { showPrayer = false },
                 onComplete: onComplete  // Direct pass-through, no complex logic
             )
@@ -409,6 +413,8 @@ struct OrangeButtonStyle: ButtonStyle {
         score: 4,
         totalQuestions: 5,
         timeElapsed: 180,
+        lessonStartTime: Date(),
+        questionsAnswered: [:],
         onDismiss: {},
         onComplete: {}
     )

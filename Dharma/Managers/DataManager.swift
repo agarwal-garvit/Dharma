@@ -40,6 +40,10 @@ class DataManager {
     var isLoadingLessons = false
     var errorMessage: String?
     
+    var currentUserId: UUID? {
+        return DharmaAuthManager.shared.user?.id
+    }
+    
     private init() {
         loadUserData()
         // Content will be loaded from server
@@ -69,11 +73,13 @@ class DataManager {
             await MainActor.run {
                 self.courses = fetchedCourses
                 self.isLoadingCourses = false
+                print("✅ Loaded \(fetchedCourses.count) courses")
             }
         } catch {
             await MainActor.run {
                 self.errorMessage = "Failed to load courses: \(error.localizedDescription)"
                 self.isLoadingCourses = false
+                print("❌ Failed to load courses: \(error.localizedDescription)")
             }
         }
     }
@@ -88,11 +94,13 @@ class DataManager {
                 // Sort lessons by order_idx
                 self.lessons = fetchedLessons.sorted { $0.orderIdx < $1.orderIdx }
                 self.isLoadingLessons = false
+                print("✅ Loaded \(fetchedLessons.count) lessons for course \(courseId)")
             }
         } catch {
             await MainActor.run {
                 self.errorMessage = "Failed to load lessons: \(error.localizedDescription)"
                 self.isLoadingLessons = false
+                print("❌ Failed to load lessons for course \(courseId): \(error.localizedDescription)")
             }
         }
     }
@@ -112,6 +120,19 @@ class DataManager {
         }
     }
     
+    func loadQuizContent(for sectionId: UUID) async -> QuizContent? {
+        do {
+            let quizContent = try await databaseService.fetchQuizContent(for: sectionId)
+            return quizContent
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to load quiz content: \(error.localizedDescription)"
+            }
+            return nil
+        }
+    }
+    
+    // Legacy method for backward compatibility
     func loadQuizData(for sectionId: UUID) async -> (questions: [DBQuizQuestion], options: [DBQuizOption]) {
         do {
             let questions = try await databaseService.fetchQuizQuestions(for: sectionId)
@@ -152,6 +173,12 @@ class DataManager {
     
     func getOptionsForQuestion(_ questionId: UUID) -> [DBQuizOption] {
         return quizOptions.filter { $0.questionId == questionId }
+    }
+    
+    func getQuizSectionId(for lessonId: UUID) -> UUID? {
+        return lessonSections.first { section in
+            section.lessonId == lessonId && section.kind == .quiz
+        }?.id
     }
     
     // MARK: - Legacy Chapter Conversion
@@ -388,5 +415,29 @@ class DataManager {
     
     func getVerses(for chapter: Chapter) -> [Verse] {
         return verses.filter { $0.chapterIndex == chapter.index }
+    }
+    
+    // MARK: - Lesson Completion Methods
+    
+    func recordLessonCompletion(
+        userId: UUID,
+        lessonId: UUID,
+        score: Int,
+        totalQuestions: Int,
+        timeElapsedSeconds: Int,
+        questionsAnswered: [String: Any],
+        startedAt: Date,
+        completedAt: Date
+    ) async throws -> DBLessonCompletion {
+        return try await databaseService.recordLessonCompletion(
+            userId: userId,
+            lessonId: lessonId,
+            score: score,
+            totalQuestions: totalQuestions,
+            timeElapsedSeconds: timeElapsedSeconds,
+            questionsAnswered: questionsAnswered,
+            startedAt: startedAt,
+            completedAt: completedAt
+        )
     }
 }

@@ -283,25 +283,30 @@ struct LearnView: View {
     
     private func loadContent() {
         isLoading = true
+        print("🔄 Starting to load content...")
         
         Task {
             // Load courses first
             await dataManager.loadCourses()
+            print("📚 Courses loaded: \(dataManager.courses.count)")
             
             // If we have courses, load lessons for the first course (Bhagavad Gita)
             if let firstCourse = dataManager.courses.first {
                 selectedCourse = firstCourse
                 currentCourseTitle = firstCourse.title
-                currentCourseLessons = "\(dataManager.lessons.count) Lessons"
+                print("📖 Loading lessons for course: \(firstCourse.title)")
                 
                 await dataManager.loadLessons(for: firstCourse.id)
                 
                 await MainActor.run {
+                    currentCourseLessons = "\(dataManager.lessons.count) Lessons"
                     isLoading = false
+                    print("✅ Content loading completed. Lessons: \(dataManager.lessons.count)")
                 }
             } else {
                 await MainActor.run {
                     isLoading = false
+                    print("❌ No courses found")
                 }
             }
         }
@@ -424,6 +429,7 @@ struct LessonDetailView: View {
     @State private var showSummary = false
     @State private var dataManager = DataManager.shared
     @State private var lessonSections: [DBLessonSection] = []
+    @State private var lessonStartTime = Date()
     
     private var lessonTitle: String {
         // Get title from database lesson by array index
@@ -443,12 +449,14 @@ struct LessonDetailView: View {
                     lessonIndex: lessonIndex,
                     lessonTitle: lessonTitle,
                     lessonSections: lessonSections,
+                    lessonStartTime: lessonStartTime,
                     onDismiss: { dismiss() }
                 )
             }
         }
         .onAppear {
-            print("LessonDetailView appeared for Lesson \(lessonIndex)")
+            lessonStartTime = Date() // Set the actual lesson start time
+            print("📚 Lesson \(lessonIndex) started at: \(lessonStartTime)")
             print("Initial state - isLoading: \(isLoading), showSummary: \(showSummary)")
             
             // Load lesson sections from database
