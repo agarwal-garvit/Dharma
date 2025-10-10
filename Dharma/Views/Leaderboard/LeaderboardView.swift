@@ -55,103 +55,31 @@ struct LeaderboardView: View {
     }
     
     private var comingSoonView: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 24) {
             Spacer()
             
-            // Coming soon illustration
-            VStack(spacing: 24) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
-                        .frame(width: 120, height: 120)
-                    
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 50))
-                        .foregroundColor(.orange)
-                }
+                    )
+                    .frame(width: 120, height: 120)
                 
-                VStack(spacing: 12) {
-                    Text("Leaderboard")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
-                    
-                    Text("Coming Soon")
-                        .font(.title2)
-                        .foregroundColor(.orange)
-                        .fontWeight(.semibold)
-                }
-                
-                Text("Compete with fellow learners and see how you rank in your spiritual journey. Track your progress against others and stay motivated!")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 50))
+                    .foregroundColor(.orange)
             }
             
-            // Features preview
-            VStack(spacing: 16) {
-                Text("What to Expect")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                VStack(spacing: 12) {
-                    FeatureRow(
-                        icon: "trophy.fill",
-                        title: "Global Rankings",
-                        description: "See how you compare worldwide"
-                    )
-                    
-                    FeatureRow(
-                        icon: "chart.line.uptrend.xyaxis",
-                        title: "Progress Tracking",
-                        description: "Monitor your learning journey"
-                    )
-                    
-                    FeatureRow(
-                        icon: "person.3.fill",
-                        title: "Study Groups",
-                        description: "Compete with friends and family"
-                    )
-                    
-                    FeatureRow(
-                        icon: "star.fill",
-                        title: "Achievement Badges",
-                        description: "Unlock special recognition"
-                    )
-                }
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.systemGray6))
-            )
-            .padding(.horizontal)
-            
-            // Notify me button
-            Button(action: {
-                // TODO: Implement notification signup
-            }) {
-                HStack {
-                    Image(systemName: "bell.fill")
-                    Text("Notify Me When Available")
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding(.horizontal, 32)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.orange)
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
+            // Coming Soon text
+            Text("Coming Soon")
+                .font(.title2)
+                .foregroundColor(.orange)
+                .fontWeight(.semibold)
             
             Spacer()
         }
@@ -180,33 +108,6 @@ struct LeaderboardView: View {
                     )
                 }
             }
-        }
-    }
-}
-
-struct FeatureRow: View {
-    let icon: String
-    let title: String
-    let description: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(.orange)
-                .frame(width: 20)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-                
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
         }
     }
 }
