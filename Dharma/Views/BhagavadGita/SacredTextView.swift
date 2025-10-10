@@ -26,18 +26,24 @@ struct SacredTextView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Text selector
-                textSelector
+            ZStack {
+                // Background color
+                ThemeManager.appBackground
+                    .ignoresSafeArea()
                 
-                // Chapter selector
-                chapterSelector
-                
-                // Content area
-                if isLoading {
-                    loadingView
-                } else {
-                    contentView
+                VStack(spacing: 0) {
+                    // Text selector
+                    textSelector
+                    
+                    // Chapter selector
+                    chapterSelector
+                    
+                    // Content area
+                    if isLoading {
+                        loadingView
+                    } else {
+                        contentView
+                    }
                 }
             }
             .navigationTitle(currentText.title)

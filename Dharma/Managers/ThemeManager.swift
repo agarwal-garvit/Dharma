@@ -17,8 +17,8 @@ struct ThemeManager {
     static let accentRed = Color(red: 1.0, green: 0.231, blue: 0.188)
     static let accentPurple = Color(red: 0.686, green: 0.322, blue: 0.871)
     
-    // Background color - #e4eeed
-    static let appBackground = Color(red: 228/255, green: 238/255, blue: 237/255)
+    // Background color - #f0f5f8
+    static let appBackground = Color(red: 240/255, green: 245/255, blue: 248/255)
     
     // MARK: - Typography
     

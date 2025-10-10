@@ -33,9 +33,13 @@ struct LearnView: View {
     @State private var courseLessons: [UUID: [DBLesson]] = [:]
     @State private var scrollToCourseId: UUID?
     
-    // All courses
+    // All courses sorted by course_order
     private var courses: [DBCourse] {
-        return dataManager.courses
+        return dataManager.courses.sorted { course1, course2 in
+            let order1 = course1.courseOrder ?? Int.max
+            let order2 = course2.courseOrder ?? Int.max
+            return order1 < order2
+        }
     }
     
     // Current visible course info
@@ -270,7 +274,7 @@ struct LearnView: View {
                 VStack(spacing: 32) {
                     // Display all courses vertically
                     ForEach(Array(courses.enumerated()), id: \.element.id) { courseIndex, course in
-                        VStack(spacing: 12) {
+                        VStack(spacing: 4) {
                             // Course header with visibility tracking
                             GeometryReader { geometry in
                                 courseSectionHeader(course: course)
@@ -291,7 +295,7 @@ struct LearnView: View {
                                         }
                                     }
                             }
-                            .frame(height: 60)
+                            .frame(height: 40)
                             
                             // Lessons for this course
                             if let lessons = courseLessons[course.id], !lessons.isEmpty {
@@ -380,7 +384,8 @@ struct LearnView: View {
             }
         }
         .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.top, 8)
+        .padding(.bottom, 2)
     }
     
     private func lessonCard(lesson: DBLesson, courseId: UUID, color: Color, isLeft: Bool) -> some View {

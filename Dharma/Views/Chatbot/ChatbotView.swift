@@ -15,27 +15,37 @@ struct ChatbotView: View {
     var body: some View {
         if !authManager.isAuthenticated {
             // Sign in required view
-            VStack(spacing: 20) {
-                Image(systemName: "person.circle")
-                    .font(.system(size: 64))
-                    .foregroundColor(.orange.opacity(0.6))
+            ZStack {
+                // Background color
+                ThemeManager.appBackground
+                    .ignoresSafeArea()
                 
-                Text("Sign In Required")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                Text("Please sign in to start chatting with the Gita Guide.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                VStack(spacing: 20) {
+                    Image(systemName: "person.circle")
+                        .font(.system(size: 64))
+                        .foregroundColor(.orange.opacity(0.6))
+                    
+                    Text("Sign In Required")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("Please sign in to start chatting with the Gita Guide.")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(.systemBackground))
         } else {
             // Chat interface
             NavigationView {
-                VStack(spacing: 0) {
+                ZStack {
+                    // Background color
+                    ThemeManager.appBackground
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 0) {
                     // Messages
                     ScrollView {
                         LazyVStack(spacing: 12) {
@@ -76,6 +86,7 @@ struct ChatbotView: View {
                     
                     // Input area
                     inputArea
+                    }
                 }
                 .navigationTitle("Gita Guide")
                 .navigationBarTitleDisplayMode(.inline)

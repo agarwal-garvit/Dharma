@@ -15,21 +15,27 @@ struct ProgressPetView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Pet section
-                    petSection
-                    
-                    // Progress stats
-                    progressStats
-                    
-                    // Achievements
-                    achievementsSection
-                    
-                    // Recent activity
-                    recentActivitySection
+            ZStack {
+                // Background color
+                ThemeManager.appBackground
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Pet section
+                        petSection
+                        
+                        // Progress stats
+                        progressStats
+                        
+                        // Achievements
+                        achievementsSection
+                        
+                        // Recent activity
+                        recentActivitySection
+                    }
+                    .padding()
                 }
-                .padding()
             }
             .navigationTitle("My Progress")
             .navigationBarTitleDisplayMode(.large)

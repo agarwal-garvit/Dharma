@@ -20,20 +20,26 @@ struct ProfileView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Profile Header
-                    profileHeader
-                    
-                    // User Stats Section
-                    userStatsSection
-                    
-                    // Account Actions
-                    accountActionsSection
-                    
-                    Spacer(minLength: 50)
+            ZStack {
+                // Background color
+                ThemeManager.appBackground
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Profile Header
+                        profileHeader
+                        
+                        // User Stats Section
+                        userStatsSection
+                        
+                        // Account Actions
+                        accountActionsSection
+                        
+                        Spacer(minLength: 50)
+                    }
+                    .padding()
                 }
-                .padding()
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)

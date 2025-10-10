@@ -20,11 +20,17 @@ struct LeaderboardView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                if showingComingSoon {
-                    comingSoonView
-                } else {
-                    leaderboardContent
+            ZStack {
+                // Background color
+                ThemeManager.appBackground
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    if showingComingSoon {
+                        comingSoonView
+                    } else {
+                        leaderboardContent
+                    }
                 }
             }
             .navigationTitle("Leaderboard")

@@ -13,9 +13,11 @@ struct DBCourse: Identifiable, Codable {
     let id: UUID
     let title: String
     let description: String?
+    let courseOrder: Int?
     
     enum CodingKeys: String, CodingKey {
         case id, title, description
+        case courseOrder = "course_order"
     }
 }
 

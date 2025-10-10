@@ -40,7 +40,7 @@ class DatabaseService: ObservableObject {
             let courses: [DBCourse] = try await supabase.database
                 .from("courses")
                 .select()
-                .order("title")
+                .order("course_order")
                 .execute()
                 .value
             
