@@ -10,9 +10,19 @@ import SwiftUI
 struct MainTabView: View {
     @State private var selectedTab = 0
     
+    init() {
+        // Set the tab bar background
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(red: 228/255, green: 238/255, blue: 237/255, alpha: 1.0)
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+    
     var body: some View {
         TabView(selection: $selectedTab) {
             LearnView()
+                .background(ThemeManager.appBackground)
                 .tabItem {
                     Image(systemName: "book.fill")
                     Text("Learn")
@@ -20,6 +30,7 @@ struct MainTabView: View {
                 .tag(0)
             
             SacredTextView()
+                .background(ThemeManager.appBackground)
                 .tabItem {
                     Image(systemName: "scroll.fill")
                     Text("Sacred Texts")
@@ -27,6 +38,7 @@ struct MainTabView: View {
                 .tag(1)
             
             ProgressPetView()
+                .background(ThemeManager.appBackground)
                 .tabItem {
                     Image(systemName: "pawprint.fill")
                     Text("Progress")
@@ -34,6 +46,7 @@ struct MainTabView: View {
                 .tag(2)
             
             LeaderboardView()
+                .background(ThemeManager.appBackground)
                 .tabItem {
                     Image(systemName: "trophy.fill")
                     Text("Leaderboard")
@@ -41,6 +54,7 @@ struct MainTabView: View {
                 .tag(3)
             
             ChatbotView()
+                .background(ThemeManager.appBackground)
                 .tabItem {
                     Image(systemName: "message.fill")
                     Text("Chat")

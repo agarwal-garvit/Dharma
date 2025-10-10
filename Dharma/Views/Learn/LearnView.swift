@@ -26,26 +26,67 @@ struct LearnView: View {
     @State private var selectedLesson: DBLesson?
     @State private var showingProfile = false
     @State private var lessonToShow: LessonIndex?
-    @State private var currentCourseTitle = "Bhagavad Gita"
-    @State private var currentCourseLessons = "Lessons"
-    @State private var selectedCourse: DBCourse?
+    @State private var currentVisibleCourse: DBCourse?
+    @State private var showingCourseSelector = false
+    @State private var userStreak = 5 // TODO: Get from database
+    @State private var userXP = 1250 // TODO: Get from database
+    @State private var courseLessons: [UUID: [DBLesson]] = [:]
+    @State private var scrollToCourseId: UUID?
     
-    // Get lessons from database (already sorted by order_idx)
-    private var lessons: [DBLesson] {
-        return dataManager.lessons
+    // All courses
+    private var courses: [DBCourse] {
+        return dataManager.courses
+    }
+    
+    // Current visible course info
+    private var currentCourseTitle: String {
+        currentVisibleCourse?.title ?? "Select Course"
+    }
+    
+    private var currentCourseLessonCount: String {
+        if let courseId = currentVisibleCourse?.id,
+           let lessons = courseLessons[courseId] {
+            return "\(lessons.count) Lessons"
+        }
+        return "Lessons"
+    }
+    
+    // Get color for a course (alternates between orange and blue)
+    private func courseColor(for course: DBCourse) -> Color {
+        if let index = courses.firstIndex(where: { $0.id == course.id }) {
+            return index % 2 == 0 ? Color.orange : Color.blue
+        }
+        return Color.blue
+    }
+    
+    // Current course color
+    private var currentCourseColor: Color {
+        if let course = currentVisibleCourse {
+            return courseColor(for: course)
+        }
+        return Color.blue
     }
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Fixed course title card that changes based on visible content
-                courseTitleCard
+            ZStack {
+                // Background color
+                ThemeManager.appBackground
+                    .ignoresSafeArea()
                 
-                // Scrollable lessons area
-                if isLoading {
-                    loadingView
-                } else {
-                    lessonsScrollView
+                VStack(spacing: 8) {
+                    // Streak and XP stats bar
+                    statsBar
+                    
+                    // Course selector dropdown
+                    courseSelectorCard
+                    
+                    // Scrollable lessons area
+                    if isLoading {
+                        loadingView
+                    } else {
+                        lessonsScrollView
+                    }
                 }
             }
             .navigationTitle("Learn")
@@ -106,40 +147,109 @@ struct LearnView: View {
         }
     }
     
-    private var courseTitleCard: some View {
-        VStack(spacing: 4) {
-            Text(currentCourseTitle)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
+    private var statsBar: some View {
+        HStack(spacing: 16) {
+            // Streak
+            HStack(spacing: 6) {
+                Image(systemName: "flame.fill")
+                    .foregroundColor(.orange)
+                    .font(.system(size: 18))
+                
+                Text("\(userStreak) day streak")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+            }
             
-            Text(currentCourseLessons)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            Spacer()
+            
+            // XP Points
+            HStack(spacing: 6) {
+                Image(systemName: "star.fill")
+                    .foregroundColor(.yellow)
+                    .font(.system(size: 18))
+                
+                Text("\(userXP) XP")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.blue.opacity(0.1), Color.blue.opacity(0.05)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .shadow(
-                    color: Color.blue.opacity(0.2),
-                    radius: 6,
-                    x: 0,
-                    y: 3
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.blue.opacity(0.3), lineWidth: 1)
-                )
-        )
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.6))
+        .cornerRadius(8)
         .padding(.horizontal)
+        .padding(.top, 8)
+    }
+    
+    private var courseSelectorCard: some View {
+        Button(action: {
+            showingCourseSelector = true
+        }) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(currentCourseTitle)
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    Text(currentCourseLessonCount)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.9))
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.down")
+                    .foregroundColor(.white)
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(currentCourseColor.opacity(0.85))
+                    .shadow(color: currentCourseColor.opacity(0.3), radius: 4, x: 0, y: 2)
+            )
+            .padding(.horizontal)
+        }
+        .sheet(isPresented: $showingCourseSelector) {
+            NavigationStack {
+                List(courses) { course in
+                    Button(action: {
+                        scrollToCourse(course)
+                        showingCourseSelector = false
+                    }) {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(course.title)
+                                    .font(.headline)
+                                if let lessons = courseLessons[course.id] {
+                                    Text("\(lessons.count) Lessons")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            Spacer()
+                            if currentVisibleCourse?.id == course.id {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("Select Course")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            showingCourseSelector = false
+                        }
+                    }
+                }
+            }
+        }
     }
     
     private var loadingView: some View {
@@ -155,64 +265,129 @@ struct LearnView: View {
     }
     
     private var lessonsScrollView: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // Staggered layout for lessons
-                VStack(spacing: 0) {
-                    ForEach(Array(lessons.enumerated()), id: \.element.id) { index, lesson in
-                        HStack {
-                            if index % 2 == 0 {
-                                // Left position
-                                lessonCard(lesson: lesson, isLeft: true)
-                                    .onAppear {
-                                        updateCourseTitle(for: index)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 32) {
+                    // Display all courses vertically
+                    ForEach(Array(courses.enumerated()), id: \.element.id) { courseIndex, course in
+                        VStack(spacing: 12) {
+                            // Course header with visibility tracking
+                            GeometryReader { geometry in
+                                courseSectionHeader(course: course)
+                                    .id(course.id) // For scrolling to this course
+                                    .onChange(of: geometry.frame(in: .global).minY) { _, yPosition in
+                                        // Update current course based on scroll direction
+                                        // Trigger earlier so it updates before scrolling too far into lessons
+                                        
+                                        if yPosition <= 250 && yPosition >= -100 {
+                                            // Scrolling down: header is approaching or at the top
+                                            currentVisibleCourse = course
+                                        } else if yPosition > 250 {
+                                            // Header moved below the detection zone (scrolling up)
+                                            // Set to previous course if exists
+                                            if courseIndex > 0 {
+                                                currentVisibleCourse = courses[courseIndex - 1]
+                                            }
+                                        }
                                     }
-                                
-                                // Arrow next to left card
-                                if index < lessons.count - 1 {
-                                    arrowNextToCard(for: index)
-                                } else {
-                                    // Empty space for last card
-                                    Spacer()
-                                        .frame(width: 136) // Same width as arrow + padding
+                            }
+                            .frame(height: 60)
+                            
+                            // Lessons for this course
+                            if let lessons = courseLessons[course.id], !lessons.isEmpty {
+                                let courseCardColor = courseColor(for: course)
+                                VStack(spacing: 0) {
+                                    ForEach(Array(lessons.enumerated()), id: \.element.id) { index, lesson in
+                                        HStack {
+                                            if index % 2 == 0 {
+                                                // Left position
+                                                lessonCard(lesson: lesson, courseId: course.id, color: courseCardColor, isLeft: true)
+                                                
+                                                // Arrow next to left card
+                                                if index < lessons.count - 1 {
+                                                    arrowNextToCard(for: index, totalLessons: lessons.count)
+                                                } else {
+                                                    Spacer()
+                                                        .frame(width: 136)
+                                                }
+                                                
+                                                Spacer()
+                                            } else {
+                                                // Right position
+                                                Spacer()
+                                                
+                                                // Arrow next to right card
+                                                if index < lessons.count - 1 {
+                                                    arrowNextToCard(for: index, totalLessons: lessons.count)
+                                                } else {
+                                                    Spacer()
+                                                        .frame(width: 136)
+                                                }
+                                                
+                                                lessonCard(lesson: lesson, courseId: course.id, color: courseCardColor, isLeft: false)
+                                            }
+                                        }
+                                    }
                                 }
-                                
-                                Spacer()
+                                .padding(.horizontal)
                             } else {
-                                // Right position
-                                Spacer()
-                                
-                                // Arrow next to right card
-                                if index < lessons.count - 1 {
-                                    arrowNextToCard(for: index)
-                                } else {
-                                    // Empty space for last card
-                                    Spacer()
-                                        .frame(width: 136) // Same width as arrow + padding
-                                }
-                                
-                                lessonCard(lesson: lesson, isLeft: false)
-                                    .onAppear {
-                                        updateCourseTitle(for: index)
-                                    }
+                                // Loading or no lessons
+                                Text("Loading lessons...")
+                                    .foregroundColor(.secondary)
+                                    .padding()
                             }
                         }
                     }
                 }
-                .padding(.horizontal)
-                
-                // Future: Additional courses will be added here
-                // For example, when you add Mahabharata:
-                // [Mahabharata lessons...]
+                .padding(.bottom, 20)
             }
-            .padding(.bottom, 20)
+            .onChange(of: scrollToCourseId) { _, courseId in
+                if let courseId = courseId {
+                    withAnimation {
+                        proxy.scrollTo(courseId, anchor: .top)
+                    }
+                    scrollToCourseId = nil
+                }
+            }
         }
     }
     
-    private func lessonCard(lesson: DBLesson, isLeft: Bool) -> some View {
+    private func courseSectionHeader(course: DBCourse) -> some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 12) {
+                // Left line
+                Rectangle()
+                    .fill(Color.gray.opacity(0.4))
+                    .frame(height: 1)
+                
+                // Course title
+                Text(course.title)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.gray)
+                
+                // Right line
+                Rectangle()
+                    .fill(Color.gray.opacity(0.4))
+                    .frame(height: 1)
+            }
+            
+            // Lesson count
+            if let lessons = courseLessons[course.id] {
+                Text("\(lessons.count) Lessons")
+                    .font(.caption)
+                    .foregroundColor(.gray.opacity(0.7))
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
+    
+    private func lessonCard(lesson: DBLesson, courseId: UUID, color: Color, isLeft: Bool) -> some View {
         Button(action: {
-            // Find the array index of this lesson
-            if let arrayIndex = lessons.firstIndex(where: { $0.id == lesson.id }) {
+            // Find the array index of this lesson within its course
+            if let lessons = courseLessons[courseId],
+               let arrayIndex = lessons.firstIndex(where: { $0.id == lesson.id }) {
                 print("Lesson \(lesson.title) tapped (array index: \(arrayIndex)) - isUnlocked: \(isLessonUnlocked(lesson))")
                 lessonToShow = LessonIndex(arrayIndex)
                 selectedLessonIndex = arrayIndex
@@ -305,10 +480,10 @@ struct LearnView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.blue.opacity(0.9), lineWidth: 4)
+                    .stroke(color.opacity(0.9), lineWidth: 4)
             )
             .shadow(
-                color: isLessonUnlocked(lesson) ? Color.blue.opacity(0.2) : Color.black.opacity(0.1),
+                color: isLessonUnlocked(lesson) ? color.opacity(0.2) : Color.black.opacity(0.1),
                 radius: isLessonUnlocked(lesson) ? 8 : 4,
                 x: 0,
                 y: isLessonUnlocked(lesson) ? 4 : 2
@@ -326,22 +501,27 @@ struct LearnView: View {
         print("🔄 Starting to load content...")
         
         Task {
-            // Load courses first
+            // Load all courses
             await dataManager.loadCourses()
             print("📚 Courses loaded: \(dataManager.courses.count)")
             
-            // If we have courses, load lessons for the first course (Bhagavad Gita)
-            if let firstCourse = dataManager.courses.first {
-                selectedCourse = firstCourse
-                currentCourseTitle = firstCourse.title
-                print("📖 Loading lessons for course: \(firstCourse.title)")
-                
-                await dataManager.loadLessons(for: firstCourse.id)
+            // Load lessons for ALL courses
+            for course in dataManager.courses {
+                print("📖 Loading lessons for course: \(course.title)")
+                await dataManager.loadLessons(for: course.id)
                 
                 await MainActor.run {
-                    currentCourseLessons = "\(dataManager.lessons.count) Lessons"
+                    // Store lessons for this course
+                    courseLessons[course.id] = dataManager.lessons
+                }
+            }
+            
+            // Set first course as visible
+            if let firstCourse = dataManager.courses.first {
+                await MainActor.run {
+                    currentVisibleCourse = firstCourse
                     isLoading = false
-                    print("✅ Content loading completed. Lessons: \(dataManager.lessons.count)")
+                    print("✅ Content loading completed. All courses loaded.")
                 }
             } else {
                 await MainActor.run {
@@ -350,6 +530,11 @@ struct LearnView: View {
                 }
             }
         }
+    }
+    
+    private func scrollToCourse(_ course: DBCourse) {
+        scrollToCourseId = course.id
+        currentVisibleCourse = course
     }
     
     private func isChapterUnlocked(_ chapter: Chapter) -> Bool {
@@ -367,24 +552,13 @@ struct LearnView: View {
         return 0.0
     }
     
-    private func updateCourseTitle(for lessonIndex: Int) {
-        // Update course title based on selected course
-        if let course = selectedCourse {
-            currentCourseTitle = course.title
-            currentCourseLessons = "\(dataManager.lessons.count) Lessons"
-        } else {
-            currentCourseTitle = "Bhagavad Gita"
-            currentCourseLessons = "\(lessons.count) Lessons"
-        }
-    }
-    
     private func isLessonUnlocked(_ lesson: DBLesson) -> Bool {
         // For now, all lessons are unlocked
         // You can implement your own logic here based on user progress
         return true
     }
     
-    private func arrowNextToCard(for index: Int) -> some View {
+    private func arrowNextToCard(for index: Int, totalLessons: Int) -> some View {
         let isLeftPosition = index % 2 == 0
         let nextIsLeftPosition = (index + 1) % 2 == 0
         
@@ -394,9 +568,9 @@ struct LearnView: View {
                 Image("downRight")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 120, height: 108) // Reduced width, same height
-                    .padding(.leading, 4) // Moved left
-                    .padding(.top, 40) // Moved lower
+                    .frame(width: 120, height: 108)
+                    .padding(.leading, 4)
+                    .padding(.top, 40)
             )
         } else {
             // Arrow from right card to left card (top-right to bottom-left)
@@ -404,9 +578,9 @@ struct LearnView: View {
                 Image("downLeft")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 120, height: 108) // Reduced width, same height
-                    .padding(.trailing, 4) // Moved right
-                    .padding(.top, 40) // Moved lower
+                    .frame(width: 120, height: 108)
+                    .padding(.trailing, 4)
+                    .padding(.top, 40)
             )
         }
     }

@@ -17,48 +17,54 @@ struct DharmaApp: App {
     
     var body: some Scene {
         WindowGroup {
-            Group {
-                if !isAuthenticated {
-                    SignInView()
-                        .onAppear {
-                            // Initialize Google Sign In
-                            setupGoogleSignIn()
-                        }
-                } else if hasCompletedOnboarding {
-                    MainTabView()
-                        .onAppear {
-                            // Initialize managers
-                            _ = DataManager.shared
-                            _ = AudioManager.shared
-                            _ = HapticManager.shared
-                        }
-                } else {
-                    OnboardingView()
-                        .onAppear {
-                            // Initialize managers
-                            _ = DataManager.shared
-                            _ = AudioManager.shared
-                            _ = HapticManager.shared
-                        }
-                        .onReceive(NotificationCenter.default.publisher(for: .onboardingCompleted)) { _ in
-                            hasCompletedOnboarding = true
-                        }
+            ZStack {
+                // Global app background color
+                ThemeManager.appBackground
+                    .ignoresSafeArea()
+                
+                Group {
+                    if !isAuthenticated {
+                        SignInView()
+                            .onAppear {
+                                // Initialize Google Sign In
+                                setupGoogleSignIn()
+                            }
+                    } else if hasCompletedOnboarding {
+                        MainTabView()
+                            .onAppear {
+                                // Initialize managers
+                                _ = DataManager.shared
+                                _ = AudioManager.shared
+                                _ = HapticManager.shared
+                            }
+                    } else {
+                        OnboardingView()
+                            .onAppear {
+                                // Initialize managers
+                                _ = DataManager.shared
+                                _ = AudioManager.shared
+                                _ = HapticManager.shared
+                            }
+                            .onReceive(NotificationCenter.default.publisher(for: .onboardingCompleted)) { _ in
+                                hasCompletedOnboarding = true
+                            }
+                    }
                 }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .authStateChanged)) { _ in
-                isAuthenticated = authManager.isAuthenticated
-            }
-            .onAppear {
-                // Check initial auth state
-                isAuthenticated = authManager.isAuthenticated
-                
-                // Start listening for auth state changes (only once)
-                authManager.startAuthStateListener()
-                
-                // Debug configuration (remove in production)
-                #if DEBUG
-                Config.debugInfoPlist()
-                #endif
+                .onReceive(NotificationCenter.default.publisher(for: .authStateChanged)) { _ in
+                    isAuthenticated = authManager.isAuthenticated
+                }
+                .onAppear {
+                    // Check initial auth state
+                    isAuthenticated = authManager.isAuthenticated
+                    
+                    // Start listening for auth state changes (only once)
+                    authManager.startAuthStateListener()
+                    
+                    // Debug configuration (remove in production)
+                    #if DEBUG
+                    Config.debugInfoPlist()
+                    #endif
+                }
             }
         }
     }
