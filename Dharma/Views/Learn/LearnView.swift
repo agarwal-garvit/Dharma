@@ -7,25 +7,12 @@
 
 import SwiftUI
 
-struct LessonIndex: Identifiable {
-    let id: Int
-    let value: Int
-    
-    init(_ value: Int) {
-        self.id = value
-        self.value = value
-    }
-}
-
 struct LearnView: View {
     @State private var dataManager = DataManager.shared
     @State private var isLoading = true
-    @State private var selectedLessonIndex: Int?
-    @State private var showingLessonDetail = false
     @State private var showingLessonPlayer = false
     @State private var selectedLesson: DBLesson?
     @State private var showingProfile = false
-    @State private var lessonToShow: LessonIndex?
     @State private var currentVisibleCourse: DBCourse?
     @State private var showingCourseSelector = false
     @State private var userStreak = 5 // TODO: Get from database
@@ -116,18 +103,12 @@ struct LearnView: View {
         .onAppear {
             loadContent()
         }
-        .fullScreenCover(item: $lessonToShow) { lessonIndexWrapper in
-            LessonDetailView(lessonIndex: lessonIndexWrapper.value, onLessonSelected: { lesson in
-                // Find the corresponding DBLesson by array index
-                if lessonIndexWrapper.value < dataManager.lessons.count {
-                    let dbLesson = dataManager.lessons[lessonIndexWrapper.value]
-                    selectedLesson = dbLesson
-                    lessonToShow = nil
-                    showingLessonPlayer = true
-                }
+        .fullScreenCover(item: $selectedLesson) { lesson in
+            LessonDetailView(lesson: lesson, onLessonSelected: { legacyLesson in
+                showingLessonPlayer = true
             })
             .onAppear {
-                print("Presenting LessonDetailView for Lesson \(lessonIndexWrapper.value)")
+                print("Presenting LessonDetailView for Lesson \(lesson.title)")
             }
         }
         .fullScreenCover(isPresented: $showingLessonPlayer) {
@@ -390,15 +371,10 @@ struct LearnView: View {
     
     private func lessonCard(lesson: DBLesson, courseId: UUID, color: Color, isLeft: Bool) -> some View {
         Button(action: {
-            // Find the array index of this lesson within its course
-            if let lessons = courseLessons[courseId],
-               let arrayIndex = lessons.firstIndex(where: { $0.id == lesson.id }) {
-                print("Lesson \(lesson.title) tapped (array index: \(arrayIndex)) - isUnlocked: \(isLessonUnlocked(lesson))")
-                lessonToShow = LessonIndex(arrayIndex)
-                selectedLessonIndex = arrayIndex
-                print("State set - lessonToShow: \(lessonToShow?.value ?? -1), selectedLessonIndex: \(selectedLessonIndex ?? -1)")
-                print("Sheet presentation triggered - lessonToShow: \(lessonToShow?.value ?? -1)")
-            }
+            // Set the selected lesson directly
+            print("Lesson \(lesson.title) (ID: \(lesson.id)) from course \(courseId) tapped - isUnlocked: \(isLessonUnlocked(lesson))")
+            selectedLesson = lesson
+            print("Selected lesson set: \(lesson.title)")
         }) {
             ZStack {
                 // Background - Image or Gradient
@@ -512,12 +488,13 @@ struct LearnView: View {
             
             // Load lessons for ALL courses
             for course in dataManager.courses {
-                print("📖 Loading lessons for course: \(course.title)")
-                await dataManager.loadLessons(for: course.id)
+                print("📖 Loading lessons for course: \(course.title) (ID: \(course.id))")
+                let lessons = await dataManager.loadLessons(for: course.id)
                 
                 await MainActor.run {
-                    // Store lessons for this course
-                    courseLessons[course.id] = dataManager.lessons
+                    // Store lessons for this specific course
+                    courseLessons[course.id] = lessons
+                    print("   ✅ Stored \(lessons.count) lessons for course: \(course.title)")
                 }
             }
             
@@ -641,7 +618,7 @@ struct LearnView: View {
 
 
 struct LessonDetailView: View {
-    let lessonIndex: Int
+    let lesson: DBLesson
     let onLessonSelected: (Lesson) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var isLoading = true
@@ -651,12 +628,7 @@ struct LessonDetailView: View {
     @State private var lessonStartTime = Date()
     
     private var lessonTitle: String {
-        // Get title from database lesson by array index
-        if lessonIndex < dataManager.lessons.count {
-            return dataManager.lessons[lessonIndex].title
-        }
-        
-        return "Lesson \(lessonIndex + 1)"
+        return lesson.title
     }
     
     var body: some View {
@@ -665,7 +637,7 @@ struct LessonDetailView: View {
                 loadingView
             } else if showSummary {
                 LessonSummaryView(
-                    lessonIndex: lessonIndex,
+                    lesson: lesson,
                     lessonTitle: lessonTitle,
                     lessonSections: lessonSections,
                     lessonStartTime: lessonStartTime,
@@ -675,26 +647,18 @@ struct LessonDetailView: View {
         }
         .onAppear {
             lessonStartTime = Date() // Set the actual lesson start time
-            print("📚 Lesson \(lessonIndex) started at: \(lessonStartTime)")
+            print("📚 Lesson \(lesson.title) (ID: \(lesson.id)) started at: \(lessonStartTime)")
             print("Initial state - isLoading: \(isLoading), showSummary: \(showSummary)")
             
             // Load lesson sections from database
             Task {
-                if lessonIndex < dataManager.lessons.count {
-                    let lesson = dataManager.lessons[lessonIndex]
-                    let sections = await dataManager.loadLessonSections(for: lesson.id)
-                    await MainActor.run {
-                        self.lessonSections = sections
-                        self.isLoading = false
-                        self.showSummary = true
-                        print("Loading completed for Lesson \(lessonIndex)")
-                        print("Final state - isLoading: \(isLoading), showSummary: \(showSummary)")
-                    }
-                } else {
-                    await MainActor.run {
-                        self.isLoading = false
-                        self.showSummary = true
-                    }
+                let sections = await dataManager.loadLessonSections(for: lesson.id)
+                await MainActor.run {
+                    self.lessonSections = sections
+                    self.isLoading = false
+                    self.showSummary = true
+                    print("Loading completed for Lesson \(lesson.title) - Loaded \(sections.count) sections")
+                    print("Final state - isLoading: \(isLoading), showSummary: \(showSummary)")
                 }
             }
         }
@@ -725,7 +689,7 @@ struct LessonDetailView: View {
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
                 
-                Text("Lesson \(lessonIndex + 1)")
+                Text("Lesson \(lesson.orderIdx)")
                     .font(.title2)
                     .foregroundColor(.secondary)
             }

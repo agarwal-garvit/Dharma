@@ -56,7 +56,7 @@ struct FinalThoughtsContent {
 }
 
 struct FinalThoughtsView: View {
-    let chapterIndex: Int
+    let lesson: DBLesson
     let lessonTitle: String
     let score: Int
     let totalQuestions: Int
@@ -124,7 +124,7 @@ struct FinalThoughtsView: View {
         }
         .fullScreenCover(isPresented: $showPrayer) {
             PrayerView(
-                chapterIndex: chapterIndex,
+                lesson: lesson,
                 lessonTitle: lessonTitle,
                 score: score,
                 totalQuestions: totalQuestions,
@@ -351,28 +351,22 @@ struct FinalThoughtsView: View {
     private func loadFinalThoughtsContent() {
         Task {
             do {
-                // Get the lesson ID from the chapter index
-                guard chapterIndex < dataManager.lessons.count else {
-                    await MainActor.run {
-                        self.errorMessage = "Lesson not found"
-                        self.isLoading = false
-                    }
-                    return
-                }
-                
-                let lesson = dataManager.lessons[chapterIndex]
+                print("📖 Loading final thoughts for lesson: \(lesson.title) (ID: \(lesson.id))")
                 
                 // Fetch lesson sections
                 let sections = await dataManager.loadLessonSections(for: lesson.id)
+                print("   Found \(sections.count) sections")
                 
                 // Find the FINAL_THOUGHTS section
                 let finalThoughtsSection = sections.first { $0.kind == .finalThoughts }
                 
                 await MainActor.run {
                     if let section = finalThoughtsSection {
+                        print("   ✅ Found FINAL_THOUGHTS section")
                         self.finalThoughtsContent = FinalThoughtsContent(from: section.content)
                         self.errorMessage = nil
                     } else {
+                        print("   ⚠️ No FINAL_THOUGHTS section found")
                         self.finalThoughtsContent = nil
                         self.errorMessage = nil
                     }
@@ -382,6 +376,7 @@ struct FinalThoughtsView: View {
                 await MainActor.run {
                     self.errorMessage = "Failed to load final thoughts: \(error.localizedDescription)"
                     self.isLoading = false
+                    print("   ❌ Error loading final thoughts: \(error.localizedDescription)")
                 }
             }
         }
@@ -408,7 +403,7 @@ struct OrangeButtonStyle: ButtonStyle {
 
 #Preview {
     FinalThoughtsView(
-        chapterIndex: 2,
+        lesson: DBLesson(id: UUID(), courseId: UUID(), orderIdx: 2, title: "Sankhya Yoga", imageUrl: nil),
         lessonTitle: "Sankhya Yoga",
         score: 4,
         totalQuestions: 5,

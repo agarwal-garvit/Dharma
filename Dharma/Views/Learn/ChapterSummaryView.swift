@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct LessonSummaryView: View {
-    let lessonIndex: Int
+    let lesson: DBLesson
     let lessonTitle: String
     let lessonSections: [DBLessonSection]
     let lessonStartTime: Date
@@ -44,7 +44,7 @@ struct LessonSummaryView: View {
                     VStack(alignment: .leading, spacing: 24) {
                         // Lesson header
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Lesson \(lessonIndex + 1)")
+                            Text("Lesson \(lesson.orderIdx)")
                                 .font(.title2)
                                 .foregroundColor(.orange)
                                 .fontWeight(.semibold)
@@ -95,7 +95,7 @@ struct LessonSummaryView: View {
                 .padding()
                 .background(Color(.systemBackground))
             }
-            .navigationTitle("Lesson \(lessonIndex + 1)")
+            .navigationTitle("Lesson \(lesson.orderIdx)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -106,7 +106,7 @@ struct LessonSummaryView: View {
             }
         }
         .onAppear {
-            print("LessonSummaryView appeared for Lesson \(lessonIndex)")
+            print("LessonSummaryView appeared for Lesson \(lesson.title) (ID: \(lesson.id))")
         }
         .alert("Exit", isPresented: $showingExitConfirmation) {
             Button("Cancel", role: .cancel) { }
@@ -120,7 +120,7 @@ struct LessonSummaryView: View {
             if let quizSectionId = quizSectionId {
                 QuizView(
                     sectionId: quizSectionId,
-                    chapterIndex: lessonIndex,
+                    lesson: lesson,
                     lessonTitle: lessonTitle,
                     lessonStartTime: lessonStartTime,
                     onDismiss: { showQuiz = false },
@@ -144,7 +144,7 @@ struct LessonSummaryView: View {
 }
 #Preview {
     LessonSummaryView(
-        lessonIndex: 1,
+        lesson: DBLesson(id: UUID(), courseId: UUID(), orderIdx: 1, title: "Sankhya Yoga", imageUrl: nil),
         lessonTitle: "Sankhya Yoga",
         lessonSections: [],
         lessonStartTime: Date(),

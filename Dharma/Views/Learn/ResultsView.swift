@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ResultsView: View {
-    let chapterIndex: Int
+    let lesson: DBLesson
     let lessonTitle: String
     let score: Int
     let totalQuestions: Int
@@ -179,33 +179,30 @@ struct ResultsView: View {
     
     private func completeLesson() {
         Task {
-            // Get the lesson ID from the chapter index
-            if chapterIndex < dataManager.lessons.count {
-                let lesson = dataManager.lessons[chapterIndex]
-                
-                // Record comprehensive lesson completion
-                if let userId = dataManager.currentUserId {
-                    do {
-                        let _ = try await dataManager.recordLessonCompletion(
-                            userId: userId,
-                            lessonId: lesson.id,
-                            score: score,
-                            totalQuestions: totalQuestions,
-                            timeElapsedSeconds: Int(timeElapsed),
-                            questionsAnswered: questionsAnswered ?? [:],
-                            startedAt: lessonStartTime,
-                            completedAt: Date()
-                        )
-                        print("✅ Comprehensive lesson completion recorded for \(lesson.title)")
-                    } catch {
-                        print("❌ Failed to record lesson completion: \(error)")
-                    }
+            print("📝 Completing lesson: \(lesson.title) (ID: \(lesson.id), Course: \(lesson.courseId))")
+            
+            // Record comprehensive lesson completion
+            if let userId = dataManager.currentUserId {
+                do {
+                    let _ = try await dataManager.recordLessonCompletion(
+                        userId: userId,
+                        lessonId: lesson.id,
+                        score: score,
+                        totalQuestions: totalQuestions,
+                        timeElapsedSeconds: Int(timeElapsed),
+                        questionsAnswered: questionsAnswered ?? [:],
+                        startedAt: lessonStartTime,
+                        completedAt: Date()
+                    )
+                    print("✅ Comprehensive lesson completion recorded for \(lesson.title)")
+                } catch {
+                    print("❌ Failed to record lesson completion: \(error)")
                 }
-                
-                // Also update the existing lesson completion system
-                await dataManager.completeLesson(lesson.id)
-                print("✅ Lesson \(lesson.title) marked as completed")
             }
+            
+            // Also update the existing lesson completion system
+            await dataManager.completeLesson(lesson.id)
+            print("✅ Lesson \(lesson.title) marked as completed")
         }
     }
     
@@ -236,7 +233,7 @@ struct ResultsView: View {
 
 #Preview {
     ResultsView(
-        chapterIndex: 2,
+        lesson: DBLesson(id: UUID(), courseId: UUID(), orderIdx: 2, title: "Sankhya Yoga", imageUrl: nil),
         lessonTitle: "Sankhya Yoga",
         score: 4,
         totalQuestions: 5,

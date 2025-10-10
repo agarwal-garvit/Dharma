@@ -9,7 +9,7 @@ import SwiftUI
 
 struct QuizView: View {
     let sectionId: UUID
-    let chapterIndex: Int
+    let lesson: DBLesson
     let lessonTitle: String
     let lessonStartTime: Date
     let onDismiss: () -> Void
@@ -81,7 +81,7 @@ struct QuizView: View {
             .fullScreenCover(isPresented: $showFinalThoughts) {
                 if let session = quizSession {
                     FinalThoughtsView(
-                        chapterIndex: chapterIndex,
+                        lesson: lesson,
                         lessonTitle: lessonTitle,
                         score: session.score,
                         totalQuestions: session.totalQuestions,
@@ -330,7 +330,7 @@ struct QuizView: View {
 #Preview {
     QuizView(
         sectionId: UUID(),
-        chapterIndex: 2,
+        lesson: DBLesson(id: UUID(), courseId: UUID(), orderIdx: 2, title: "Sankhya Yoga", imageUrl: nil),
         lessonTitle: "Sankhya Yoga",
         lessonStartTime: Date(),
         onDismiss: {},

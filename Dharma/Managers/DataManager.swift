@@ -84,7 +84,7 @@ class DataManager {
         }
     }
     
-    func loadLessons(for courseId: UUID) async {
+    func loadLessons(for courseId: UUID) async -> [DBLesson] {
         isLoadingLessons = true
         errorMessage = nil
         
@@ -96,12 +96,14 @@ class DataManager {
                 self.isLoadingLessons = false
                 print("✅ Loaded \(fetchedLessons.count) lessons for course \(courseId)")
             }
+            return fetchedLessons.sorted { $0.orderIdx < $1.orderIdx }
         } catch {
             await MainActor.run {
                 self.errorMessage = "Failed to load lessons: \(error.localizedDescription)"
                 self.isLoadingLessons = false
                 print("❌ Failed to load lessons for course \(courseId): \(error.localizedDescription)")
             }
+            return []
         }
     }
     

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct PrayerView: View {
-    let chapterIndex: Int
+    let lesson: DBLesson
     let lessonTitle: String
     let score: Int
     let totalQuestions: Int
@@ -111,7 +111,7 @@ struct PrayerView: View {
         }
         .fullScreenCover(isPresented: $showResults) {
             ResultsView(
-                chapterIndex: chapterIndex,
+                lesson: lesson,
                 lessonTitle: lessonTitle,
                 score: score,
                 totalQuestions: totalQuestions,
@@ -128,7 +128,7 @@ struct PrayerView: View {
 
 #Preview {
     PrayerView(
-        chapterIndex: 2,
+        lesson: DBLesson(id: UUID(), courseId: UUID(), orderIdx: 2, title: "Sankhya Yoga", imageUrl: nil),
         lessonTitle: "Sankhya Yoga",
         score: 4,
         totalQuestions: 5,
