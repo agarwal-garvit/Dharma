@@ -292,8 +292,9 @@ struct LearnView: View {
                                                 if index < lessons.count - 1 {
                                                     arrowNextToCard(for: index, totalLessons: lessons.count)
                                                 } else {
-                                                    Spacer()
-                                                        .frame(width: 136)
+                                                    // Show invisible arrow for last lesson to maintain consistent spacing
+                                                    arrowNextToCard(for: index, totalLessons: lessons.count)
+                                                        .opacity(0)
                                                 }
                                                 
                                                 Spacer()
@@ -305,8 +306,9 @@ struct LearnView: View {
                                                 if index < lessons.count - 1 {
                                                     arrowNextToCard(for: index, totalLessons: lessons.count)
                                                 } else {
-                                                    Spacer()
-                                                        .frame(width: 136)
+                                                    // Show invisible arrow for last lesson to maintain consistent spacing
+                                                    arrowNextToCard(for: index, totalLessons: lessons.count)
+                                                        .opacity(0)
                                                 }
                                                 
                                                 lessonCard(lesson: lesson, courseId: course.id, color: courseCardColor, isLeft: false)
