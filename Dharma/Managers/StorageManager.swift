@@ -17,6 +17,11 @@ class StorageManager: ObservableObject {
     private let supabase: SupabaseClient
     private let bucketName = "lesson-images"
     
+    // MARK: - Configuration for Chapter Images
+    // Separate bucket for chapter images in same project
+    private let chapterImagesBucket = "chapter-images"
+    private let chapterImagesUseFolder = false
+    
     // In-memory cache for images
     private var imageCache = NSCache<NSString, UIImage>()
     
@@ -44,6 +49,33 @@ class StorageManager: ObservableObject {
         // https://[PROJECT_ID].supabase.co/storage/v1/object/public/[BUCKET]/[FILE_PATH]
         let urlString = "\(Config.supabaseURL)/storage/v1/object/public/\(bucketName)/\(fileName)"
         return URL(string: urlString)
+    }
+    
+    /// Get the public URL for a chapter image from the chapter-images bucket
+    func getChapterImageURL(filePath: String) -> URL? {
+        print("🔗 StorageManager: Getting chapter image URL for path: '\(filePath)'")
+        
+        // Extract filename from "chapter-images/Ch2Img1.png" format
+        let fileName: String
+        if filePath.hasPrefix("chapter-images/") {
+            fileName = String(filePath.dropFirst("chapter-images/".count))
+            print("🔗 StorageManager: Extracted filename '\(fileName)' from path")
+        } else {
+            fileName = filePath
+        }
+        
+        // Use the correct storage URL format for separate bucket
+        // Format: https://[PROJECT_ID].supabase.co/storage/v1/object/public/[BUCKET]/[FILE]
+        let urlString = "\(Config.supabaseURL)/storage/v1/object/public/\(chapterImagesBucket)/\(fileName)"
+        
+        print("🔗 StorageManager: Generated URL: '\(urlString)'")
+        
+        let url = URL(string: urlString)
+        if url == nil {
+            print("❌ StorageManager: Failed to create URL from string: '\(urlString)'")
+        }
+        
+        return url
     }
     
     /// Generate URL for a specific lesson

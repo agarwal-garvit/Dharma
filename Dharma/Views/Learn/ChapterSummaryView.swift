@@ -25,11 +25,19 @@ struct LessonSummaryView: View {
     
     private var summaryContent: String {
         guard let section = summarySection,
-              let content = section.content,
-              let contentString = content["content"]?.value as? String else {
+              let content = section.content else {
             return "No summary content available for this chapter."
         }
-        return contentString
+        
+        // Handle both JSON structure and plain string content
+        if let contentString = content["content"]?.value as? String {
+            return contentString
+        } else if let wholeContentDict = content as? [String: AnyCodable] {
+            // If the entire content is a JSON object, try to parse it
+            return ContentParser.parseLessonSummary(from: wholeContentDict.mapValues { $0.value })
+        } else {
+            return "No summary content available for this chapter."
+        }
     }
     
     private var quizSectionId: UUID? {
@@ -62,11 +70,12 @@ struct LessonSummaryView: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             
-                            Text(summaryContent)
-                                .font(.title3)
-                                .fontWeight(.medium)
-                                .lineSpacing(4)
-                                .foregroundColor(.primary)
+                            RichContentView(
+                                content: summaryContent,
+                                font: .title3,
+                                lineSpacing: 4,
+                                foregroundColor: .primary
+                            )
                         }
                     }
                     .padding()

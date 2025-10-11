@@ -43,28 +43,56 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     }
     
     private func loadImage() async {
-        guard let url = url else { return }
+        guard let url = url else {
+            print("❌ CachedAsyncImage: No URL provided")
+            return
+        }
+        
+        print("🖼️ CachedAsyncImage: Loading image from URL: \(url)")
         
         // Check cache first
         if let cachedImage = storageManager.getCachedImage(for: url) {
+            print("✅ CachedAsyncImage: Found cached image for: \(url)")
             loadedImage = cachedImage
             return
         }
         
         // Load from network
         isLoading = true
+        print("📥 CachedAsyncImage: Downloading image from: \(url)")
         
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await URLSession.shared.data(from: url)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("🌐 CachedAsyncImage: HTTP Response: \(httpResponse.statusCode) for \(url)")
+                if httpResponse.statusCode != 200 {
+                    print("❌ CachedAsyncImage: HTTP Error \(httpResponse.statusCode) for \(url)")
+                    
+                    // Try to get error message from response body
+                    if let errorString = String(data: data, encoding: .utf8) {
+                        print("❌ CachedAsyncImage: Error response body: \(errorString)")
+                    }
+                    
+                    isLoading = false
+                    return
+                }
+            }
+            
             if let image = UIImage(data: data) {
+                print("✅ CachedAsyncImage: Successfully created image from data for: \(url)")
                 await MainActor.run {
                     storageManager.cacheImage(image, for: url)
                     loadedImage = image
                     isLoading = false
                 }
+            } else {
+                print("❌ CachedAsyncImage: Failed to create UIImage from data for: \(url)")
+                isLoading = false
             }
         } catch {
-            print("❌ Failed to load image from \(url): \(error.localizedDescription)")
+            print("❌ CachedAsyncImage: Failed to load image from \(url): \(error.localizedDescription)")
+            print("❌ CachedAsyncImage: Error details: \(error)")
             isLoading = false
         }
     }
