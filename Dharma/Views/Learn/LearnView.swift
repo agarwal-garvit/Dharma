@@ -500,12 +500,15 @@ struct LearnView: View {
                 }
             }
             
+            // Preload all lesson images in background
+            await preloadLessonImages()
+            
             // Set first course as visible
             if let firstCourse = dataManager.courses.first {
                 await MainActor.run {
                     currentVisibleCourse = firstCourse
                     isLoading = false
-                    print("✅ Content loading completed. All courses loaded.")
+                    print("✅ Content loading completed. All courses and images loaded.")
                 }
             } else {
                 await MainActor.run {
@@ -513,6 +516,60 @@ struct LearnView: View {
                     print("❌ No courses found")
                 }
             }
+        }
+    }
+    
+    private func preloadLessonImages() async {
+        print("🖼️ Starting image preloading...")
+        let storageManager = StorageManager.shared
+        
+        // Collect all lesson images that need preloading
+        var imagesToPreload: [URL] = []
+        
+        for (_, lessons) in courseLessons {
+            for lesson in lessons {
+                if let imageUrlString = lesson.imageUrl,
+                   let imageUrl = URL(string: imageUrlString) {
+                    // Only preload if not already cached
+                    if storageManager.getCachedImage(for: imageUrl) == nil {
+                        imagesToPreload.append(imageUrl)
+                    }
+                }
+            }
+        }
+        
+        print("🖼️ Found \(imagesToPreload.count) images to preload")
+        
+        // Preload images in batches to avoid overwhelming the network
+        let batchSize = 5
+        for i in stride(from: 0, to: imagesToPreload.count, by: batchSize) {
+            let batch = Array(imagesToPreload[i..<min(i + batchSize, imagesToPreload.count)])
+            
+            await withTaskGroup(of: Void.self) { group in
+                for imageUrl in batch {
+                    group.addTask {
+                        await self.preloadSingleImage(url: imageUrl)
+                    }
+                }
+            }
+            
+            // Small delay between batches to be network-friendly
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        }
+        
+        print("✅ Image preloading completed")
+    }
+    
+    private func preloadSingleImage(url: URL) async {
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            if let image = UIImage(data: data) {
+                await MainActor.run {
+                    StorageManager.shared.cacheImage(image, for: url)
+                }
+            }
+        } catch {
+            print("❌ Failed to preload image from \(url): \(error.localizedDescription)")
         }
     }
     
