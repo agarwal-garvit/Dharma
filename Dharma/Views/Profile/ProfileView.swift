@@ -13,9 +13,6 @@ struct ProfileView: View {
     @State private var authManager = DharmaAuthManager.shared
     @State private var isLoading = false
     @State private var showingSignOutAlert = false
-    @State private var userStats: UserStats?
-    @State private var completedLessonsCount = 0
-    @State private var isLoadingStats = true
     @State private var userDisplayName: String?
     
     var body: some View {
@@ -30,11 +27,11 @@ struct ProfileView: View {
                         // Profile Header
                         profileHeader
                         
-                        // User Stats Section
-                        userStatsSection
-                        
                         // Account Actions
                         accountActionsSection
+                        
+                        // App Information
+                        appInfoSection
                         
                         Spacer(minLength: 50)
                     }
@@ -60,7 +57,6 @@ struct ProfileView: View {
             Text("Are you sure you want to sign out?")
         }
         .onAppear {
-            loadUserStats()
             loadUserDisplayName()
         }
     }
@@ -111,44 +107,91 @@ struct ProfileView: View {
         )
     }
     
-    private var userStatsSection: some View {
+    private var appInfoSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Your Progress")
+            Text("App Information")
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.primary)
             
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 16) {
-                StatCard(
-                    title: "Total XP",
-                    value: isLoadingStats ? "..." : "\(userStats?.xp_total ?? 0)",
-                    icon: "star.fill",
-                    color: .orange
-                )
+            VStack(spacing: 12) {
+                // Terms of Service Button
+                Button(action: {
+                    // TODO: Navigate to terms of service
+                }) {
+                    HStack {
+                        Image(systemName: "doc.text.fill")
+                            .foregroundColor(.blue)
+                            .frame(width: 24)
+                        
+                        Text("Terms of Service")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemBackground))
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
                 
-                StatCard(
-                    title: "Current Streak",
-                    value: isLoadingStats ? "..." : "\(userStats?.streak_count ?? 0) days",
-                    icon: "flame.fill",
-                    color: .red
-                )
+                // Privacy Policy Button
+                Button(action: {
+                    // TODO: Navigate to privacy policy
+                }) {
+                    HStack {
+                        Image(systemName: "hand.raised.fill")
+                            .foregroundColor(.green)
+                            .frame(width: 24)
+                        
+                        Text("Privacy Policy")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemBackground))
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
                 
-                StatCard(
-                    title: "Lessons Completed",
-                    value: isLoadingStats ? "..." : "\(completedLessonsCount)",
-                    icon: "checkmark.circle.fill",
-                    color: .green
-                )
-                
-                StatCard(
-                    title: "Longest Streak",
-                    value: isLoadingStats ? "..." : "\(userStats?.longest_streak ?? 0) days",
-                    icon: "trophy.fill",
-                    color: .blue
-                )
+                // About Button
+                Button(action: {
+                    // TODO: Navigate to about page
+                }) {
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(.purple)
+                            .frame(width: 24)
+                        
+                        Text("About Dharma")
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.secondary)
+                            .font(.caption)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemBackground))
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding()
@@ -260,21 +303,6 @@ struct ProfileView: View {
         return formatter.string(from: user.createdAt)
     }
     
-    private func loadUserStats() {
-        isLoadingStats = true
-        
-        Task {
-            // Fetch user stats and completed lessons count
-            let stats = await authManager.fetchUserStats()
-            let completedCount = await authManager.getCompletedLessonsCount()
-            
-            await MainActor.run {
-                self.userStats = stats
-                self.completedLessonsCount = completedCount
-                self.isLoadingStats = false
-            }
-        }
-    }
     
     private func loadUserDisplayName() {
         Task {
@@ -305,36 +333,6 @@ struct ProfileView: View {
     }
 }
 
-struct StatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(color)
-            
-            Text(value)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-            
-                Text(title)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground))
-        )
-    }
-}
 
 #Preview {
     ProfileView()

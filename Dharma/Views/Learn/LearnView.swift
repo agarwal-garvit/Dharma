@@ -15,10 +15,12 @@ struct LearnView: View {
     @State private var showingProfile = false
     @State private var currentVisibleCourse: DBCourse?
     @State private var showingCourseSelector = false
-    @State private var userStreak = 5 // TODO: Get from database
-    @State private var userXP = 1250 // TODO: Get from database
+    @State private var userStreak = 0
+    @State private var userXP = 0
+    @State private var userMetrics: DBUserMetrics?
     @State private var courseLessons: [UUID: [DBLesson]] = [:]
     @State private var scrollToCourseId: UUID?
+    @State private var navigateToProgress = false
     
     // All courses sorted by course_order
     private var courses: [DBCourse] {
@@ -102,6 +104,7 @@ struct LearnView: View {
         }
         .onAppear {
             loadContent()
+            loadUserMetrics()
         }
         .fullScreenCover(item: $selectedLesson) { lesson in
             LessonDetailView(lesson: lesson, onLessonSelected: { legacyLesson in
@@ -130,40 +133,52 @@ struct LearnView: View {
         .sheet(isPresented: $showingProfile) {
             ProfileView()
         }
+        .onChange(of: navigateToProgress) { _, shouldNavigate in
+            if shouldNavigate {
+                // Post notification to switch to progress tab
+                NotificationCenter.default.post(name: .switchToProgressTab, object: nil)
+                navigateToProgress = false
+            }
+        }
     }
     
     private var statsBar: some View {
-        HStack(spacing: 16) {
-            // Streak
-            HStack(spacing: 6) {
-                Image(systemName: "flame.fill")
-                    .foregroundColor(.orange)
-                    .font(.system(size: 18))
+        Button(action: {
+            navigateToProgress = true
+        }) {
+            HStack(spacing: 16) {
+                // Streak
+                HStack(spacing: 6) {
+                    Image(systemName: "flame.fill")
+                        .foregroundColor(.orange)
+                        .font(.system(size: 18))
+                    
+                    Text("\(userStreak) day streak")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                }
                 
-                Text("\(userStreak) day streak")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-            }
-            
-            Spacer()
-            
-            // XP Points
-            HStack(spacing: 6) {
-                Image(systemName: "star.fill")
-                    .foregroundColor(.yellow)
-                    .font(.system(size: 18))
+                Spacer()
                 
-                Text("\(userXP) XP")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                // XP Points
+                HStack(spacing: 6) {
+                    Image(systemName: "star.fill")
+                        .foregroundColor(.yellow)
+                        .font(.system(size: 18))
+                    
+                    Text("\(userXP) XP")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.white.opacity(0.6))
+            .cornerRadius(8)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color.white.opacity(0.6))
-        .cornerRadius(8)
+        .buttonStyle(PlainButtonStyle())
         .padding(.horizontal)
         .padding(.top, 8)
     }
@@ -672,6 +687,19 @@ struct LearnView: View {
             18: "मोक्षसंन्यासयोग"
         ]
         return titles[index] ?? "अध्याय \(index)"
+    }
+    
+    private func loadUserMetrics() {
+        Task {
+            let authManager = DharmaAuthManager.shared
+            let metrics = await authManager.getUserMetrics()
+            
+            await MainActor.run {
+                self.userMetrics = metrics
+                self.userStreak = metrics?.currentStreak ?? 0
+                self.userXP = metrics?.totalXp ?? 0
+            }
+        }
     }
 }
 

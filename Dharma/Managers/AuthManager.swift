@@ -202,29 +202,22 @@ class DharmaAuthManager {
         guard let currentUser = self.currentUser else { return }
         
         do {
-            // Check if user already logged in today
-            let today = Calendar.current.startOfDay(for: Date())
-            _ = ISO8601DateFormatter().string(from: today)
+            // Record daily usage using the new system
+            let databaseService = DatabaseService.shared
+            try await databaseService.recordDailyUsage(userId: currentUser.id)
             
-            // Record a minimal session to track daily login
-            let session = UserLessonSession(
-                id: UUID(),
-                user_id: currentUser.id,
-                lesson_id: UUID(), // Use a dummy lesson ID for daily login tracking
-                started_at: ISO8601DateFormatter().string(from: Date()),
-                completed_at: nil,
-                duration_seconds: nil
-            )
+            // Calculate and update streak
+            let currentStreak = try await databaseService.calculateUserStreak(userId: currentUser.id)
             
-            try await supabase.database
-                .from("user_lesson_sessions")
-                .insert(session)
-                .execute()
+            // Check for streak milestones and award XP
+            if currentStreak == 7 || currentStreak == 30 || currentStreak == 100 {
+                _ = try await databaseService.awardStreakMilestoneXP(userId: currentUser.id, streakDays: currentStreak)
+            }
             
             // Update user stats to reflect new streak
             await updateUserStats()
             
-            print("Successfully recorded daily login")
+            print("Successfully recorded daily login - Streak: \(currentStreak) days")
         } catch {
             print("Failed to record daily login: \(error)")
         }
@@ -235,13 +228,14 @@ class DharmaAuthManager {
         guard let currentUser = self.currentUser else { return }
         
         do {
-            // First, get current stats
-            let currentStats = await fetchUserStats()
+            // Use the new database service to get current metrics
+            let databaseService = DatabaseService.shared
+            let currentMetrics = try await databaseService.getUserMetrics(userId: currentUser.id)
             
             // Calculate new values
-            let newXpTotal = (currentStats?.xp_total ?? 0) + xpToAdd
-            let newStreakCount = await calculateCurrentStreak()
-            let newLongestStreak = max(currentStats?.longest_streak ?? 0, newStreakCount)
+            let newXpTotal = (currentMetrics?.totalXp ?? 0) + xpToAdd
+            let newStreakCount = try await databaseService.calculateUserStreak(userId: currentUser.id)
+            let newLongestStreak = max(currentMetrics?.longestStreak ?? 0, newStreakCount)
             let newLastActiveDate = ISO8601DateFormatter().string(from: Date())
             
             // Update or insert stats
@@ -253,7 +247,7 @@ class DharmaAuthManager {
                 last_active_date: newLastActiveDate
             )
             
-            if currentStats != nil {
+            if currentMetrics != nil {
                 // Update existing stats
                 try await supabase.database
                     .from("user_stats")
@@ -347,6 +341,32 @@ class DharmaAuthManager {
     }
     
     @MainActor
+    func getUserMetrics() async -> DBUserMetrics? {
+        guard let currentUser = self.currentUser else { return nil }
+        
+        do {
+            let databaseService = DatabaseService.shared
+            return try await databaseService.getUserMetrics(userId: currentUser.id)
+        } catch {
+            print("Failed to fetch user metrics: \(error)")
+            return nil
+        }
+    }
+    
+    @MainActor
+    func getDailyUsage() async -> [DBDailyUsage] {
+        guard let currentUser = self.currentUser else { return [] }
+        
+        do {
+            let databaseService = DatabaseService.shared
+            return try await databaseService.fetchDailyUsage(userId: currentUser.id)
+        } catch {
+            print("Failed to fetch daily usage: \(error)")
+            return []
+        }
+    }
+    
+    @MainActor
     func recordLessonCompletion(lessonId: String) async {
         guard let currentUser = self.currentUser else { return }
         
@@ -384,8 +404,10 @@ class DharmaAuthManager {
                 .upsert(progress)
                 .execute()
             
-            // Award XP and update stats
-            await updateUserStats(xpToAdd: 20, lessonCompleted: true)
+            // Award XP based on performance (base XP + bonus for good scores)
+            let baseXP = 25
+            let bonusXP = 0 // Will be calculated based on quiz score if available
+            await updateUserStats(xpToAdd: baseXP + bonusXP, lessonCompleted: true)
             
             print("Successfully recorded lesson completion for lesson: \(lessonId)")
         } catch {

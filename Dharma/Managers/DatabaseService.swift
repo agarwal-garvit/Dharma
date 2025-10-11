@@ -292,6 +292,7 @@ class DatabaseService: ObservableObject {
                 updatedAt: nil
             )
             
+            // Insert the lesson completion and return the inserted record
             let result: DBLessonCompletion = try await supabase.database
                 .from("lesson_completions")
                 .insert(completion)
@@ -300,12 +301,21 @@ class DatabaseService: ObservableObject {
                 .execute()
                 .value
             
+            print("✅ Lesson completion insert and fetch successful")
+            
             isLoading = false
             print("✅ Lesson completion recorded: \(score)/\(totalQuestions) (\(String(format: "%.1f", scorePercentage))%) in \(timeElapsedSeconds)s")
+            
+            // Award XP based on performance
+            await awardLessonCompletionXP(userId: userId, scorePercentage: scorePercentage)
+            
             return result
         } catch {
             isLoading = false
             errorMessage = "Failed to record lesson completion: \(error.localizedDescription)"
+            print("❌ DatabaseService.recordLessonCompletion error: \(error)")
+            print("❌ Error type: \(type(of: error))")
+            print("❌ Error details: \(error.localizedDescription)")
             throw error
         }
     }
@@ -602,9 +612,145 @@ class DatabaseService: ObservableObject {
         }
     }
     
+    // MARK: - Daily Usage Operations
+    
+    func recordDailyUsage(userId: UUID, sessionTimeSeconds: Int = 0) async throws {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            try await supabase.database
+                .rpc("record_daily_usage", params: [
+                    "p_user_id": userId.uuidString,
+                    "p_usage_date": DateFormatter.dateOnly.string(from: Date()),
+                    "p_session_time_seconds": String(sessionTimeSeconds)
+                ])
+                .execute()
+            
+            isLoading = false
+            print("✅ Daily usage recorded for user: \(userId)")
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to record daily usage: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func getUserMetrics(userId: UUID) async throws -> DBUserMetrics? {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let metrics: [DBUserMetrics] = try await supabase.database
+                .rpc("get_user_metrics", params: [
+                    "p_user_id": userId.uuidString
+                ])
+                .execute()
+                .value
+            
+            isLoading = false
+            return metrics.first
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to fetch user metrics: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func calculateUserStreak(userId: UUID) async throws -> Int {
+        do {
+            let result: [String: Int] = try await supabase.database
+                .rpc("calculate_user_streak", params: [
+                    "p_user_id": userId.uuidString
+                ])
+                .execute()
+                .value
+            
+            return result["calculate_user_streak"] ?? 0
+        } catch {
+            errorMessage = "Failed to calculate user streak: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func awardStreakMilestoneXP(userId: UUID, streakDays: Int) async throws -> Int {
+        do {
+            let result: [String: Int] = try await supabase.database
+                .rpc("award_streak_milestone_xp", params: [
+                    "p_user_id": userId.uuidString,
+                    "p_streak_days": String(streakDays)
+                ])
+                .execute()
+                .value
+            
+            let xpAwarded = result["award_streak_milestone_xp"] ?? 0
+            if xpAwarded > 0 {
+                print("🎉 Awarded \(xpAwarded) XP for \(streakDays) day streak!")
+            }
+            return xpAwarded
+        } catch {
+            errorMessage = "Failed to award streak milestone XP: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func fetchDailyUsage(userId: UUID) async throws -> [DBDailyUsage] {
+        do {
+            let usage: [DBDailyUsage] = try await supabase.database
+                .from("daily_usage")
+                .select()
+                .eq("user_id", value: userId)
+                .order("date", ascending: false)
+                .limit(30)
+                .execute()
+                .value
+            
+            return usage
+        } catch {
+            errorMessage = "Failed to fetch daily usage: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    private func awardLessonCompletionXP(userId: UUID, scorePercentage: Double) async {
+        do {
+            // Base XP for completing a lesson
+            var baseXP = 25
+            
+            // Bonus XP based on score
+            var bonusXP = 0
+            if scorePercentage >= 90 {
+                bonusXP = 15 // Perfect score bonus
+            } else if scorePercentage >= 80 {
+                bonusXP = 10 // Good score bonus
+            } else if scorePercentage >= 70 {
+                bonusXP = 5 // Decent score bonus
+            }
+            
+            let totalXP = baseXP + bonusXP
+            
+            // Award XP
+            try await awardXP(userId: userId, lessonId: nil, ruleCode: "LESSON_COMPLETION", xpAmount: totalXP)
+            
+            print("🎯 Awarded \(totalXP) XP for lesson completion (Score: \(String(format: "%.1f", scorePercentage))%)")
+        } catch {
+            print("Failed to award lesson completion XP: \(error)")
+        }
+    }
+    
     // MARK: - Error Handling
     
     func clearError() {
         errorMessage = nil
     }
+}
+
+// MARK: - Date Formatter Extension
+
+extension DateFormatter {
+    static let dateOnly: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }

@@ -8,10 +8,12 @@
 import SwiftUI
 
 struct ProgressPetView: View {
-    @State private var dataManager = DataManager.shared
-    @State private var petHappiness: Double = 0.7
-    @State private var petLevel: Int = 3
-    @State private var showingPetDetails = false
+    @State private var authManager = DharmaAuthManager.shared
+    @State private var userMetrics: DBUserMetrics?
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @State private var dailyUsageData: [DBDailyUsage] = []
+    @State private var selectedDate = Date()
     
     var body: some View {
         NavigationView {
@@ -20,204 +22,223 @@ struct ProgressPetView: View {
                 ThemeManager.appBackground
                     .ignoresSafeArea()
                 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Pet section
-                        petSection
-                        
-                        // Progress stats
-                        progressStats
-                        
-                        // Achievements
-                        achievementsSection
-                        
-                        // Recent activity
-                        recentActivitySection
+                if isLoading {
+                    loadingView
+                } else if let errorMessage = errorMessage {
+                    errorView(errorMessage)
+                } else {
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            // Main metrics section
+                            mainMetricsSection
+                            
+                            // Calendar view showing daily usage
+                            calendarSection
+                            
+                            // Detailed stats
+                            detailedStatsSection
+                            
+                            // Recent achievements
+                            achievementsSection
+                        }
+                        .padding()
                     }
-                    .padding()
                 }
             }
             .navigationTitle("My Progress")
             .navigationBarTitleDisplayMode(.large)
         }
-        .sheet(isPresented: $showingPetDetails) {
-            PetDetailsView(petLevel: petLevel, happiness: petHappiness)
+        .onAppear {
+            loadUserMetrics()
+        }
+        .refreshable {
+            await refreshMetrics()
         }
     }
     
-    private var petSection: some View {
+    private var loadingView: some View {
         VStack(spacing: 16) {
-            Text("Your Spiritual Companion")
+            ProgressView()
+                .scaleEffect(1.5)
+            
+            Text("Loading your progress...")
+                .font(.headline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    private func errorView(_ message: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 50))
+                .foregroundColor(.orange)
+            
+            Text("Unable to load progress")
                 .font(.headline)
                 .foregroundColor(.primary)
             
-            // Pet display
-            Button(action: {
-                showingPetDetails = true
-            }) {
-                VStack(spacing: 12) {
-                    // Cow pet
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.brown.opacity(0.3), Color.brown.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 120, height: 120)
-                        
-                        // Cow emoji or custom cow drawing
-                        Text("🐄")
-                            .font(.system(size: 60))
-                            .scaleEffect(petHappiness)
-                            .animation(.easeInOut(duration: 0.5), value: petHappiness)
-                    }
-                    
-                    VStack(spacing: 4) {
-                        Text("Gau Mata")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.primary)
-                        
-                        Text("Level \(petLevel)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        // Happiness meter
-                        HStack {
-                            Text("Happiness")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            ProgressView(value: petHappiness)
-                                .progressViewStyle(LinearProgressViewStyle(tint: .green))
-                                .frame(width: 100)
-                            
-                            Text("\(Int(petHappiness * 100))%")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(.systemBackground))
-                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
             
-            // Pet care actions
-            petCareActions
+            Button("Retry") {
+                loadUserMetrics()
+            }
+            .buttonStyle(.borderedProminent)
         }
+        .padding()
     }
     
-    private var petCareActions: some View {
-        HStack(spacing: 16) {
-            Button(action: {
-                feedPet()
-            }) {
-                VStack(spacing: 4) {
-                    Image(systemName: "leaf.fill")
-                        .font(.title2)
-                        .foregroundColor(.green)
-                    Text("Feed")
-                        .font(.caption)
-                        .foregroundColor(.primary)
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.green.opacity(0.1))
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            
-            Button(action: {
-                playWithPet()
-            }) {
-                VStack(spacing: 4) {
-                    Image(systemName: "gamecontroller.fill")
-                        .font(.title2)
-                        .foregroundColor(.blue)
-                    Text("Play")
-                        .font(.caption)
-                        .foregroundColor(.primary)
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.blue.opacity(0.1))
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            
-            Button(action: {
-                meditateWithPet()
-            }) {
-                VStack(spacing: 4) {
-                    Image(systemName: "brain.head.profile")
-                        .font(.title2)
-                        .foregroundColor(.purple)
-                    Text("Meditate")
-                        .font(.caption)
-                        .foregroundColor(.primary)
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.purple.opacity(0.1))
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-        }
-    }
-    
-    private var progressStats: some View {
+    private var mainMetricsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Your Journey")
                 .font(.headline)
+                .fontWeight(.semibold)
                 .foregroundColor(.primary)
             
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
-                ProgressStatCard(
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 16) {
+                MetricCard(
                     title: "Total XP",
-                    value: "\(dataManager.userProgress.totalXP)",
+                    value: "\(userMetrics?.totalXp ?? 0)",
                     icon: "star.fill",
                     color: .yellow
                 )
                 
-                ProgressStatCard(
+                MetricCard(
                     title: "Current Streak",
-                    value: "\(dataManager.userProgress.streak) days",
+                    value: "\(userMetrics?.currentStreak ?? 0) days",
                     icon: "flame.fill",
                     color: .orange
                 )
                 
-                ProgressStatCard(
+                MetricCard(
                     title: "Lessons Completed",
-                    value: "\(dataManager.userProgress.completedLessons.count)",
+                    value: "\(userMetrics?.lessonsCompleted ?? 0)",
                     icon: "book.fill",
                     color: .blue
                 )
                 
-                ProgressStatCard(
+                MetricCard(
                     title: "Study Time",
-                    value: "\(getTotalStudyTime()) min",
+                    value: "\(userMetrics?.totalStudyTimeMinutes ?? 0) min",
                     icon: "clock.fill",
                     color: .green
                 )
             }
         }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemGray6))
+        )
+    }
+    
+    private var calendarSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Activity Calendar")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+            
+            VStack(spacing: 12) {
+                // Simple calendar grid showing the last 30 days
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
+                    // Day headers
+                    ForEach(["S", "M", "T", "W", "T", "F", "S"], id: \.self) { day in
+                        Text(day)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // Calendar days
+                    ForEach(getLast30Days(), id: \.self) { date in
+                        CalendarDayView(
+                            date: date,
+                            isActive: isDateActive(date),
+                            isToday: Calendar.current.isDateInToday(date)
+                        )
+                    }
+                }
+                
+                // Legend
+                HStack(spacing: 16) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 8, height: 8)
+                        Text("Active")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                        Text("Inactive")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemGray6))
+        )
+    }
+    
+    private var detailedStatsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Detailed Statistics")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+            
+            VStack(spacing: 12) {
+                StatRow(
+                    title: "Longest Streak",
+                    value: "\(userMetrics?.longestStreak ?? 0) days",
+                    icon: "trophy.fill",
+                    color: .purple
+                )
+                
+                StatRow(
+                    title: "Quiz Average Score",
+                    value: String(format: "%.1f%%", userMetrics?.quizAverageScore ?? 0.0),
+                    icon: "chart.bar.fill",
+                    color: .indigo
+                )
+                
+                StatRow(
+                    title: "Total Study Sessions",
+                    value: "\(userMetrics?.totalStudyTimeMinutes ?? 0 / 10) sessions",
+                    icon: "calendar.badge.clock",
+                    color: .teal
+                )
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemGray6))
+        )
     }
     
     private var achievementsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Recent Achievements")
+            Text("Achievements")
                 .font(.headline)
+                .fontWeight(.semibold)
                 .foregroundColor(.primary)
             
             VStack(spacing: 12) {
@@ -225,7 +246,7 @@ struct ProgressPetView: View {
                     title: "First Steps",
                     description: "Completed your first lesson",
                     icon: "book.fill",
-                    isUnlocked: !dataManager.userProgress.completedLessons.isEmpty,
+                    isUnlocked: (userMetrics?.lessonsCompleted ?? 0) > 0,
                     color: .blue
                 )
                 
@@ -233,83 +254,117 @@ struct ProgressPetView: View {
                     title: "Consistent Learner",
                     description: "7-day study streak",
                     icon: "flame.fill",
-                    isUnlocked: dataManager.userProgress.streak >= 7,
+                    isUnlocked: (userMetrics?.currentStreak ?? 0) >= 7,
                     color: .orange
+                )
+                
+                AchievementRow(
+                    title: "Dedicated Student",
+                    description: "30-day study streak",
+                    icon: "flame.fill",
+                    isUnlocked: (userMetrics?.currentStreak ?? 0) >= 30,
+                    color: .red
                 )
                 
                 AchievementRow(
                     title: "Knowledge Seeker",
                     description: "Earned 100 XP",
                     icon: "star.fill",
-                    isUnlocked: dataManager.userProgress.totalXP >= 100,
+                    isUnlocked: (userMetrics?.totalXp ?? 0) >= 100,
                     color: .yellow
                 )
-            }
-        }
-    }
-    
-    private var recentActivitySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Recent Activity")
-                .font(.headline)
-                .foregroundColor(.primary)
-            
-            VStack(spacing: 12) {
-                ActivityRow(
-                    title: "Completed Lesson",
-                    subtitle: "Karma Yoga Basics",
-                    time: "2 hours ago",
-                    icon: "checkmark.circle.fill",
+                
+                AchievementRow(
+                    title: "Quiz Master",
+                    description: "90% average quiz score",
+                    icon: "chart.bar.fill",
+                    isUnlocked: (userMetrics?.quizAverageScore ?? 0) >= 90,
                     color: .green
                 )
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemGray6))
+        )
+    }
+    
+    private func loadUserMetrics() {
+        isLoading = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                async let metrics = authManager.getUserMetrics()
+                async let dailyUsage = authManager.getDailyUsage()
                 
-                ActivityRow(
-                    title: "Earned XP",
-                    subtitle: "+25 points",
-                    time: "Yesterday",
-                    icon: "star.fill",
-                    color: .yellow
-                )
+                let (fetchedMetrics, fetchedDailyUsage) = await (metrics, dailyUsage)
                 
-                ActivityRow(
-                    title: "Streak Milestone",
-                    subtitle: "5 days in a row!",
-                    time: "3 days ago",
-                    icon: "flame.fill",
-                    color: .orange
-                )
+                await MainActor.run {
+                    self.userMetrics = fetchedMetrics
+                    self.dailyUsageData = fetchedDailyUsage
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                    self.isLoading = false
+                }
             }
         }
     }
     
-    private func feedPet() {
-        withAnimation {
-            petHappiness = min(1.0, petHappiness + 0.1)
+    private func refreshMetrics() async {
+        await MainActor.run {
+            isLoading = true
         }
-        HapticManager.shared.buttonTap()
+        
+        do {
+            async let metrics = authManager.getUserMetrics()
+            async let dailyUsage = authManager.getDailyUsage()
+            
+            let (fetchedMetrics, fetchedDailyUsage) = await (metrics, dailyUsage)
+            
+            await MainActor.run {
+                self.userMetrics = fetchedMetrics
+                self.dailyUsageData = fetchedDailyUsage
+                self.isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = error.localizedDescription
+                self.isLoading = false
+            }
+        }
     }
     
-    private func playWithPet() {
-        withAnimation {
-            petHappiness = min(1.0, petHappiness + 0.15)
+    private func getLast30Days() -> [Date] {
+        let calendar = Calendar.current
+        let today = Date()
+        var dates: [Date] = []
+        
+        for i in 0..<30 {
+            if let date = calendar.date(byAdding: .day, value: -i, to: today) {
+                dates.append(date)
+            }
         }
-        HapticManager.shared.buttonTap()
+        
+        return dates.reversed()
     }
     
-    private func meditateWithPet() {
-        withAnimation {
-            petHappiness = min(1.0, petHappiness + 0.2)
+    private func isDateActive(_ date: Date) -> Bool {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+        
+        return dailyUsageData.contains { usage in
+            usage.usageDate == dateString
         }
-        HapticManager.shared.buttonTap()
-    }
-    
-    private func getTotalStudyTime() -> Int {
-        // TODO: Calculate actual study time from user data
-        return dataManager.userProgress.completedLessons.count * 10
     }
 }
 
-struct ProgressStatCard: View {
+struct MetricCard: View {
     let title: String
     let value: String
     let icon: String
@@ -324,17 +379,76 @@ struct ProgressStatCard: View {
             Text(value)
                 .font(.title3)
                 .fontWeight(.bold)
+                .foregroundColor(.primary)
             
             Text(title)
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray6))
+                .fill(Color(.systemBackground))
         )
+    }
+}
+
+struct StatRow: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .frame(width: 20)
+            
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+            
+            Spacer()
+            
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+        )
+    }
+}
+
+struct CalendarDayView: View {
+    let date: Date
+    let isActive: Bool
+    let isToday: Bool
+    
+    private var dayNumber: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d"
+        return formatter.string(from: date)
+    }
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(isActive ? Color.green : (isToday ? Color.blue.opacity(0.3) : Color.clear))
+                .frame(width: 24, height: 24)
+            
+            Text(dayNumber)
+                .font(.caption)
+                .fontWeight(isToday ? .bold : .medium)
+                .foregroundColor(isActive ? .white : (isToday ? .blue : .primary))
+        }
+        .frame(width: 32, height: 32)
     }
 }
 
@@ -384,119 +498,6 @@ struct AchievementRow: View {
                 .fill(isUnlocked ? Color(.systemBackground) : Color(.systemGray6))
                 .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
         )
-    }
-}
-
-struct ActivityRow: View {
-    let title: String
-    let subtitle: String
-    let time: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(color)
-                .frame(width: 20)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-                
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            Text(time)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemGray6))
-        )
-    }
-}
-
-struct PetDetailsView: View {
-    let petLevel: Int
-    let happiness: Double
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 24) {
-                // Pet display
-                VStack(spacing: 16) {
-                    Text("🐄")
-                        .font(.system(size: 100))
-                        .scaleEffect(happiness)
-                    
-                    Text("Gau Mata")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                    
-                    Text("Level \(petLevel) • \(Int(happiness * 100))% Happy")
-                        .font(.title3)
-                        .foregroundColor(.secondary)
-                }
-                
-                // Pet stats
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Pet Statistics")
-                        .font(.headline)
-                    
-                    VStack(spacing: 12) {
-                        PetStatRow(title: "Happiness", value: happiness, color: .green)
-                        PetStatRow(title: "Wisdom", value: Double(petLevel) / 10.0, color: .blue)
-                        PetStatRow(title: "Spiritual Growth", value: happiness * 0.8, color: .purple)
-                    }
-                }
-                
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("Pet Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct PetStatRow: View {
-    let title: String
-    let value: Double
-    let color: Color
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(title)
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Text("\(Int(value * 100))%")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            ProgressView(value: value)
-                .progressViewStyle(LinearProgressViewStyle(tint: color))
-        }
     }
 }
 

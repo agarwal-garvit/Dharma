@@ -332,7 +332,7 @@ class DataManager {
         saveUserData()
     }
     
-    private func updateStreak() {
+    func updateStreak() {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         
@@ -441,5 +441,21 @@ class DataManager {
             startedAt: startedAt,
             completedAt: completedAt
         )
+    }
+    
+    // MARK: - Daily Usage Tracking
+    
+    func recordDailyUsage() async {
+        guard let currentUser = DharmaAuthManager.shared.user else { 
+            print("❌ No authenticated user for daily usage tracking")
+            return 
+        }
+        
+        do {
+            try await databaseService.recordDailyUsage(userId: currentUser.id)
+            print("✅ Daily usage recorded successfully")
+        } catch {
+            print("❌ Failed to record daily usage: \(error)")
+        }
     }
 }

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct MainTabView: View {
     @State private var selectedTab = 0
@@ -40,7 +41,7 @@ struct MainTabView: View {
             ProgressPetView()
                 .background(ThemeManager.appBackground)
                 .tabItem {
-                    Image(systemName: "pawprint.fill")
+                    Image(systemName: "chart.bar.fill")
                     Text("Progress")
                 }
                 .tag(2)
@@ -62,6 +63,22 @@ struct MainTabView: View {
                 .tag(4)
         }
         .accentColor(.orange)
+        .onAppear {
+            // Track daily usage when app becomes active
+            Task {
+                await DataManager.shared.recordDailyUsage()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            // Track daily usage when app becomes active from background
+            Task {
+                await DataManager.shared.recordDailyUsage()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchToProgressTab)) { _ in
+            // Switch to progress tab when requested
+            selectedTab = 2
+        }
     }
 }
 

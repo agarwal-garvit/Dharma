@@ -51,7 +51,15 @@ struct DharmaApp: App {
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .authStateChanged)) { _ in
+                    let wasAuthenticated = isAuthenticated
                     isAuthenticated = authManager.isAuthenticated
+                    
+                    // Record session when user becomes authenticated
+                    if !wasAuthenticated && isAuthenticated {
+                        Task {
+                            await authManager.recordDailyLogin()
+                        }
+                    }
                 }
                 .onAppear {
                     // Check initial auth state
@@ -59,6 +67,13 @@ struct DharmaApp: App {
                     
                     // Start listening for auth state changes (only once)
                     authManager.startAuthStateListener()
+                    
+                    // Record app launch for session tracking
+                    Task {
+                        if isAuthenticated {
+                            await authManager.recordDailyLogin()
+                        }
+                    }
                     
                     // Debug configuration (remove in production)
                     #if DEBUG
@@ -83,4 +98,5 @@ struct DharmaApp: App {
 extension Notification.Name {
     static let onboardingCompleted = Notification.Name("onboardingCompleted")
     static let authStateChanged = Notification.Name("authStateChanged")
+    static let switchToProgressTab = Notification.Name("switchToProgressTab")
 }

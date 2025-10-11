@@ -195,14 +195,22 @@ struct ResultsView: View {
                         completedAt: Date()
                     )
                     print("✅ Comprehensive lesson completion recorded for \(lesson.title)")
+                    print("📊 Recorded: \(score)/\(totalQuestions) (\(String(format: "%.1f", Double(score)/Double(totalQuestions)*100))%) in \(Int(timeElapsed))s")
+                    
+                    // Update local progress only (no database calls to avoid duplication)
+                    dataManager.userProgress.completedLessons.insert(lesson.id.uuidString)
+                    dataManager.userProgress.totalXP += 50
+                    dataManager.updateStreak()
+                    dataManager.saveUserData()
+                    print("✅ Local progress updated for \(lesson.title)")
                 } catch {
                     print("❌ Failed to record lesson completion: \(error)")
+                    print("❌ Error details: \(error.localizedDescription)")
+                    print("❌ Error type: \(type(of: error))")
                 }
+            } else {
+                print("❌ No authenticated user ID found for lesson completion recording")
             }
-            
-            // Also update the existing lesson completion system
-            await dataManager.completeLesson(lesson.id)
-            print("✅ Lesson \(lesson.title) marked as completed")
         }
     }
     

@@ -311,6 +311,46 @@ struct DBXPRule: Codable {
     }
 }
 
+// MARK: - Daily Usage Models
+
+struct DBDailyUsage: Identifiable, Codable {
+    let id: UUID
+    let userId: UUID
+    let usageDate: String
+    let sessionCount: Int
+    let totalTimeSeconds: Int
+    let createdAt: String?
+    let updatedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case usageDate = "date"
+        case sessionCount = "session_count"
+        case totalTimeSeconds = "total_time_seconds"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct DBUserMetrics: Codable {
+    let totalXp: Int
+    let currentStreak: Int
+    let longestStreak: Int
+    let lessonsCompleted: Int
+    let totalStudyTimeMinutes: Int
+    let quizAverageScore: Double
+    
+    enum CodingKeys: String, CodingKey {
+        case totalXp = "total_xp"
+        case currentStreak = "current_streak"
+        case longestStreak = "longest_streak"
+        case lessonsCompleted = "lessons_completed"
+        case totalStudyTimeMinutes = "total_study_time_minutes"
+        case quizAverageScore = "quiz_average_score"
+    }
+}
+
 // MARK: - Helper Types
 
 // Helper type to handle Any JSON values from the database
