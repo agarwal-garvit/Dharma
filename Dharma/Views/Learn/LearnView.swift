@@ -69,21 +69,26 @@ struct LearnView: View {
                 ThemeManager.appBackground
                     .ignoresSafeArea()
                 
-                VStack(spacing: 8) {
-                    // Streak and XP stats bar
-                    statsBar
-                    
-                    // Course selector dropdown
-                    courseSelectorCard
-                    
-                    // Scrollable lessons area
-                    if isLoading {
-                        loadingView
-                    } else {
+                if isLoading {
+                    // Full screen loading view
+                    loadingView
+                        .transition(.opacity)
+                } else {
+                    // Main content
+                    VStack(spacing: 8) {
+                        // Streak and XP stats bar
+                        statsBar
+                        
+                        // Course selector dropdown
+                        courseSelectorCard
+                        
+                        // Scrollable lessons area
                         lessonsScrollView
                     }
+                    .transition(.opacity)
                 }
             }
+            .animation(.easeInOut(duration: 0.3), value: isLoading)
             .navigationTitle("Learn")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -531,11 +536,18 @@ struct LearnView: View {
             if let firstCourse = dataManager.courses.first {
                 await MainActor.run {
                     currentVisibleCourse = firstCourse
-                    isLoading = false
                     print("✅ Content loading completed. All courses and images loaded.")
                     
                     // Load user progress for lessons after courses and lessons are loaded
                     loadUserLessonProgress()
+                }
+                
+                // Small delay to ensure UI is fully rendered before removing loading screen
+                try? await Task.sleep(nanoseconds: 400_000_000) // 0.4 seconds
+                
+                await MainActor.run {
+                    isLoading = false
+                    print("✅ Loading screen dismissed")
                 }
             } else {
                 await MainActor.run {
