@@ -112,6 +112,11 @@ struct LearnView: View {
             // Reload progress when a lesson is completed
             loadUserLessonProgress()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .streakUpdated)) { _ in
+            // Reload metrics when streak is updated (after login)
+            print("📊 LearnView received streakUpdated notification - reloading metrics")
+            loadUserMetrics()
+        }
         .fullScreenCover(item: $selectedLesson) { lesson in
             LessonDetailView(lesson: lesson, onLessonSelected: { legacyLesson in
                 showingLessonPlayer = true

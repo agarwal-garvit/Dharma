@@ -30,11 +30,11 @@ struct MainTabView: View {
                 }
                 .tag(0)
             
-            SacredTextView()
+            DailyView()
                 .background(ThemeManager.appBackground)
                 .tabItem {
-                    Image(systemName: "scroll.fill")
-                    Text("Sacred Texts")
+                    Image(systemName: "sun.max.fill")
+                    Text("Daily")
                 }
                 .tag(1)
             
@@ -46,11 +46,11 @@ struct MainTabView: View {
                 }
                 .tag(2)
             
-            LeaderboardView()
+            SacredTextView()
                 .background(ThemeManager.appBackground)
                 .tabItem {
-                    Image(systemName: "trophy.fill")
-                    Text("Leaderboard")
+                    Image(systemName: "scroll.fill")
+                    Text("Texts")
                 }
                 .tag(3)
             
@@ -58,7 +58,7 @@ struct MainTabView: View {
                 .background(ThemeManager.appBackground)
                 .tabItem {
                     Image(systemName: "message.fill")
-                    Text("Chat")
+                    Text("AI")
                 }
                 .tag(4)
         }

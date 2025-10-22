@@ -45,6 +45,11 @@ struct ProgressPetView: View {
         .onAppear {
             loadUserMetrics()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .streakUpdated)) { _ in
+            // Reload metrics when streak is updated (after login)
+            print("📊 ProgressPetView received streakUpdated notification - reloading metrics")
+            loadUserMetrics()
+        }
         .refreshable {
             await refreshMetrics()
         }

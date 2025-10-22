@@ -60,6 +60,8 @@ struct DharmaApp: App {
                     if !wasAuthenticated && isAuthenticated {
                         Task {
                             await authManager.updateStreakIfNeeded()
+                            // Notify that streak has been updated
+                            NotificationCenter.default.post(name: .streakUpdated, object: nil)
                         }
                     }
                 }
@@ -84,6 +86,9 @@ struct DharmaApp: App {
                             await recordAppOpen()
                             // Update streak
                             await authManager.updateStreakIfNeeded()
+                            // Notify that streak has been updated
+                            NotificationCenter.default.post(name: .streakUpdated, object: nil)
+                            print("✅ [LOGIN_TRACKING] Streak update completed, notification posted")
                         } else {
                             print("⚠️ [LOGIN_TRACKING] User not authenticated - skipping login tracking")
                         }
@@ -194,4 +199,5 @@ extension Notification.Name {
     static let authStateChanged = Notification.Name("authStateChanged")
     static let switchToProgressTab = Notification.Name("switchToProgressTab")
     static let lessonCompleted = Notification.Name("lessonCompleted")
+    static let streakUpdated = Notification.Name("streakUpdated")
 }
