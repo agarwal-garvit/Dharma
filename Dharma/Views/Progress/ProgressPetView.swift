@@ -204,15 +204,6 @@ struct ProgressPetView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(Color.blue.opacity(0.3))
-                            .frame(width: 8, height: 8)
-                        Text("Today")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
                     Spacer()
                 }
             }
@@ -232,7 +223,8 @@ struct ProgressPetView: View {
         Task {
             do {
                 async let metrics = authManager.getUserMetrics()
-                async let sessions = authManager.getLoginSessions()
+                // Fetch more sessions to cover 90+ days even with multiple logins per day
+                async let sessions = authManager.getLoginSessions(limit: 500)
                 
                 let (fetchedMetrics, fetchedSessions) = await (metrics, sessions)
                 
@@ -257,7 +249,8 @@ struct ProgressPetView: View {
         
         do {
             async let metrics = authManager.getUserMetrics()
-            async let sessions = authManager.getLoginSessions()
+            // Fetch more sessions to cover 90+ days even with multiple logins per day
+            async let sessions = authManager.getLoginSessions(limit: 500)
             
             let (fetchedMetrics, fetchedSessions) = await (metrics, sessions)
             
@@ -294,22 +287,22 @@ struct ProgressPetView: View {
         let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth))!
         let range = calendar.range(of: .day, in: .month, for: currentMonth)!
         
-        let dateFormatter = ISO8601DateFormatter()
+        let isoFormatter = ISO8601DateFormatter()
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        dayFormatter.timeZone = TimeZone.current
         
+        // Collect all unique dates with login sessions in this month
         var activeDates = Set<String>()
         for session in loginSessions {
-            if let date = dateFormatter.date(from: session.loginTimestamp) {
-                let dayFormatter = DateFormatter()
-                dayFormatter.dateFormat = "yyyy-MM-dd"
+            if let date = isoFormatter.date(from: session.loginTimestamp) {
                 let dateString = dayFormatter.string(from: date)
                 activeDates.insert(dateString)
             }
         }
         
+        // Count how many days in the current month have login sessions
         var count = 0
-        let dayFormatter = DateFormatter()
-        dayFormatter.dateFormat = "yyyy-MM-dd"
-        
         for day in range {
             if let date = calendar.date(byAdding: .day, value: day - 1, to: monthStart) {
                 let dateString = dayFormatter.string(from: date)
@@ -366,14 +359,17 @@ struct ProgressPetView: View {
     }
     
     private func isDateActive(_ date: Date) -> Bool {
+        let calendar = Calendar.current
         let dayFormatter = DateFormatter()
         dayFormatter.dateFormat = "yyyy-MM-dd"
+        dayFormatter.timeZone = TimeZone.current
         let dateString = dayFormatter.string(from: date)
         
         let isoFormatter = ISO8601DateFormatter()
         
         return loginSessions.contains { session in
             if let sessionDate = isoFormatter.date(from: session.loginTimestamp) {
+                // Use calendar to ensure we're comparing dates in the user's timezone
                 let sessionDateString = dayFormatter.string(from: sessionDate)
                 return sessionDateString == dateString
             }
@@ -478,16 +474,12 @@ struct CalendarDayView: View {
                 Circle()
                     .fill(Color.green)
                     .frame(width: 32, height: 32)
-            } else if isToday {
-                Circle()
-                    .stroke(Color.blue, lineWidth: 2)
-                    .frame(width: 32, height: 32)
             }
             
             Text(dayNumber)
                 .font(.system(size: 14))
-                .fontWeight(isToday ? .bold : .medium)
-                .foregroundColor(isActive ? .white : (isToday ? .blue : .primary))
+                .fontWeight(.medium)
+                .foregroundColor(isActive ? .white : .primary)
         }
         .frame(width: 36, height: 36)
     }
