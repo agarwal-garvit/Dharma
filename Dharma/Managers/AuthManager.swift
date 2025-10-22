@@ -46,8 +46,12 @@ class DharmaAuthManager {
         do {
             let session = try await supabase.auth.session
             self.currentUser = session.user
+            print("🔍 [AUTH] Session found - User ID: \(session.user.id)")
+            
+            // Post notification that auth state has been determined
+            NotificationCenter.default.post(name: .authStateChanged, object: nil)
         } catch {
-            print("No existing session: \(error)")
+            print("⚠️ [AUTH] No existing session: \(error)")
             self.currentUser = nil
         }
     }
@@ -63,8 +67,11 @@ class DharmaAuthManager {
             // Initialize user in custom users table if needed
             await initializeUserIfNeeded()
             
-            // Record daily login activity
-            await recordDailyLogin()
+            // Record login session with device info
+            await recordLoginSession(authMethod: "email")
+            
+            // Update streak
+            await updateStreakIfNeeded()
             
             print("Successfully signed in with email: \(email)")
         } catch {
@@ -82,8 +89,11 @@ class DharmaAuthManager {
             // Initialize user in custom users table
             await initializeUserIfNeeded(displayName: displayName)
             
-            // Record daily login activity
-            await recordDailyLogin()
+            // Record login session (first login)
+            await recordLoginSession(authMethod: "email", isFirstLogin: true)
+            
+            // Update streak
+            await updateStreakIfNeeded()
             
             print("Successfully signed up with email: \(email)")
             
@@ -113,6 +123,9 @@ class DharmaAuthManager {
                 throw DharmaAuthError.noGoogleToken
             }
             
+            // Check if this is a new user (for first login tracking)
+            let isNewUser = await checkIfNewUser()
+            
             // Sign in to Supabase with Google token
             let session = try await supabase.auth.signInWithIdToken(
                 credentials: .init(
@@ -126,8 +139,11 @@ class DharmaAuthManager {
             // Initialize user in custom users table if needed
             await initializeUserIfNeeded(displayName: user.profile?.name)
             
-            // Record daily login activity
-            await recordDailyLogin()
+            // Record login session with device info
+            await recordLoginSession(authMethod: "google", isFirstLogin: isNewUser)
+            
+            // Update streak
+            await updateStreakIfNeeded()
             
             print("Successfully signed in with Google: \(session.user.email ?? "No email")")
             
@@ -198,13 +214,11 @@ class DharmaAuthManager {
     }
     
     @MainActor
-    func recordDailyLogin() async {
+    func updateStreakIfNeeded() async {
         guard let currentUser = self.currentUser else { return }
         
         do {
-            // Record daily usage using the new system
             let databaseService = DatabaseService.shared
-            try await databaseService.recordDailyUsage(userId: currentUser.id)
             
             // Calculate and update streak
             let currentStreak = try await databaseService.calculateUserStreak(userId: currentUser.id)
@@ -217,9 +231,9 @@ class DharmaAuthManager {
             // Update user stats to reflect new streak
             await updateUserStats()
             
-            print("Successfully recorded daily login - Streak: \(currentStreak) days")
+            print("✅ Streak updated: \(currentStreak) days")
         } catch {
-            print("Failed to record daily login: \(error)")
+            print("Failed to update streak: \(error)")
         }
     }
     
@@ -354,14 +368,14 @@ class DharmaAuthManager {
     }
     
     @MainActor
-    func getDailyUsage() async -> [DBDailyUsage] {
+    func getLoginSessions(limit: Int = 100) async -> [DBUserLoginSession] {
         guard let currentUser = self.currentUser else { return [] }
         
         do {
             let databaseService = DatabaseService.shared
-            return try await databaseService.fetchDailyUsage(userId: currentUser.id)
+            return try await databaseService.fetchUserLoginHistory(userId: currentUser.id, limit: limit)
         } catch {
-            print("Failed to fetch daily usage: \(error)")
+            print("Failed to fetch login sessions: \(error)")
             return []
         }
     }
@@ -413,6 +427,109 @@ class DharmaAuthManager {
         } catch {
             print("Failed to record lesson completion: \(error)")
         }
+    }
+    
+    // MARK: - Login Session Tracking
+    
+    @MainActor
+    private func recordLoginSession(authMethod: String, isFirstLogin: Bool = false) async {
+        print("🔍 [LOGIN_TRACKING] recordLoginSession called with method: \(authMethod)")
+        
+        guard let currentUser = self.currentUser else {
+            print("⚠️ [LOGIN_TRACKING] No current user in recordLoginSession")
+            return
+        }
+        
+        print("🔍 [LOGIN_TRACKING] User ID: \(currentUser.id)")
+        
+        do {
+            let databaseService = DatabaseService.shared
+            
+            // Get device information
+            let deviceModel = await getDeviceModel()
+            let deviceOS = await getDeviceOS()
+            let appVersion = getAppVersion()
+            
+            print("🔍 [LOGIN_TRACKING] Device info - Model: \(deviceModel), OS: \(deviceOS), Version: \(appVersion)")
+            
+            let session = try await databaseService.recordLoginSession(
+                userId: currentUser.id,
+                authMethod: authMethod,
+                deviceModel: deviceModel,
+                deviceOS: deviceOS,
+                appVersion: appVersion,
+                isFirstLogin: isFirstLogin
+            )
+            
+            print("✅ [LOGIN_TRACKING] Login session tracked successfully - ID: \(session.id)")
+        } catch {
+            print("❌ [LOGIN_TRACKING] Failed to record login session: \(error)")
+            print("❌ [LOGIN_TRACKING] Error details: \(error.localizedDescription)")
+            if let nsError = error as NSError? {
+                print("❌ [LOGIN_TRACKING] Error domain: \(nsError.domain), code: \(nsError.code)")
+            }
+        }
+    }
+    
+    @MainActor
+    private func checkIfNewUser() async -> Bool {
+        guard let currentUser = self.currentUser else { return false }
+        
+        do {
+            let existingUser: [UserRecord] = try await supabase.database
+                .from("users")
+                .select()
+                .eq("id", value: currentUser.id)
+                .execute()
+                .value
+            
+            return existingUser.isEmpty
+        } catch {
+            print("Failed to check if new user: \(error)")
+            return false
+        }
+    }
+    
+    private func getDeviceModel() async -> String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let machineMirror = Mirror(reflecting: systemInfo.machine)
+        let identifier = machineMirror.children.reduce("") { identifier, element in
+            guard let value = element.value as? Int8, value != 0 else { return identifier }
+            return identifier + String(UnicodeScalar(UInt8(value)))
+        }
+        
+        // Map identifier to friendly name
+        let deviceMap: [String: String] = [
+            "iPhone14,2": "iPhone 13 Pro",
+            "iPhone14,3": "iPhone 13 Pro Max",
+            "iPhone14,4": "iPhone 13 mini",
+            "iPhone14,5": "iPhone 13",
+            "iPhone15,2": "iPhone 14 Pro",
+            "iPhone15,3": "iPhone 14 Pro Max",
+            "iPhone15,4": "iPhone 14",
+            "iPhone15,5": "iPhone 14 Plus",
+            "iPhone16,1": "iPhone 15 Pro",
+            "iPhone16,2": "iPhone 15 Pro Max",
+            "iPhone16,3": "iPhone 15",
+            "iPhone16,4": "iPhone 15 Plus",
+            "arm64": "Simulator"
+        ]
+        
+        return deviceMap[identifier] ?? identifier
+    }
+    
+    private func getDeviceOS() async -> String {
+        let osVersion = UIDevice.current.systemVersion
+        return "iOS \(osVersion)"
+    }
+    
+    private func getAppVersion() -> String {
+        if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+           let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
+            return "\(version) (\(build))"
+        }
+        return "Unknown"
     }
     
     // MARK: - User Initialization

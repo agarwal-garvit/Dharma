@@ -199,10 +199,12 @@ struct ResultsView: View {
                     
                     // Update local progress only (no database calls to avoid duplication)
                     dataManager.userProgress.completedLessons.insert(lesson.id.uuidString)
-                    dataManager.userProgress.totalXP += 50
                     dataManager.updateStreak()
                     dataManager.saveUserData()
                     print("✅ Local progress updated for \(lesson.title)")
+                    
+                    // Notify that a lesson was completed so UI can update
+                    NotificationCenter.default.post(name: .lessonCompleted, object: nil)
                 } catch {
                     print("❌ Failed to record lesson completion: \(error)")
                     print("❌ Error details: \(error.localizedDescription)")

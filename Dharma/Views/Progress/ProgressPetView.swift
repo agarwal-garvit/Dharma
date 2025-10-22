@@ -12,8 +12,8 @@ struct ProgressPetView: View {
     @State private var userMetrics: DBUserMetrics?
     @State private var isLoading = true
     @State private var errorMessage: String?
-    @State private var dailyUsageData: [DBDailyUsage] = []
-    @State private var selectedDate = Date()
+    @State private var loginSessions: [DBUserLoginSession] = []
+    @State private var currentMonth = Date()
     
     var body: some View {
         NavigationView {
@@ -34,12 +34,6 @@ struct ProgressPetView: View {
                             
                             // Calendar view showing daily usage
                             calendarSection
-                            
-                            // Detailed stats
-                            detailedStatsSection
-                            
-                            // Recent achievements
-                            achievementsSection
                         }
                         .padding()
                     }
@@ -103,13 +97,6 @@ struct ProgressPetView: View {
                 GridItem(.flexible())
             ], spacing: 16) {
                 MetricCard(
-                    title: "Total XP",
-                    value: "\(userMetrics?.totalXp ?? 0)",
-                    icon: "star.fill",
-                    color: .yellow
-                )
-                
-                MetricCard(
                     title: "Current Streak",
                     value: "\(userMetrics?.currentStreak ?? 0) days",
                     icon: "flame.fill",
@@ -117,17 +104,24 @@ struct ProgressPetView: View {
                 )
                 
                 MetricCard(
-                    title: "Lessons Completed",
+                    title: "Lessons Complete",
                     value: "\(userMetrics?.lessonsCompleted ?? 0)",
                     icon: "book.fill",
                     color: .blue
                 )
                 
                 MetricCard(
-                    title: "Study Time",
+                    title: "Total Study Time",
                     value: "\(userMetrics?.totalStudyTimeMinutes ?? 0) min",
                     icon: "clock.fill",
                     color: .green
+                )
+                
+                MetricCard(
+                    title: "Average Quiz Score",
+                    value: String(format: "%.0f%%", userMetrics?.quizAverageScore ?? 0.0),
+                    icon: "chart.bar.fill",
+                    color: .purple
                 )
             }
         }
@@ -140,29 +134,62 @@ struct ProgressPetView: View {
     
     private var calendarSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Activity Calendar")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
+            // Month navigation header
+            HStack {
+                Button(action: { changeMonth(by: -1) }) {
+                    Image(systemName: "chevron.left")
+                        .font(.title3)
+                        .foregroundColor(.primary)
+                }
+                
+                Spacer()
+                
+                VStack(spacing: 2) {
+                    Text(monthYearString)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    
+                    Text("\(activeDaysInMonth) active days")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Button(action: { changeMonth(by: 1) }) {
+                    Image(systemName: "chevron.right")
+                        .font(.title3)
+                        .foregroundColor(isCurrentMonth ? .gray : .primary)
+                }
+                .disabled(isCurrentMonth)
+            }
             
             VStack(spacing: 12) {
-                // Simple calendar grid showing the last 30 days
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
+                // Calendar grid
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 10) {
                     // Day headers
-                    ForEach(["S", "M", "T", "W", "T", "F", "S"], id: \.self) { day in
+                    ForEach(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], id: \.self) { day in
                         Text(day)
-                            .font(.caption)
+                            .font(.caption2)
                             .fontWeight(.semibold)
                             .foregroundColor(.secondary)
                     }
                     
-                    // Calendar days
-                    ForEach(getLast30Days(), id: \.self) { date in
-                        CalendarDayView(
-                            date: date,
-                            isActive: isDateActive(date),
-                            isToday: Calendar.current.isDateInToday(date)
-                        )
+                    // Calendar days with proper alignment
+                    ForEach(getMonthDays(), id: \.self) { dateWrapper in
+                        if let date = dateWrapper.date {
+                            CalendarDayView(
+                                date: date,
+                                isActive: isDateActive(date),
+                                isToday: Calendar.current.isDateInToday(date),
+                                isCurrentMonth: true
+                            )
+                        } else {
+                            // Empty cell for padding
+                            Color.clear
+                                .frame(height: 36)
+                        }
                     }
                 }
                 
@@ -179,9 +206,9 @@ struct ProgressPetView: View {
                     
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(Color.gray.opacity(0.3))
+                            .fill(Color.blue.opacity(0.3))
                             .frame(width: 8, height: 8)
-                        Text("Inactive")
+                        Text("Today")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -197,98 +224,6 @@ struct ProgressPetView: View {
         )
     }
     
-    private var detailedStatsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Detailed Statistics")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
-            
-            VStack(spacing: 12) {
-                StatRow(
-                    title: "Longest Streak",
-                    value: "\(userMetrics?.longestStreak ?? 0) days",
-                    icon: "trophy.fill",
-                    color: .purple
-                )
-                
-                StatRow(
-                    title: "Quiz Average Score",
-                    value: String(format: "%.1f%%", userMetrics?.quizAverageScore ?? 0.0),
-                    icon: "chart.bar.fill",
-                    color: .indigo
-                )
-                
-                StatRow(
-                    title: "Total Study Sessions",
-                    value: "\(userMetrics?.totalStudyTimeMinutes ?? 0 / 10) sessions",
-                    icon: "calendar.badge.clock",
-                    color: .teal
-                )
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemGray6))
-        )
-    }
-    
-    private var achievementsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Achievements")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
-            
-            VStack(spacing: 12) {
-                AchievementRow(
-                    title: "First Steps",
-                    description: "Completed your first lesson",
-                    icon: "book.fill",
-                    isUnlocked: (userMetrics?.lessonsCompleted ?? 0) > 0,
-                    color: .blue
-                )
-                
-                AchievementRow(
-                    title: "Consistent Learner",
-                    description: "7-day study streak",
-                    icon: "flame.fill",
-                    isUnlocked: (userMetrics?.currentStreak ?? 0) >= 7,
-                    color: .orange
-                )
-                
-                AchievementRow(
-                    title: "Dedicated Student",
-                    description: "30-day study streak",
-                    icon: "flame.fill",
-                    isUnlocked: (userMetrics?.currentStreak ?? 0) >= 30,
-                    color: .red
-                )
-                
-                AchievementRow(
-                    title: "Knowledge Seeker",
-                    description: "Earned 100 XP",
-                    icon: "star.fill",
-                    isUnlocked: (userMetrics?.totalXp ?? 0) >= 100,
-                    color: .yellow
-                )
-                
-                AchievementRow(
-                    title: "Quiz Master",
-                    description: "90% average quiz score",
-                    icon: "chart.bar.fill",
-                    isUnlocked: (userMetrics?.quizAverageScore ?? 0) >= 90,
-                    color: .green
-                )
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemGray6))
-        )
-    }
     
     private func loadUserMetrics() {
         isLoading = true
@@ -297,13 +232,13 @@ struct ProgressPetView: View {
         Task {
             do {
                 async let metrics = authManager.getUserMetrics()
-                async let dailyUsage = authManager.getDailyUsage()
+                async let sessions = authManager.getLoginSessions()
                 
-                let (fetchedMetrics, fetchedDailyUsage) = await (metrics, dailyUsage)
+                let (fetchedMetrics, fetchedSessions) = await (metrics, sessions)
                 
                 await MainActor.run {
                     self.userMetrics = fetchedMetrics
-                    self.dailyUsageData = fetchedDailyUsage
+                    self.loginSessions = fetchedSessions
                     self.isLoading = false
                 }
             } catch {
@@ -322,13 +257,13 @@ struct ProgressPetView: View {
         
         do {
             async let metrics = authManager.getUserMetrics()
-            async let dailyUsage = authManager.getDailyUsage()
+            async let sessions = authManager.getLoginSessions()
             
-            let (fetchedMetrics, fetchedDailyUsage) = await (metrics, dailyUsage)
+            let (fetchedMetrics, fetchedSessions) = await (metrics, sessions)
             
             await MainActor.run {
                 self.userMetrics = fetchedMetrics
-                self.dailyUsageData = fetchedDailyUsage
+                self.loginSessions = fetchedSessions
                 self.isLoading = false
             }
         } catch {
@@ -339,28 +274,126 @@ struct ProgressPetView: View {
         }
     }
     
-    private func getLast30Days() -> [Date] {
+    // MARK: - Calendar Helpers
+    
+    private var monthYearString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter.string(from: currentMonth)
+    }
+    
+    private var isCurrentMonth: Bool {
         let calendar = Calendar.current
-        let today = Date()
-        var dates: [Date] = []
+        let currentComponents = calendar.dateComponents([.year, .month], from: Date())
+        let selectedComponents = calendar.dateComponents([.year, .month], from: currentMonth)
+        return currentComponents.year == selectedComponents.year && currentComponents.month == selectedComponents.month
+    }
+    
+    private var activeDaysInMonth: Int {
+        let calendar = Calendar.current
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth))!
+        let range = calendar.range(of: .day, in: .month, for: currentMonth)!
         
-        for i in 0..<30 {
-            if let date = calendar.date(byAdding: .day, value: -i, to: today) {
-                dates.append(date)
+        let dateFormatter = ISO8601DateFormatter()
+        
+        var activeDates = Set<String>()
+        for session in loginSessions {
+            if let date = dateFormatter.date(from: session.loginTimestamp) {
+                let dayFormatter = DateFormatter()
+                dayFormatter.dateFormat = "yyyy-MM-dd"
+                let dateString = dayFormatter.string(from: date)
+                activeDates.insert(dateString)
             }
         }
         
-        return dates.reversed()
+        var count = 0
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        
+        for day in range {
+            if let date = calendar.date(byAdding: .day, value: day - 1, to: monthStart) {
+                let dateString = dayFormatter.string(from: date)
+                if activeDates.contains(dateString) {
+                    count += 1
+                }
+            }
+        }
+        return count
+    }
+    
+    private func changeMonth(by value: Int) {
+        let calendar = Calendar.current
+        if let newMonth = calendar.date(byAdding: .month, value: value, to: currentMonth) {
+            // Don't allow navigation to future months
+            if value > 0 {
+                let now = Date()
+                if calendar.compare(newMonth, to: now, toGranularity: .month) == .orderedDescending {
+                    return
+                }
+            }
+            currentMonth = newMonth
+        }
+    }
+    
+    private func getMonthDays() -> [DateWrapper] {
+        let calendar = Calendar.current
+        
+        // Get the first day of the month
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth))!
+        
+        // Get the weekday of the first day (1 = Sunday, 7 = Saturday)
+        let firstWeekday = calendar.component(.weekday, from: monthStart)
+        
+        // Get the number of days in the month
+        let range = calendar.range(of: .day, in: .month, for: currentMonth)!
+        let numDays = range.count
+        
+        var days: [DateWrapper] = []
+        
+        // Add empty cells for days before the month starts
+        for _ in 1..<firstWeekday {
+            days.append(DateWrapper(date: nil))
+        }
+        
+        // Add all days in the month
+        for day in 1...numDays {
+            if let date = calendar.date(byAdding: .day, value: day - 1, to: monthStart) {
+                days.append(DateWrapper(date: date))
+            }
+        }
+        
+        return days
     }
     
     private func isDateActive(_ date: Date) -> Bool {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateString = dateFormatter.string(from: date)
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dayFormatter.string(from: date)
         
-        return dailyUsageData.contains { usage in
-            usage.usageDate == dateString
+        let isoFormatter = ISO8601DateFormatter()
+        
+        return loginSessions.contains { session in
+            if let sessionDate = isoFormatter.date(from: session.loginTimestamp) {
+                let sessionDateString = dayFormatter.string(from: sessionDate)
+                return sessionDateString == dateString
+            }
+            return false
         }
+    }
+}
+
+// MARK: - Helper Structures
+
+struct DateWrapper: Hashable {
+    let date: Date?
+    let id = UUID()
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: DateWrapper, rhs: DateWrapper) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
@@ -430,6 +463,7 @@ struct CalendarDayView: View {
     let date: Date
     let isActive: Bool
     let isToday: Bool
+    let isCurrentMonth: Bool
     
     private var dayNumber: String {
         let formatter = DateFormatter()
@@ -439,68 +473,28 @@ struct CalendarDayView: View {
     
     var body: some View {
         ZStack {
-            Circle()
-                .fill(isActive ? Color.green : (isToday ? Color.blue.opacity(0.3) : Color.clear))
-                .frame(width: 24, height: 24)
+            // Background circle
+            if isActive {
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 32, height: 32)
+            } else if isToday {
+                Circle()
+                    .stroke(Color.blue, lineWidth: 2)
+                    .frame(width: 32, height: 32)
+            }
             
             Text(dayNumber)
-                .font(.caption)
+                .font(.system(size: 14))
                 .fontWeight(isToday ? .bold : .medium)
                 .foregroundColor(isActive ? .white : (isToday ? .blue : .primary))
         }
-        .frame(width: 32, height: 32)
-    }
-}
-
-struct AchievementRow: View {
-    let title: String
-    let description: String
-    let icon: String
-    let isUnlocked: Bool
-    let color: Color
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(isUnlocked ? color : Color.gray)
-                    .frame(width: 40, height: 40)
-                
-                Image(systemName: icon)
-                    .foregroundColor(.white)
-                    .font(.title3)
-            }
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(isUnlocked ? .primary : .secondary)
-                
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            if isUnlocked {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-            } else {
-                Image(systemName: "lock.fill")
-                    .foregroundColor(.gray)
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isUnlocked ? Color(.systemBackground) : Color(.systemGray6))
-                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
-        )
+        .frame(width: 36, height: 36)
     }
 }
 
 #Preview {
     ProgressPetView()
 }
+
+

@@ -317,7 +317,7 @@ class DataManager {
                     totalCompletions: 1
                 )
                 
-                try await databaseService.updateUserLessonProgress(progress)
+                // No longer need to update user_lesson_progress - derived from lesson_completions
                 
             } catch {
                 print("Failed to update lesson progress in database: \(error)")
@@ -444,18 +444,5 @@ class DataManager {
     }
     
     // MARK: - Daily Usage Tracking
-    
-    func recordDailyUsage() async {
-        guard let currentUser = DharmaAuthManager.shared.user else { 
-            print("❌ No authenticated user for daily usage tracking")
-            return 
-        }
-        
-        do {
-            try await databaseService.recordDailyUsage(userId: currentUser.id)
-            print("✅ Daily usage recorded successfully")
-        } catch {
-            print("❌ Failed to record daily usage: \(error)")
-        }
-    }
+    // Removed - now using login sessions for tracking instead of daily_usage table
 }

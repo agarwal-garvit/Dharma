@@ -7,6 +7,8 @@
 
 import SwiftUI
 import GoogleSignIn
+import UIKit
+import Supabase
 
 @main
 struct DharmaApp: App {
@@ -54,24 +56,36 @@ struct DharmaApp: App {
                     let wasAuthenticated = isAuthenticated
                     isAuthenticated = authManager.isAuthenticated
                     
-                    // Record session when user becomes authenticated
+                    // Update streak when user becomes authenticated
                     if !wasAuthenticated && isAuthenticated {
                         Task {
-                            await authManager.recordDailyLogin()
+                            await authManager.updateStreakIfNeeded()
                         }
                     }
                 }
                 .onAppear {
-                    // Check initial auth state
-                    isAuthenticated = authManager.isAuthenticated
+                    print("🔍 [LOGIN_TRACKING] App launched")
                     
                     // Start listening for auth state changes (only once)
                     authManager.startAuthStateListener()
                     
-                    // Record app launch for session tracking
+                    // Record app launch/open for session tracking
+                    // Use a slight delay to let auth state be determined
                     Task {
+                        // Wait a moment for auth state to be determined
+                        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                        
+                        isAuthenticated = authManager.isAuthenticated
+                        print("🔍 [LOGIN_TRACKING] Auth state determined - isAuthenticated: \(isAuthenticated)")
+                        
                         if isAuthenticated {
-                            await authManager.recordDailyLogin()
+                            print("🔍 [LOGIN_TRACKING] User is authenticated, recording app open...")
+                            // Record this app open as a login session
+                            await recordAppOpen()
+                            // Update streak
+                            await authManager.updateStreakIfNeeded()
+                        } else {
+                            print("⚠️ [LOGIN_TRACKING] User not authenticated - skipping login tracking")
                         }
                     }
                     
@@ -82,6 +96,86 @@ struct DharmaApp: App {
                 }
             }
         }
+    }
+    
+    private func recordAppOpen() async {
+        // Record that the user opened the app (counts as a login session)
+        print("🔍 [LOGIN_TRACKING] recordAppOpen() called")
+        
+        guard let userId = authManager.user?.id else {
+            print("⚠️ [LOGIN_TRACKING] No user ID found - user not authenticated")
+            return
+        }
+        
+        print("🔍 [LOGIN_TRACKING] User ID: \(userId)")
+        
+        do {
+            let databaseService = DatabaseService.shared
+            let deviceModel = await getDeviceModel()
+            let deviceOS = await getDeviceOS()
+            let appVersion = getAppVersion()
+            
+            print("🔍 [LOGIN_TRACKING] Device: \(deviceModel), OS: \(deviceOS), Version: \(appVersion)")
+            
+            let session = try await databaseService.recordLoginSession(
+                userId: userId,
+                authMethod: "app_open",
+                deviceModel: deviceModel,
+                deviceOS: deviceOS,
+                appVersion: appVersion,
+                isFirstLogin: false
+            )
+            
+            print("✅ [LOGIN_TRACKING] App open recorded as login session - ID: \(session.id)")
+        } catch {
+            print("❌ [LOGIN_TRACKING] Failed to record app open: \(error)")
+            print("❌ [LOGIN_TRACKING] Error details: \(error.localizedDescription)")
+            if let nsError = error as NSError? {
+                print("❌ [LOGIN_TRACKING] Error domain: \(nsError.domain), code: \(nsError.code)")
+                print("❌ [LOGIN_TRACKING] User info: \(nsError.userInfo)")
+            }
+        }
+    }
+    
+    private func getDeviceModel() async -> String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let machineMirror = Mirror(reflecting: systemInfo.machine)
+        let identifier = machineMirror.children.reduce("") { identifier, element in
+            guard let value = element.value as? Int8, value != 0 else { return identifier }
+            return identifier + String(UnicodeScalar(UInt8(value)))
+        }
+        
+        let deviceMap: [String: String] = [
+            "iPhone14,2": "iPhone 13 Pro",
+            "iPhone14,3": "iPhone 13 Pro Max",
+            "iPhone14,4": "iPhone 13 mini",
+            "iPhone14,5": "iPhone 13",
+            "iPhone15,2": "iPhone 14 Pro",
+            "iPhone15,3": "iPhone 14 Pro Max",
+            "iPhone15,4": "iPhone 14",
+            "iPhone15,5": "iPhone 14 Plus",
+            "iPhone16,1": "iPhone 15 Pro",
+            "iPhone16,2": "iPhone 15 Pro Max",
+            "iPhone16,3": "iPhone 15",
+            "iPhone16,4": "iPhone 15 Plus",
+            "arm64": "Simulator"
+        ]
+        
+        return deviceMap[identifier] ?? identifier
+    }
+    
+    private func getDeviceOS() async -> String {
+        let osVersion = UIDevice.current.systemVersion
+        return "iOS \(osVersion)"
+    }
+    
+    private func getAppVersion() -> String {
+        if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+           let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
+            return "\(version) (\(build))"
+        }
+        return "Unknown"
     }
     
     private func setupGoogleSignIn() {
@@ -99,4 +193,5 @@ extension Notification.Name {
     static let onboardingCompleted = Notification.Name("onboardingCompleted")
     static let authStateChanged = Notification.Name("authStateChanged")
     static let switchToProgressTab = Notification.Name("switchToProgressTab")
+    static let lessonCompleted = Notification.Name("lessonCompleted")
 }

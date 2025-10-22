@@ -14,9 +14,10 @@ struct DBCourse: Identifiable, Codable {
     let title: String
     let description: String?
     let courseOrder: Int?
+    let access: Bool
     
     enum CodingKeys: String, CodingKey {
-        case id, title, description
+        case id, title, description, access
         case courseOrder = "course_order"
     }
 }
@@ -135,6 +136,7 @@ enum LessonProgressStatus: String, Codable, CaseIterable {
     }
 }
 
+// Legacy model - no longer used, derived from lesson_completions instead
 struct DBUserLessonProgress: Codable {
     let userId: UUID
     let lessonId: UUID
@@ -156,6 +158,23 @@ struct DBUserLessonProgress: Codable {
         case lastScorePct = "last_score_pct"
         case bestScorePct = "best_score_pct"
         case totalCompletions = "total_completions"
+    }
+}
+
+// Simplified progress model derived from lesson_completions
+struct DBLessonProgress: Codable {
+    let lessonId: UUID
+    let bestScorePercentage: Double
+    let lastScorePercentage: Double
+    let totalAttempts: Int
+    let lastCompletedAt: String
+    
+    enum CodingKeys: String, CodingKey {
+        case lessonId = "lesson_id"
+        case bestScorePercentage = "best_score_percentage"
+        case lastScorePercentage = "last_score_percentage"
+        case totalAttempts = "total_attempts"
+        case lastCompletedAt = "last_completed_at"
     }
 }
 
@@ -330,6 +349,60 @@ struct DBDailyUsage: Identifiable, Codable {
         case totalTimeSeconds = "total_time_seconds"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+    }
+}
+
+// MARK: - Login Session Models
+
+struct DBUserLoginSession: Identifiable, Codable {
+    let id: UUID
+    let userId: UUID
+    let loginTimestamp: String
+    let sessionDurationSeconds: Int?
+    let deviceModel: String?
+    let deviceOS: String?
+    let appVersion: String?
+    let locationCountry: String?
+    let locationCity: String?
+    let authMethod: String?
+    let ipAddress: String?
+    let isFirstLogin: Bool?
+    let createdAt: String?
+    let updatedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case loginTimestamp = "login_timestamp"
+        case sessionDurationSeconds = "session_duration_seconds"
+        case deviceModel = "device_model"
+        case deviceOS = "device_os"
+        case appVersion = "app_version"
+        case locationCountry = "location_country"
+        case locationCity = "location_city"
+        case authMethod = "auth_method"
+        case ipAddress = "ip_address"
+        case isFirstLogin = "is_first_login"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct DBUserLoginStats: Codable {
+    let totalLogins: Int
+    let firstLogin: String?
+    let lastLogin: String?
+    let mostUsedDevice: String?
+    let mostUsedAuthMethod: String?
+    let averageSessionDurationMinutes: Double?
+    
+    enum CodingKeys: String, CodingKey {
+        case totalLogins = "total_logins"
+        case firstLogin = "first_login"
+        case lastLogin = "last_login"
+        case mostUsedDevice = "most_used_device"
+        case mostUsedAuthMethod = "most_used_auth_method"
+        case averageSessionDurationMinutes = "average_session_duration_minutes"
     }
 }
 

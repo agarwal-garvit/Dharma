@@ -1,206 +1,163 @@
--- Complete Database Setup for Dharma App
--- Run this in your Supabase SQL editor to create all missing tables
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
--- 1. Create lesson_completions table (if it doesn't exist)
-CREATE TABLE IF NOT EXISTS lesson_completions (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    lesson_id UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-    attempt_number INTEGER NOT NULL DEFAULT 1,
-    score INTEGER NOT NULL,
-    total_questions INTEGER NOT NULL,
-    score_percentage DECIMAL(5,2) NOT NULL,
-    time_elapsed_seconds INTEGER NOT NULL,
-    questions_answered JSONB, -- Store individual question responses
-    started_at TIMESTAMPTZ NOT NULL,
-    completed_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE public.chat_conversations (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  title text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  message_count integer DEFAULT 0,
+  CONSTRAINT chat_conversations_pkey PRIMARY KEY (id),
+  CONSTRAINT chat_conversations_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-
--- 2. Create user_lesson_progress table (if it doesn't exist)
-CREATE TABLE IF NOT EXISTS user_lesson_progress (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    lesson_id UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-    status TEXT NOT NULL DEFAULT 'NOT_STARTED', -- NOT_STARTED, IN_PROGRESS, COMPLETED
-    started_at TIMESTAMPTZ,
-    completed_at TIMESTAMPTZ,
-    last_seen_at TIMESTAMPTZ DEFAULT NOW(),
-    last_score_pct DECIMAL(5,2),
-    best_score_pct DECIMAL(5,2),
-    total_completions INTEGER DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    -- Ensure one record per user per lesson
-    UNIQUE(user_id, lesson_id)
+CREATE TABLE public.chat_messages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  conversation_id uuid,
+  content text NOT NULL,
+  is_user boolean NOT NULL,
+  timestamp timestamp with time zone DEFAULT now(),
+  CONSTRAINT chat_messages_pkey PRIMARY KEY (id),
+  CONSTRAINT chat_messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.chat_conversations(id)
 );
-
--- 3. Create user_lesson_sessions table (if it doesn't exist)
-CREATE TABLE IF NOT EXISTS user_lesson_sessions (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    lesson_id UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-    started_at TIMESTAMPTZ NOT NULL,
-    completed_at TIMESTAMPTZ,
-    duration_seconds INTEGER,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE public.courses (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  course_order smallint NOT NULL,
+  access boolean NOT NULL DEFAULT false,
+  CONSTRAINT courses_pkey PRIMARY KEY (id)
 );
-
--- 4. Create user_stats table (if it doesn't exist)
-CREATE TABLE IF NOT EXISTS user_stats (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    xp_total INTEGER DEFAULT 0,
-    streak_count INTEGER DEFAULT 0,
-    longest_streak INTEGER DEFAULT 0,
-    last_active_date DATE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    -- Ensure one record per user
-    UNIQUE(user_id)
+CREATE TABLE public.daily_usage (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  date date NOT NULL,
+  session_count integer DEFAULT 1,
+  total_time_seconds integer DEFAULT 0,
+  last_active_at timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT daily_usage_pkey PRIMARY KEY (id),
+  CONSTRAINT daily_usage_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-
--- 5. Create xp_events table (if it doesn't exist)
-CREATE TABLE IF NOT EXISTS xp_events (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    lesson_id UUID REFERENCES lessons(id) ON DELETE CASCADE,
-    rule_code TEXT NOT NULL,
-    awarded_xp INTEGER NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE public.lesson_completions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  lesson_id uuid NOT NULL,
+  attempt_number integer NOT NULL DEFAULT 1,
+  score integer NOT NULL,
+  total_questions integer NOT NULL,
+  score_percentage numeric NOT NULL,
+  time_elapsed_seconds integer NOT NULL,
+  questions_answered jsonb,
+  started_at timestamp with time zone NOT NULL,
+  completed_at timestamp with time zone NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT lesson_completions_pkey PRIMARY KEY (id),
+  CONSTRAINT lesson_completions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT lesson_completions_lesson_id_fkey FOREIGN KEY (lesson_id) REFERENCES public.lessons(id)
 );
-
--- 6. Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_lesson_completions_user_id ON lesson_completions(user_id);
-CREATE INDEX IF NOT EXISTS idx_lesson_completions_lesson_id ON lesson_completions(lesson_id);
-CREATE INDEX IF NOT EXISTS idx_lesson_completions_user_lesson ON lesson_completions(user_id, lesson_id);
-CREATE INDEX IF NOT EXISTS idx_lesson_completions_attempt_number ON lesson_completions(user_id, lesson_id, attempt_number);
-CREATE INDEX IF NOT EXISTS idx_lesson_completions_completed_at ON lesson_completions(completed_at);
-
-CREATE INDEX IF NOT EXISTS idx_user_lesson_progress_user_id ON user_lesson_progress(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_lesson_progress_lesson_id ON user_lesson_progress(lesson_id);
-CREATE INDEX IF NOT EXISTS idx_user_lesson_progress_user_lesson ON user_lesson_progress(user_id, lesson_id);
-CREATE INDEX IF NOT EXISTS idx_user_lesson_progress_status ON user_lesson_progress(status);
-
-CREATE INDEX IF NOT EXISTS idx_user_lesson_sessions_user_id ON user_lesson_sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_lesson_sessions_lesson_id ON user_lesson_sessions(lesson_id);
-CREATE INDEX IF NOT EXISTS idx_user_lesson_sessions_started_at ON user_lesson_sessions(started_at);
-
-CREATE INDEX IF NOT EXISTS idx_user_stats_user_id ON user_stats(user_id);
-CREATE INDEX IF NOT EXISTS idx_xp_events_user_id ON xp_events(user_id);
-CREATE INDEX IF NOT EXISTS idx_xp_events_lesson_id ON xp_events(lesson_id);
-
--- 7. Create unique constraints to prevent duplicate attempts
-CREATE UNIQUE INDEX IF NOT EXISTS idx_lesson_completions_unique_attempt 
-ON lesson_completions(user_id, lesson_id, attempt_number);
-
--- 8. Enable Row Level Security (RLS) - DISABLED for now to avoid permission issues
--- You can enable these later once everything is working
-ALTER TABLE lesson_completions DISABLE ROW LEVEL SECURITY;
-ALTER TABLE user_lesson_progress DISABLE ROW LEVEL SECURITY;
-ALTER TABLE user_lesson_sessions DISABLE ROW LEVEL SECURITY;
-ALTER TABLE user_stats DISABLE ROW LEVEL SECURITY;
-ALTER TABLE xp_events DISABLE ROW LEVEL SECURITY;
-
--- 9. Create functions for lesson completion tracking
-CREATE OR REPLACE FUNCTION get_next_attempt_number(p_user_id UUID, p_lesson_id UUID)
-RETURNS INTEGER AS $$
-DECLARE
-    next_attempt INTEGER;
-BEGIN
-    SELECT COALESCE(MAX(attempt_number), 0) + 1
-    INTO next_attempt
-    FROM lesson_completions
-    WHERE user_id = p_user_id AND lesson_id = p_lesson_id;
-    
-    RETURN next_attempt;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION get_best_lesson_score(p_user_id UUID, p_lesson_id UUID)
-RETURNS DECIMAL(5,2) AS $$
-DECLARE
-    best_score DECIMAL(5,2);
-BEGIN
-    SELECT MAX(score_percentage)
-    INTO best_score
-    FROM lesson_completions
-    WHERE user_id = p_user_id AND lesson_id = p_lesson_id;
-    
-    RETURN COALESCE(best_score, 0);
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION get_average_lesson_score(p_user_id UUID, p_lesson_id UUID)
-RETURNS DECIMAL(5,2) AS $$
-DECLARE
-    avg_score DECIMAL(5,2);
-BEGIN
-    SELECT AVG(score_percentage)
-    INTO avg_score
-    FROM lesson_completions
-    WHERE user_id = p_user_id AND lesson_id = p_lesson_id;
-    
-    RETURN COALESCE(avg_score, 0);
-END;
-$$ LANGUAGE plpgsql;
-
--- 10. Create view for lesson completion statistics
-CREATE OR REPLACE VIEW lesson_completion_stats AS
-SELECT 
-    lc.user_id,
-    lc.lesson_id,
-    l.title as lesson_title,
-    COUNT(*) as total_attempts,
-    MAX(lc.score_percentage) as best_score,
-    AVG(lc.score_percentage) as average_score,
-    MIN(lc.time_elapsed_seconds) as fastest_completion,
-    AVG(lc.time_elapsed_seconds) as average_completion_time,
-    MAX(lc.completed_at) as last_attempt_date
-FROM lesson_completions lc
-JOIN lessons l ON lc.lesson_id = l.id
-GROUP BY lc.user_id, lc.lesson_id, l.title;
-
--- 11. Grant necessary permissions to authenticated users
-GRANT SELECT, INSERT, UPDATE ON lesson_completions TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON user_lesson_progress TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON user_lesson_sessions TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON user_stats TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON xp_events TO authenticated;
-GRANT SELECT ON lesson_completion_stats TO authenticated;
-
--- 12. Grant execute permissions on functions
-GRANT EXECUTE ON FUNCTION get_next_attempt_number(UUID, UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION get_best_lesson_score(UUID, UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION get_average_lesson_score(UUID, UUID) TO authenticated;
-
--- 13. Create triggers to automatically update updated_at timestamps
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Drop existing triggers if they exist, then create new ones
-DROP TRIGGER IF EXISTS update_lesson_completions_updated_at ON lesson_completions;
-CREATE TRIGGER update_lesson_completions_updated_at 
-    BEFORE UPDATE ON lesson_completions 
-    FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_user_lesson_progress_updated_at ON user_lesson_progress;
-CREATE TRIGGER update_user_lesson_progress_updated_at 
-    BEFORE UPDATE ON user_lesson_progress 
-    FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_user_stats_updated_at ON user_stats;
-CREATE TRIGGER update_user_stats_updated_at 
-    BEFORE UPDATE ON user_stats 
-    FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
+CREATE TABLE public.lesson_sections (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  lesson_id uuid NOT NULL,
+  kind text NOT NULL CHECK (kind = ANY (ARRAY['SUMMARY'::text, 'QUIZ'::text, 'FINAL_THOUGHTS'::text, 'CLOSING_PRAYER'::text, 'REPORT'::text])),
+  order_idx integer NOT NULL,
+  content jsonb,
+  CONSTRAINT lesson_sections_pkey PRIMARY KEY (id),
+  CONSTRAINT lesson_sections_lesson_id_fkey FOREIGN KEY (lesson_id) REFERENCES public.lessons(id)
+);
+CREATE TABLE public.lessons (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  course_id uuid NOT NULL,
+  order_idx integer NOT NULL,
+  title text NOT NULL,
+  subtitle text,
+  image_url text,
+  CONSTRAINT lessons_pkey PRIMARY KEY (id),
+  CONSTRAINT lessons_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id)
+);
+CREATE TABLE public.user_lesson_progress (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  lesson_id uuid NOT NULL,
+  status text NOT NULL DEFAULT 'NOT_STARTED'::text,
+  started_at timestamp with time zone,
+  completed_at timestamp with time zone,
+  last_seen_at timestamp with time zone DEFAULT now(),
+  last_score_pct numeric,
+  best_score_pct numeric,
+  total_completions integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_lesson_progress_pkey PRIMARY KEY (id),
+  CONSTRAINT user_lesson_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT user_lesson_progress_lesson_id_fkey FOREIGN KEY (lesson_id) REFERENCES public.lessons(id)
+);
+CREATE TABLE public.user_lesson_sessions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  lesson_id uuid NOT NULL,
+  started_at timestamp with time zone NOT NULL,
+  completed_at timestamp with time zone,
+  duration_seconds integer,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_lesson_sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT user_lesson_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT user_lesson_sessions_lesson_id_fkey FOREIGN KEY (lesson_id) REFERENCES public.lessons(id)
+);
+CREATE TABLE public.user_login_sessions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  login_timestamp timestamp with time zone NOT NULL DEFAULT now(),
+  session_duration_seconds integer,
+  device_model text,
+  device_os text,
+  app_version text,
+  location_country text,
+  location_city text,
+  location_coordinates point,
+  auth_method text,
+  ip_address text,
+  is_first_login boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_login_sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT user_login_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.user_stats (
+  user_id uuid NOT NULL,
+  xp_total integer NOT NULL DEFAULT 0,
+  streak_count integer NOT NULL DEFAULT 0,
+  longest_streak integer NOT NULL DEFAULT 0,
+  last_active_date date,
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_stats_pkey PRIMARY KEY (user_id),
+  CONSTRAINT user_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  email USER-DEFINED NOT NULL UNIQUE,
+  password_hash text NOT NULL,
+  display_name text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  status text NOT NULL DEFAULT 'active'::text,
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.xp_events (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  lesson_id uuid,
+  rule_code text NOT NULL,
+  awarded_xp integer NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT xp_events_pkey PRIMARY KEY (id),
+  CONSTRAINT xp_events_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT xp_events_lesson_id_fkey FOREIGN KEY (lesson_id) REFERENCES public.lessons(id),
+  CONSTRAINT xp_events_rule_code_fkey FOREIGN KEY (rule_code) REFERENCES public.xp_rules(code)
+);
+CREATE TABLE public.xp_rules (
+  code text NOT NULL,
+  xp_amount integer NOT NULL,
+  CONSTRAINT xp_rules_pkey PRIMARY KEY (code)
+);

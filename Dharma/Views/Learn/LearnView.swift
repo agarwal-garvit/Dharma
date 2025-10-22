@@ -16,11 +16,13 @@ struct LearnView: View {
     @State private var currentVisibleCourse: DBCourse?
     @State private var showingCourseSelector = false
     @State private var userStreak = 0
-    @State private var userXP = 0
     @State private var userMetrics: DBUserMetrics?
     @State private var courseLessons: [UUID: [DBLesson]] = [:]
     @State private var scrollToCourseId: UUID?
     @State private var navigateToProgress = false
+    @State private var lessonProgress: [UUID: DBLessonProgress] = [:]
+    @State private var showLockedAlert = false
+    @State private var lockedAlertMessage = ""
     
     // All courses sorted by course_order
     private var courses: [DBCourse] {
@@ -106,6 +108,10 @@ struct LearnView: View {
             loadContent()
             loadUserMetrics()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .lessonCompleted)) { _ in
+            // Reload progress when a lesson is completed
+            loadUserLessonProgress()
+        }
         .fullScreenCover(item: $selectedLesson) { lesson in
             LessonDetailView(lesson: lesson, onLessonSelected: { legacyLesson in
                 showingLessonPlayer = true
@@ -140,38 +146,26 @@ struct LearnView: View {
                 navigateToProgress = false
             }
         }
+        .alert("Lesson Locked", isPresented: $showLockedAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(lockedAlertMessage)
+        }
     }
     
     private var statsBar: some View {
         Button(action: {
             navigateToProgress = true
         }) {
-            HStack(spacing: 16) {
-                // Streak
-                HStack(spacing: 6) {
-                    Image(systemName: "flame.fill")
-                        .foregroundColor(.orange)
-                        .font(.system(size: 18))
-                    
-                    Text("\(userStreak) day streak")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                }
+            HStack(spacing: 6) {
+                Image(systemName: "flame.fill")
+                    .foregroundColor(.orange)
+                    .font(.system(size: 18))
                 
-                Spacer()
-                
-                // XP Points
-                HStack(spacing: 6) {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
-                        .font(.system(size: 18))
-                    
-                    Text("\(userXP) XP")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                }
+                Text("\(userStreak) day streak")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -388,10 +382,17 @@ struct LearnView: View {
     
     private func lessonCard(lesson: DBLesson, courseId: UUID, color: Color, isLeft: Bool) -> some View {
         Button(action: {
-            // Set the selected lesson directly
-            print("Lesson \(lesson.title) (ID: \(lesson.id)) from course \(courseId) tapped - isUnlocked: \(isLessonUnlocked(lesson))")
-            selectedLesson = lesson
-            print("Selected lesson set: \(lesson.title)")
+            if isLessonUnlocked(lesson) {
+                // Lesson is unlocked - open it
+                print("Lesson \(lesson.title) (ID: \(lesson.id)) from course \(courseId) tapped - isUnlocked: true")
+                selectedLesson = lesson
+                print("Selected lesson set: \(lesson.title)")
+            } else {
+                // Lesson is locked - show alert
+                print("Lesson \(lesson.title) is locked")
+                lockedAlertMessage = "Complete previous lessons with 80% accuracy or higher to unlock this lesson."
+                showLockedAlert = true
+            }
         }) {
             ZStack {
                 // Background - Image or Gradient
@@ -461,15 +462,9 @@ struct LearnView: View {
                     // Arrow indicator at bottom
                     HStack {
                         Spacer()
-                        if isLessonUnlocked(lesson) {
-                            Image(systemName: "chevron.right")
-                                .font(.subheadline)
-                                .foregroundColor(.white)
-                        } else {
-                            Image(systemName: "lock.fill")
-                                .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.8))
-                        }
+                        Image(systemName: "chevron.right")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
                     }
                 }
                 .padding(16)
@@ -478,7 +473,16 @@ struct LearnView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(color.opacity(0.9), lineWidth: 4)
+                    .stroke(color.opacity(isLessonUnlocked(lesson) ? 0.9 : 0.4), lineWidth: 4)
+            )
+            .overlay(
+                // Dimming overlay for locked lessons
+                Group {
+                    if !isLessonUnlocked(lesson) {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.black.opacity(0.5))
+                    }
+                }
             )
             .shadow(
                 color: isLessonUnlocked(lesson) ? color.opacity(0.2) : Color.black.opacity(0.1),
@@ -488,8 +492,8 @@ struct LearnView: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
-        .disabled(!isLessonUnlocked(lesson))
-        .scaleEffect(isLessonUnlocked(lesson) ? 1.0 : 0.98)
+        .opacity(isLessonUnlocked(lesson) ? 1.0 : 0.7)
+        .scaleEffect(isLessonUnlocked(lesson) ? 1.0 : 0.96)
         .animation(.easeInOut(duration: 0.2), value: isLessonUnlocked(lesson))
     }
     
@@ -524,6 +528,9 @@ struct LearnView: View {
                     currentVisibleCourse = firstCourse
                     isLoading = false
                     print("✅ Content loading completed. All courses and images loaded.")
+                    
+                    // Load user progress for lessons after courses and lessons are loaded
+                    loadUserLessonProgress()
                 }
             } else {
                 await MainActor.run {
@@ -609,9 +616,34 @@ struct LearnView: View {
     }
     
     private func isLessonUnlocked(_ lesson: DBLesson) -> Bool {
-        // For now, all lessons are unlocked
-        // You can implement your own logic here based on user progress
-        return true
+        // Find all lessons in the same course
+        guard let lessonsInCourse = courseLessons[lesson.courseId] else {
+            return false
+        }
+        
+        // Sort lessons by order_idx
+        let sortedLessons = lessonsInCourse.sorted { $0.orderIdx < $1.orderIdx }
+        
+        // First lesson (minimum order_idx) is always unlocked
+        if sortedLessons.first?.id == lesson.id {
+            return true
+        }
+        
+        // Find the previous lesson in the sorted order
+        guard let currentIndex = sortedLessons.firstIndex(where: { $0.id == lesson.id }),
+              currentIndex > 0 else {
+            return false
+        }
+        
+        let previousLesson = sortedLessons[currentIndex - 1]
+        
+        // Check if previous lesson has been completed with 80% or higher
+        if let progress = lessonProgress[previousLesson.id] {
+            return progress.bestScorePercentage >= 80.0
+        }
+        
+        // If no progress data for previous lesson, it's locked
+        return false
     }
     
     private func arrowNextToCard(for index: Int, totalLessons: Int) -> some View {
@@ -697,7 +729,30 @@ struct LearnView: View {
             await MainActor.run {
                 self.userMetrics = metrics
                 self.userStreak = metrics?.currentStreak ?? 0
-                self.userXP = metrics?.totalXp ?? 0
+            }
+        }
+    }
+    
+    private func loadUserLessonProgress() {
+        guard let userId = dataManager.currentUserId else {
+            print("⚠️ No user ID available to load lesson progress")
+            return
+        }
+        
+        Task {
+            do {
+                // Load all lesson progress at once from lesson_completions
+                let progressMap = try await DatabaseService.shared.fetchAllLessonProgress(userId: userId)
+                
+                await MainActor.run {
+                    self.lessonProgress = progressMap
+                    print("✅ Loaded progress for \(progressMap.count) lessons from lesson_completions")
+                }
+            } catch {
+                print("❌ Failed to load lesson progress: \(error)")
+                await MainActor.run {
+                    self.lessonProgress = [:]
+                }
             }
         }
     }
