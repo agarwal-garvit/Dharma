@@ -191,7 +191,7 @@ class LivesManager: ObservableObject {
             
             // Find the next available life slot and set its regeneration time
             let now = Date()
-            let oneHourLater = now.addingTimeInterval(3600) // 1 hour = 3600 seconds
+            let tenMinutesLater = now.addingTimeInterval(600) // 10 minutes = 600 seconds
             
             // Get all existing regeneration times to find the latest one
             let regenerationTimes = [
@@ -208,14 +208,14 @@ class LivesManager: ObservableObject {
             // Find the latest regeneration time (for stacking)
             let latestRegenerationTime = regenerationTimes.max()
             
-            // New regeneration time should be 1 hour after the latest time, or 1 hour from now if no queue
+            // New regeneration time should be 10 minutes after the latest time, or 10 minutes from now if no queue
             let newRegenerationTime: Date
             if let latestTime = latestRegenerationTime, latestTime > now {
                 // Stack on top of existing regeneration queue
-                newRegenerationTime = latestTime.addingTimeInterval(3600)
+                newRegenerationTime = latestTime.addingTimeInterval(600)
             } else {
                 // No queue or queue has passed, start from now
-                newRegenerationTime = oneHourLater
+                newRegenerationTime = tenMinutesLater
             }
             
             let newRegenerationTimeString = ISO8601DateFormatter().string(from: newRegenerationTime)
