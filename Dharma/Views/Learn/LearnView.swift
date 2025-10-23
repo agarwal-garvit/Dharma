@@ -17,6 +17,7 @@ struct LearnView: View {
     @State private var showingCourseSelector = false
     @State private var userStreak = 0
     @State private var userMetrics: DBUserMetrics?
+    @State private var loginSessions: [DBUserLoginSession] = []
     @State private var courseLessons: [UUID: [DBLesson]] = [:]
     @State private var scrollToCourseId: UUID?
     @State private var navigateToProgress = false
@@ -761,14 +762,94 @@ struct LearnView: View {
         return titles[index] ?? "अध्याय \(index)"
     }
     
+    private func isDateActive(_ date: Date) -> Bool {
+        let calendar = Calendar.current
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        dayFormatter.timeZone = TimeZone.current
+        let dateString = dayFormatter.string(from: date)
+        
+        let isoFormatter = ISO8601DateFormatter()
+        
+        return loginSessions.contains { session in
+            if let sessionDate = isoFormatter.date(from: session.loginTimestamp) {
+                // Use calendar to ensure we're comparing dates in the user's timezone
+                let sessionDateString = dayFormatter.string(from: sessionDate)
+                return sessionDateString == dateString
+            }
+            return false
+        }
+    }
+    
+    /// Calculates the current streak using the same logic as the calendar section
+    /// Goes back day by day from today, checking if each day is active (has login sessions)
+    /// This ensures consistency between the streak display and calendar active days
+    private func calculateCurrentStreak() -> Int {
+        let calendar = Calendar.current
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        dayFormatter.timeZone = TimeZone.current
+        
+        // Start from today and go backwards day by day
+        var currentDate = calendar.startOfDay(for: Date())
+        var streak = 0
+        
+        // Check if today is active
+        if isDateActive(currentDate) {
+            streak = 1
+            
+            // Keep going backwards day by day
+            while true {
+                // Go back one day
+                guard let previousDate = calendar.date(byAdding: .day, value: -1, to: currentDate) else {
+                    break
+                }
+                
+                // Check if the previous day is active
+                if isDateActive(previousDate) {
+                    streak += 1
+                    currentDate = previousDate
+                } else {
+                    // Streak broken
+                    break
+                }
+            }
+        }
+        
+        return streak
+    }
+    
     private func loadUserMetrics() {
         Task {
             let authManager = DharmaAuthManager.shared
-            let metrics = await authManager.getUserMetrics()
+            async let metrics = authManager.getUserMetrics()
+            // Fetch more sessions to cover 90+ days even with multiple logins per day
+            async let sessions = authManager.getLoginSessions(limit: 500)
+            
+            let (fetchedMetrics, fetchedSessions) = await (metrics, sessions)
             
             await MainActor.run {
-                self.userMetrics = metrics
-                self.userStreak = metrics?.currentStreak ?? 0
+                self.loginSessions = fetchedSessions
+                
+                // Calculate streak locally using login sessions (same logic as calendar)
+                let calculatedStreak = self.calculateCurrentStreak()
+                
+                // Update the metrics with our locally calculated streak
+                if var updatedMetrics = fetchedMetrics {
+                    // Create a new DBUserMetrics with our calculated streak
+                    self.userMetrics = DBUserMetrics(
+                        totalXp: updatedMetrics.totalXp,
+                        currentStreak: calculatedStreak,
+                        longestStreak: updatedMetrics.longestStreak,
+                        lessonsCompleted: updatedMetrics.lessonsCompleted,
+                        totalStudyTimeMinutes: updatedMetrics.totalStudyTimeMinutes,
+                        quizAverageScore: updatedMetrics.quizAverageScore
+                    )
+                } else {
+                    self.userMetrics = fetchedMetrics
+                }
+                
+                self.userStreak = calculatedStreak
             }
         }
     }

@@ -234,8 +234,26 @@ struct ProgressPetView: View {
                 let (fetchedMetrics, fetchedSessions) = await (metrics, sessions)
                 
                 await MainActor.run {
-                    self.userMetrics = fetchedMetrics
                     self.loginSessions = fetchedSessions
+                    
+                    // Calculate streak locally using login sessions (same logic as calendar)
+                    let calculatedStreak = self.calculateCurrentStreak()
+                    
+                    // Update the metrics with our locally calculated streak
+                    if var updatedMetrics = fetchedMetrics {
+                        // Create a new DBUserMetrics with our calculated streak
+                        self.userMetrics = DBUserMetrics(
+                            totalXp: updatedMetrics.totalXp,
+                            currentStreak: calculatedStreak,
+                            longestStreak: updatedMetrics.longestStreak,
+                            lessonsCompleted: updatedMetrics.lessonsCompleted,
+                            totalStudyTimeMinutes: updatedMetrics.totalStudyTimeMinutes,
+                            quizAverageScore: updatedMetrics.quizAverageScore
+                        )
+                    } else {
+                        self.userMetrics = fetchedMetrics
+                    }
+                    
                     self.isLoading = false
                 }
             } catch {
@@ -260,8 +278,26 @@ struct ProgressPetView: View {
             let (fetchedMetrics, fetchedSessions) = await (metrics, sessions)
             
             await MainActor.run {
-                self.userMetrics = fetchedMetrics
                 self.loginSessions = fetchedSessions
+                
+                // Calculate streak locally using login sessions (same logic as calendar)
+                let calculatedStreak = self.calculateCurrentStreak()
+                
+                // Update the metrics with our locally calculated streak
+                if var updatedMetrics = fetchedMetrics {
+                    // Create a new DBUserMetrics with our calculated streak
+                    self.userMetrics = DBUserMetrics(
+                        totalXp: updatedMetrics.totalXp,
+                        currentStreak: calculatedStreak,
+                        longestStreak: updatedMetrics.longestStreak,
+                        lessonsCompleted: updatedMetrics.lessonsCompleted,
+                        totalStudyTimeMinutes: updatedMetrics.totalStudyTimeMinutes,
+                        quizAverageScore: updatedMetrics.quizAverageScore
+                    )
+                } else {
+                    self.userMetrics = fetchedMetrics
+                }
+                
                 self.isLoading = false
             }
         } catch {
@@ -380,6 +416,44 @@ struct ProgressPetView: View {
             }
             return false
         }
+    }
+    
+    /// Calculates the current streak using the same logic as the calendar section
+    /// Goes back day by day from today, checking if each day is active (has login sessions)
+    /// This ensures consistency between the streak display and calendar active days
+    private func calculateCurrentStreak() -> Int {
+        let calendar = Calendar.current
+        let dayFormatter = DateFormatter()
+        dayFormatter.dateFormat = "yyyy-MM-dd"
+        dayFormatter.timeZone = TimeZone.current
+        
+        // Start from today and go backwards day by day
+        var currentDate = calendar.startOfDay(for: Date())
+        var streak = 0
+        
+        // Check if today is active
+        if isDateActive(currentDate) {
+            streak = 1
+            
+            // Keep going backwards day by day
+            while true {
+                // Go back one day
+                guard let previousDate = calendar.date(byAdding: .day, value: -1, to: currentDate) else {
+                    break
+                }
+                
+                // Check if the previous day is active
+                if isDateActive(previousDate) {
+                    streak += 1
+                    currentDate = previousDate
+                } else {
+                    // Streak broken
+                    break
+                }
+            }
+        }
+        
+        return streak
     }
 }
 
