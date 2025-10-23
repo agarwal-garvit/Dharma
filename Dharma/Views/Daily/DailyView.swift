@@ -11,6 +11,8 @@ struct DailyView: View {
     @State private var dailyVerse: Verse?
     @State private var isLoading = true
     @State private var currentDate = Date()
+    @State private var showingProfile = false
+    @State private var livesManager = LivesManager.shared
     
     private var formattedDate: String {
         let formatter = DateFormatter()
@@ -41,9 +43,38 @@ struct DailyView: View {
             .background(ThemeManager.appBackground)
             .navigationTitle("Daily")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        showingProfile = true
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.blue.opacity(0.2))
+                                .frame(width: 36, height: 36)
+                            
+                            Image(systemName: "person.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue.opacity(0.7))
+                        }
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    LivesDisplayView()
+                }
+            }
+        }
+        .sheet(isPresented: $showingProfile) {
+            ProfileView()
         }
         .onAppear {
             loadDailyVerse()
+            
+            // Check and regenerate lives
+            Task {
+                await livesManager.checkAndRegenerateLives()
+            }
         }
     }
     
@@ -189,15 +220,15 @@ struct DailyView: View {
             }
             
             // Keywords Section
-            if !verse.keywords.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Key Concepts")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
-                        .textCase(.uppercase)
-                        .tracking(1)
-                    
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Key Concepts")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(1)
+                
+                if !verse.keywords.isEmpty {
                     FlowLayout(spacing: 8) {
                         ForEach(verse.keywords, id: \.self) { keyword in
                             Text(keyword)
@@ -210,20 +241,25 @@ struct DailyView: View {
                                 .cornerRadius(12)
                         }
                     }
+                } else {
+                    Text("No key concepts available")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .italic()
                 }
-                .padding(.top, 8)
             }
+            .padding(.top, 8)
             
             // Themes Section
-            if !verse.themes.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Themes")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
-                        .textCase(.uppercase)
-                        .tracking(1)
-                    
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Themes")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(1)
+                
+                if !verse.themes.isEmpty {
                     FlowLayout(spacing: 8) {
                         ForEach(verse.themes, id: \.self) { theme in
                             HStack(spacing: 4) {
@@ -240,9 +276,14 @@ struct DailyView: View {
                             .cornerRadius(12)
                         }
                     }
+                } else {
+                    Text("No themes available")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .italic()
                 }
-                .padding(.top, 8)
             }
+            .padding(.top, 8)
             
             // Reflection Prompt
             reflectionPrompt
@@ -355,6 +396,15 @@ struct DailyView: View {
         // Sample verses for demonstration
         let sampleVerses: [(devanagari: String, iast: String, translation: String, chapter: Int, verse: Int, keywords: [String], themes: [String], commentary: String)] = [
             (
+                "दृष्ट्वेमं स्वजनं कृष्ण युयुत्सुं समुपस्थितम्।\nसीदन्ति मम गात्राणि मुखं च परिशुष्यति॥",
+                "dṛṣṭvemaṁ sva-janaṁ kṛṣṇa yuyutsuṁ samupasthitam\nsīdanti mama gātrāṇi mukhaṁ ca pariśuṣyati",
+                "Seeing my own kinsmen arrayed for battle, O Krishna, my limbs give way and my mouth is parched.",
+                1, 28,
+                ["Moral Dilemma", "Family", "Duty", "Compassion", "Arjuna's Despair"],
+                ["Ethical Conflict", "Dharma vs. Love", "Inner Turmoil", "Spiritual Crisis"],
+                "This verse captures Arjuna's profound moral crisis on the battlefield of Kurukshetra. Faced with the prospect of fighting his own relatives and teachers, Arjuna experiences physical and emotional breakdown, setting the stage for Krishna's teachings on dharma and the nature of the self."
+            ),
+            (
                 "कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।\nमा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि॥",
                 "karmaṇy-evādhikāras te mā phaleṣu kadācana\nmā karma-phala-hetur bhūr mā te saṅgo 'stvakarmaṇi",
                 "You have a right to perform your prescribed duty, but you are not entitled to the fruits of action. Never consider yourself the cause of the results of your activities, and never be attached to not doing your duty.",
@@ -383,8 +433,11 @@ struct DailyView: View {
             )
         ]
         
-        let index = (dayOfYear - 1) % sampleVerses.count
-        let sample = sampleVerses[index]
+        // For demo purposes, always use the first verse (Chapter 1)
+        let sample = sampleVerses[0]
+        
+        print("📖 Creating sample verse with keywords: \(sample.keywords)")
+        print("📖 Creating sample verse with themes: \(sample.themes)")
         
         return Verse(
             id: "daily-\(dayOfYear)",

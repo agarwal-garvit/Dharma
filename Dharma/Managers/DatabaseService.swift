@@ -965,6 +965,111 @@ class DatabaseService: ObservableObject {
         }
     }
     
+    // MARK: - Lives Operations
+    
+    func fetchUserLives(userId: UUID) async throws -> DBUserLives? {
+        do {
+            let lives: [DBUserLives] = try await supabase.database
+                .from("user_lives")
+                .select()
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+            
+            if let userLives = lives.first {
+                print("📥 DatabaseService: Fetched lives from DB")
+                print("   user_id: \(userLives.userId)")
+                print("   current_lives: \(userLives.currentLives)")
+                print("   life_1_regenerates_at: \(userLives.life1RegeneratesAt ?? "NULL")")
+                print("   life_2_regenerates_at: \(userLives.life2RegeneratesAt ?? "NULL")")
+                print("   life_3_regenerates_at: \(userLives.life3RegeneratesAt ?? "NULL")")
+                print("   life_4_regenerates_at: \(userLives.life4RegeneratesAt ?? "NULL")")
+                print("   life_5_regenerates_at: \(userLives.life5RegeneratesAt ?? "NULL")")
+            } else {
+                print("📥 DatabaseService: No lives record found for user")
+            }
+            
+            return lives.first
+        } catch {
+            errorMessage = "Failed to fetch user lives: \(error.localizedDescription)"
+            print("❌ DatabaseService: Error fetching lives: \(error)")
+            throw error
+        }
+    }
+    
+    func initializeUserLives(userId: UUID) async throws -> DBUserLives {
+        let newLives = DBUserLives(
+            userId: userId,
+            currentLives: 5,
+            life1RegeneratesAt: nil,
+            life2RegeneratesAt: nil,
+            life3RegeneratesAt: nil,
+            life4RegeneratesAt: nil,
+            life5RegeneratesAt: nil,
+            updatedAt: nil
+        )
+        
+        do {
+            let inserted: DBUserLives = try await supabase.database
+                .from("user_lives")
+                .insert(newLives)
+                .select()
+                .single()
+                .execute()
+                .value
+            
+            print("✅ Initialized lives for user: \(userId)")
+            return inserted
+        } catch {
+            errorMessage = "Failed to initialize user lives: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func updateUserLives(lives: DBUserLives) async throws {
+        do {
+            // Create encodable update payload with updated_at timestamp
+            struct LivesUpdate: Encodable {
+                let current_lives: Int
+                let life_1_regenerates_at: String?
+                let life_2_regenerates_at: String?
+                let life_3_regenerates_at: String?
+                let life_4_regenerates_at: String?
+                let life_5_regenerates_at: String?
+                let updated_at: String
+            }
+            
+            let update = LivesUpdate(
+                current_lives: lives.currentLives,
+                life_1_regenerates_at: lives.life1RegeneratesAt,
+                life_2_regenerates_at: lives.life2RegeneratesAt,
+                life_3_regenerates_at: lives.life3RegeneratesAt,
+                life_4_regenerates_at: lives.life4RegeneratesAt,
+                life_5_regenerates_at: lives.life5RegeneratesAt,
+                updated_at: ISO8601DateFormatter().string(from: Date())
+            )
+            
+            print("📤 DatabaseService: Sending update to DB...")
+            print("   current_lives: \(update.current_lives)")
+            print("   life_1_regenerates_at: \(update.life_1_regenerates_at ?? "NULL")")
+            print("   life_2_regenerates_at: \(update.life_2_regenerates_at ?? "NULL")")
+            print("   life_3_regenerates_at: \(update.life_3_regenerates_at ?? "NULL")")
+            print("   life_4_regenerates_at: \(update.life_4_regenerates_at ?? "NULL")")
+            print("   life_5_regenerates_at: \(update.life_5_regenerates_at ?? "NULL")")
+            
+            try await supabase.database
+                .from("user_lives")
+                .update(update)
+                .eq("user_id", value: lives.userId)
+                .execute()
+            
+            print("✅ DatabaseService: Update sent successfully")
+        } catch {
+            errorMessage = "Failed to update user lives: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
     // MARK: - Error Handling
     
     func clearError() {

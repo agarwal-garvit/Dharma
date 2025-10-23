@@ -125,6 +125,7 @@ struct ChatbotView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
             }
+            
         }
         .padding()
         .background(
@@ -133,8 +134,18 @@ struct ChatbotView: View {
         )
     }
     
+    private func sendExampleQuestion(_ question: String) {
+        currentMessage = question
+        sendMessage()
+    }
+    
     private var inputArea: some View {
         VStack(spacing: 0) {
+            // Example questions - horizontal scroll above input
+            if chatManager.messages.isEmpty {
+                exampleQuestionsScroll
+            }
+            
             Divider()
             
             HStack(spacing: 12) {
@@ -159,6 +170,47 @@ struct ChatbotView: View {
         }
         .background(Color(.systemBackground))
     }
+    
+    private var exampleQuestionsScroll: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(exampleQuestions, id: \.self) { question in
+                    Button(action: {
+                        sendExampleQuestion(question)
+                    }) {
+                        Text(question)
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.orange.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                                    )
+                            )
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .padding(.vertical, 8)
+    }
+    
+    private let exampleQuestions = [
+        "What is dharma?",
+        "Explain karma yoga",
+        "What is the Bhagavad Gita about?",
+        "Who is Krishna?",
+        "What is moksha?",
+        "Explain the three gunas",
+        "What is bhakti yoga?",
+        "What is the meaning of life?",
+        "How to find inner peace?",
+        "What is the soul?"
+    ]
     
     private func sendMessage() {
         guard !currentMessage.isEmpty else { return }
@@ -234,6 +286,7 @@ struct ChatBubble: View {
         return formatter.string(from: date)
     }
 }
+
 
 #Preview {
     ChatbotView()

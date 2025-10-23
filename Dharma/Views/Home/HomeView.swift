@@ -13,6 +13,7 @@ struct HomeView: View {
     @State private var showingQuickQuiz = false
     @State private var quickQuizAnswer = ""
     @State private var quickQuizResult: QuizResult?
+    @State private var livesManager = LivesManager.shared
     
     private var verseOfTheDay: Verse? {
         dataManager.getVerseOfTheDay()
@@ -40,10 +41,21 @@ struct HomeView: View {
             }
             .navigationTitle("Dharma")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    LivesDisplayView()
+                }
+            }
         }
         .sheet(isPresented: $showingQuickQuiz) {
             if let verse = verseOfTheDay {
                 QuickQuizView(verse: verse, result: $quickQuizResult)
+            }
+        }
+        .onAppear {
+            // Check and regenerate lives
+            Task {
+                await livesManager.checkAndRegenerateLives()
             }
         }
     }

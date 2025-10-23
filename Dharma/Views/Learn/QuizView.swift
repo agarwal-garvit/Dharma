@@ -25,6 +25,8 @@ struct QuizView: View {
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var questionsAnswered: [String: Any] = [:]
+    @State private var showLivesModal = false
+    @State private var livesManager = LivesManager.shared
     
     var body: some View {
         NavigationView {
@@ -72,10 +74,14 @@ struct QuizView: View {
             .navigationTitle("Quiz")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Exit") {
                         showingExitConfirmation = true
                     }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    LivesDisplayView()
                 }
             }
             .fullScreenCover(isPresented: $showFinalThoughts) {
@@ -101,9 +107,23 @@ struct QuizView: View {
             } message: {
                 Text("Your progress will be lost. Are you sure you want to exit?")
             }
+            .sheet(isPresented: $showLivesModal) {
+                LivesModalView()
+                    .onDisappear {
+                        // When lives modal is dismissed and lives are 0, exit the quiz
+                        if livesManager.currentLives == 0 {
+                            onComplete()
+                        }
+                    }
+            }
         }
         .onAppear {
             loadQuiz()
+            
+            // Check lives on quiz start
+            Task {
+                await livesManager.checkAndRegenerateLives()
+            }
         }
     }
     
@@ -280,6 +300,21 @@ struct QuizView: View {
             ]
             
             print("🎯 QuizView: Answer \(index) selected, Score: \(oldScore) → \(currentSession.score)")
+        }
+        
+        // Deduct a life if answer is incorrect
+        if !isCorrect {
+            Task {
+                await livesManager.deductLife()
+                
+                // If lives hit 0, show the lives modal
+                if livesManager.currentLives == 0 {
+                    await MainActor.run {
+                        print("💔 QuizView: Lives depleted - showing modal and will exit quiz")
+                        showLivesModal = true
+                    }
+                }
+            }
         }
         
         withAnimation {

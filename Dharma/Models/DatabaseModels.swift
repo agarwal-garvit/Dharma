@@ -352,6 +352,30 @@ struct DBDailyUsage: Identifiable, Codable {
     }
 }
 
+// MARK: - Lives Models
+
+struct DBUserLives: Codable {
+    let userId: UUID
+    var currentLives: Int
+    var life1RegeneratesAt: String?
+    var life2RegeneratesAt: String?
+    var life3RegeneratesAt: String?
+    var life4RegeneratesAt: String?
+    var life5RegeneratesAt: String?
+    let updatedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case currentLives = "current_lives"
+        case life1RegeneratesAt = "life_1_regenerates_at"
+        case life2RegeneratesAt = "life_2_regenerates_at"
+        case life3RegeneratesAt = "life_3_regenerates_at"
+        case life4RegeneratesAt = "life_4_regenerates_at"
+        case life5RegeneratesAt = "life_5_regenerates_at"
+        case updatedAt = "updated_at"
+    }
+}
+
 // MARK: - Login Session Models
 
 struct DBUserLoginSession: Identifiable, Codable {

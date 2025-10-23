@@ -42,29 +42,28 @@ struct LessonSummaryView: View {
                 // Summary content
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        // Lesson header
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Lesson \(lesson.orderIdx)")
-                                .font(.title2)
-                                .foregroundColor(.orange)
-                                .fontWeight(.semibold)
-                            
-                            Text(lessonTitle)
+                        // Header
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Summary")
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
+                            
+                            Text(lessonTitle)
+                                .font(.title2)
+                                .foregroundColor(.orange)
+                                .fontWeight(.semibold)
                         }
                         
                         // Summary content
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("Summary")
+                            Text("Chapter Overview")
                                 .font(.title2)
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             
                             Text(summaryContent)
-                                .font(.title3)
-                                .fontWeight(.medium)
+                                .font(.body)
                                 .lineSpacing(4)
                                 .foregroundColor(.primary)
                         }
@@ -95,7 +94,7 @@ struct LessonSummaryView: View {
                 .padding()
                 .background(Color(.systemBackground))
             }
-            .navigationTitle("Lesson \(lesson.orderIdx)")
+            .navigationTitle("Summary")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

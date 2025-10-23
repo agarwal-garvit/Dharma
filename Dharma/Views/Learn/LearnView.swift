@@ -23,6 +23,8 @@ struct LearnView: View {
     @State private var lessonProgress: [UUID: DBLessonProgress] = [:]
     @State private var showLockedAlert = false
     @State private var lockedAlertMessage = ""
+    @State private var showLivesModal = false
+    @State private var livesManager = LivesManager.shared
     
     // All courses sorted by course_order
     private var courses: [DBCourse] {
@@ -92,7 +94,7 @@ struct LearnView: View {
             .navigationTitle("Learn")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
                         showingProfile = true
                     }) {
@@ -107,11 +109,20 @@ struct LearnView: View {
                         }
                     }
                 }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    LivesDisplayView()
+                }
             }
         }
         .onAppear {
             loadContent()
             loadUserMetrics()
+            
+            // Check and regenerate lives
+            Task {
+                await livesManager.checkAndRegenerateLives()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .lessonCompleted)) { _ in
             // Reload progress when a lesson is completed
@@ -160,6 +171,9 @@ struct LearnView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(lockedAlertMessage)
+        }
+        .sheet(isPresented: $showLivesModal) {
+            LivesModalView()
         }
     }
     
@@ -392,6 +406,13 @@ struct LearnView: View {
     
     private func lessonCard(lesson: DBLesson, courseId: UUID, color: Color, isLeft: Bool) -> some View {
         Button(action: {
+            // Check lives first
+            if livesManager.currentLives == 0 {
+                print("❌ No lives remaining - showing lives modal")
+                showLivesModal = true
+                return
+            }
+            
             if isLessonUnlocked(lesson) {
                 // Lesson is unlocked - open it
                 print("Lesson \(lesson.title) (ID: \(lesson.id)) from course \(courseId) tapped - isUnlocked: true")

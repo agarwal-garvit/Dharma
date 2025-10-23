@@ -10,6 +10,8 @@ import Combine
 
 struct MainTabView: View {
     @State private var selectedTab = 0
+    @State private var dataManager = DataManager.shared
+    @State private var livesManager = LivesManager.shared
     
     init() {
         // Set the tab bar background
@@ -66,6 +68,17 @@ struct MainTabView: View {
         .onReceive(NotificationCenter.default.publisher(for: .switchToProgressTab)) { _ in
             // Switch to progress tab when requested
             selectedTab = 2
+        }
+        .onAppear {
+            // Initialize lives manager with current user
+            Task {
+                if let userId = dataManager.currentUserId {
+                    await livesManager.initializeForUser(userId: userId)
+                    print("✅ MainTabView: Lives manager initialized for user: \(userId)")
+                } else {
+                    print("⚠️ MainTabView: No current user ID available to initialize lives")
+                }
+            }
         }
     }
 }

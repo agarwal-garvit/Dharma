@@ -54,36 +54,55 @@ struct PrayerView: View {
                             .foregroundColor(.orange)
                     }
                     
-                    // Prayer text
+                    // Reflection text
                     VStack(spacing: 16) {
-                        Text("Om Namo Bhagavate Vasudevaya")
-                            .font(.title3)
+                        Text("Reflection on Chapter 1")
+                            .font(.headline)
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
                             .multilineTextAlignment(.center)
                         
-                        Text("Salutations to Lord Krishna, the son of Vasudeva")
+                        Divider()
+                        
+                        // Sanskrit verse from Chapter 1
+                        Text("दृष्ट्वेमं स्वजनं कृष्ण युयुत्सुं समुपस्थितम्।\nसीदन्ति मम गात्राणि मुखं च परिशुष्यति॥")
+                            .font(.body)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(6)
+                            .padding(.vertical, 8)
+                        
+                        Text("dṛṣṭvemaṁ sva-janaṁ kṛṣṇa yuyutsuṁ samupasthitam\nsīdanti mama gātrāṇi mukhaṁ ca pariśuṣyati")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
+                            .italic()
                             .multilineTextAlignment(.center)
+                            .lineSpacing(4)
                         
                         Divider()
                         
-                        Text("Prayer content will be loaded from the database...")
+                        Text("\"Seeing my own kinsmen arrayed for battle, O Krishna, my limbs give way and my mouth is parched.\"")
                             .font(.body)
-                            .lineSpacing(4)
-                            .foregroundColor(.secondary)
-                            .italic()
+                            .foregroundColor(.primary)
                             .multilineTextAlignment(.center)
+                            .lineSpacing(6)
+                            .padding(.vertical, 8)
+                        
+                        Text("— Bhagavad Gita 1.28")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                            .fontWeight(.semibold)
                         
                         Divider()
+                            .padding(.vertical, 4)
                         
-                        Text("Closing prayer will be loaded from the database...")
+                        Text("Chapter 1 presents Arjuna's moral dilemma on the battlefield of Kurukshetra. Faced with fighting his own relatives and teachers, Arjuna experiences deep confusion and sorrow. This sets the stage for Krishna's profound teachings on dharma, duty, and the nature of the self.")
                             .font(.body)
-                            .lineSpacing(4)
-                            .foregroundColor(.secondary)
-                            .italic()
+                            .lineSpacing(6)
+                            .foregroundColor(.primary)
                             .multilineTextAlignment(.center)
+                            .padding(.top, 8)
                     }
                 }
                 .padding()
