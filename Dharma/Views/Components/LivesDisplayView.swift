@@ -15,19 +15,21 @@ struct LivesDisplayView: View {
         Button(action: {
             showLivesModal = true
         }) {
-            // Heart with number inside (no timer shown here)
-            ZStack {
+            HStack(spacing: 6) {
                 Image(systemName: "heart.fill")
-                    .font(.system(size: 24))
+                    .font(.system(size: 18))
                     .foregroundColor(livesManager.currentLives > 0 ? .red : .gray)
                 
                 Text("\(livesManager.currentLives)")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
-                    .offset(y: -1)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.primary)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(.systemGray6))
+            )
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(isPresented: $showLivesModal) {
@@ -39,4 +41,3 @@ struct LivesDisplayView: View {
 #Preview {
     LivesDisplayView()
 }
-

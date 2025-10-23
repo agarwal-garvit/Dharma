@@ -120,6 +120,12 @@ class LivesManager: ObservableObject {
             // Update database if changes were made
             if needsUpdate {
                 print("📤 LivesManager: Updating database with regenerated lives...")
+                print("   Before update - Life 1: \(userLives.life1RegeneratesAt ?? "NULL")")
+                print("   Before update - Life 2: \(userLives.life2RegeneratesAt ?? "NULL")")
+                print("   Before update - Life 3: \(userLives.life3RegeneratesAt ?? "NULL")")
+                print("   Before update - Life 4: \(userLives.life4RegeneratesAt ?? "NULL")")
+                print("   Before update - Life 5: \(userLives.life5RegeneratesAt ?? "NULL")")
+                
                 try await databaseService.updateUserLives(lives: userLives)
                 print("✅ LivesManager: Database updated successfully")
                 
@@ -128,6 +134,11 @@ class LivesManager: ObservableObject {
                 if let verifiedLives = try await databaseService.fetchUserLives(userId: userId) {
                     userLives = verifiedLives
                     print("✅ LivesManager: Verification complete - DB shows \(verifiedLives.currentLives) lives")
+                    print("   After verification - Life 1: \(verifiedLives.life1RegeneratesAt ?? "NULL")")
+                    print("   After verification - Life 2: \(verifiedLives.life2RegeneratesAt ?? "NULL")")
+                    print("   After verification - Life 3: \(verifiedLives.life3RegeneratesAt ?? "NULL")")
+                    print("   After verification - Life 4: \(verifiedLives.life4RegeneratesAt ?? "NULL")")
+                    print("   After verification - Life 5: \(verifiedLives.life5RegeneratesAt ?? "NULL")")
                 }
             }
             
@@ -209,23 +220,25 @@ class LivesManager: ObservableObject {
             
             let newRegenerationTimeString = ISO8601DateFormatter().string(from: newRegenerationTime)
             
-            // Assign to the next available life slot (5 -> 4 -> 3 -> 2 -> 1)
-            var assignedSlot = 0
-            if userLives.life5RegeneratesAt == nil {
+            // Assign to the life slot that corresponds to the life that was just lost
+            // If currentLives = 4, assign to life5RegeneratesAt (life 5 was lost)
+            // If currentLives = 3, assign to life4RegeneratesAt (life 4 was lost)
+            // And so on...
+            let assignedSlot = userLives.currentLives + 1
+            
+            switch assignedSlot {
+            case 5:
                 userLives.life5RegeneratesAt = newRegenerationTimeString
-                assignedSlot = 5
-            } else if userLives.life4RegeneratesAt == nil {
+            case 4:
                 userLives.life4RegeneratesAt = newRegenerationTimeString
-                assignedSlot = 4
-            } else if userLives.life3RegeneratesAt == nil {
+            case 3:
                 userLives.life3RegeneratesAt = newRegenerationTimeString
-                assignedSlot = 3
-            } else if userLives.life2RegeneratesAt == nil {
+            case 2:
                 userLives.life2RegeneratesAt = newRegenerationTimeString
-                assignedSlot = 2
-            } else if userLives.life1RegeneratesAt == nil {
+            case 1:
                 userLives.life1RegeneratesAt = newRegenerationTimeString
-                assignedSlot = 1
+            default:
+                print("⚠️ LivesManager: Invalid life slot assignment: \(assignedSlot)")
             }
             
             print("💔 LivesManager: Assigned regeneration to life slot \(assignedSlot)")
@@ -263,15 +276,58 @@ class LivesManager: ObservableObject {
         return timeInterval > 0 ? timeInterval : nil
     }
     
-    /// Get formatted time string (HH:MM:SS) until next life
+    /// Get formatted time string (MM:SS) until next life
     func getFormattedTimeUntilNextLife() -> String? {
         guard let timeInterval = getTimeUntilNextLife() else { return nil }
         
-        let hours = Int(timeInterval) / 3600
-        let minutes = (Int(timeInterval) % 3600) / 60
+        let minutes = Int(timeInterval) / 60
         let seconds = Int(timeInterval) % 60
         
-        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
+    /// Manually trigger regeneration check (for debugging/testing)
+    func manualRegenerationCheck() async {
+        print("🔧 LivesManager: Manual regeneration check triggered")
+        await checkAndRegenerateLives()
+    }
+    
+    /// Reset lives to clean state (for debugging/testing)
+    /// This ensures all regeneration timestamps are NULL when user has full lives
+    func resetLivesToCleanState() async {
+        guard let userId = userId else {
+            print("⚠️ LivesManager: No userId set")
+            return
+        }
+        
+        do {
+            var lives = try await databaseService.fetchUserLives(userId: userId)
+            
+            if lives == nil {
+                lives = try await databaseService.initializeUserLives(userId: userId)
+            }
+            
+            guard var userLives = lives else { return }
+            
+            // If user has 5 lives, all regeneration timestamps should be NULL
+            if userLives.currentLives == 5 {
+                userLives.life1RegeneratesAt = nil
+                userLives.life2RegeneratesAt = nil
+                userLives.life3RegeneratesAt = nil
+                userLives.life4RegeneratesAt = nil
+                userLives.life5RegeneratesAt = nil
+                
+                try await databaseService.updateUserLives(lives: userLives)
+                print("🧹 LivesManager: Reset lives to clean state - all regeneration timestamps cleared")
+            }
+            
+            // Update local state
+            currentLives = userLives.currentLives
+            updateNextRegenerationTime(from: userLives)
+            
+        } catch {
+            print("❌ LivesManager: Error resetting lives to clean state: \(error)")
+        }
     }
     
     // MARK: - Private Methods
@@ -300,9 +356,10 @@ class LivesManager: ObservableObject {
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
                     
-                    // If we have a next regeneration time and it has passed, check for regeneration
+                    // Check for regeneration if we have any pending regeneration times
                     if let nextTime = self.nextLifeRegenerationTime,
                        nextTime <= Date() {
+                        print("⏰ LivesManager: Timer triggered regeneration check (next time: \(nextTime))")
                         await self.checkAndRegenerateLives()
                     }
                 }

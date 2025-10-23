@@ -1028,7 +1028,7 @@ class DatabaseService: ObservableObject {
     
     func updateUserLives(lives: DBUserLives) async throws {
         do {
-            // Create encodable update payload with updated_at timestamp
+            // Create encodable update payload with explicit NULL handling
             struct LivesUpdate: Encodable {
                 let current_lives: Int
                 let life_1_regenerates_at: String?
@@ -1037,6 +1037,54 @@ class DatabaseService: ObservableObject {
                 let life_4_regenerates_at: String?
                 let life_5_regenerates_at: String?
                 let updated_at: String
+                
+                // Custom encoding to handle null values properly
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(current_lives, forKey: .current_lives)
+                    try container.encode(updated_at, forKey: .updated_at)
+                    
+                    // Explicitly encode nil values as null in JSON
+                    if let life1 = life_1_regenerates_at {
+                        try container.encode(life1, forKey: .life_1_regenerates_at)
+                    } else {
+                        try container.encodeNil(forKey: .life_1_regenerates_at)
+                    }
+                    
+                    if let life2 = life_2_regenerates_at {
+                        try container.encode(life2, forKey: .life_2_regenerates_at)
+                    } else {
+                        try container.encodeNil(forKey: .life_2_regenerates_at)
+                    }
+                    
+                    if let life3 = life_3_regenerates_at {
+                        try container.encode(life3, forKey: .life_3_regenerates_at)
+                    } else {
+                        try container.encodeNil(forKey: .life_3_regenerates_at)
+                    }
+                    
+                    if let life4 = life_4_regenerates_at {
+                        try container.encode(life4, forKey: .life_4_regenerates_at)
+                    } else {
+                        try container.encodeNil(forKey: .life_4_regenerates_at)
+                    }
+                    
+                    if let life5 = life_5_regenerates_at {
+                        try container.encode(life5, forKey: .life_5_regenerates_at)
+                    } else {
+                        try container.encodeNil(forKey: .life_5_regenerates_at)
+                    }
+                }
+                
+                enum CodingKeys: String, CodingKey {
+                    case current_lives
+                    case life_1_regenerates_at
+                    case life_2_regenerates_at
+                    case life_3_regenerates_at
+                    case life_4_regenerates_at
+                    case life_5_regenerates_at
+                    case updated_at
+                }
             }
             
             let update = LivesUpdate(

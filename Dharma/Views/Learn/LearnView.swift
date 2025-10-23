@@ -100,18 +100,20 @@ struct LearnView: View {
                     }) {
                         ZStack {
                             Circle()
-                                .fill(Color.blue.opacity(0.2))
+                                .fill(Color.orange.opacity(0.2))
                                 .frame(width: 36, height: 36)
                             
                             Image(systemName: "person.circle.fill")
                                 .font(.title2)
-                                .foregroundColor(.blue.opacity(0.7))
+                                .foregroundColor(.orange.opacity(0.7))
                         }
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    LivesDisplayView()
+                    if !isLoading {
+                        LivesDisplayView()
+                    }
                 }
             }
         }
