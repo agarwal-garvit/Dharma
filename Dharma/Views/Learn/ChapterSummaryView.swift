@@ -7,6 +7,22 @@
 
 import SwiftUI
 
+// MARK: - Content Item Model
+
+enum ContentItem: Identifiable {
+    case text(String)
+    case image(String)
+    
+    var id: String {
+        switch self {
+        case .text(let content):
+            return "text_\(content.prefix(20))"
+        case .image(let url):
+            return "image_\(url)"
+        }
+    }
+}
+
 struct LessonSummaryView: View {
     let lesson: DBLesson
     let lessonTitle: String
@@ -36,6 +52,59 @@ struct LessonSummaryView: View {
         lessonSections.first { $0.kind == .quiz }?.id
     }
     
+    // MARK: - Content Parsing
+    
+    private func parseContent(_ content: String) -> [ContentItem] {
+        var items: [ContentItem] = []
+        var currentText = ""
+        var i = content.startIndex
+        
+        while i < content.endIndex {
+            // Look for opening bracket
+            if content[i] == "[" {
+                // Add any accumulated text as a text item
+                if !currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    items.append(.text(currentText))
+                    currentText = ""
+                }
+                
+                // Find closing bracket
+                var j = content.index(after: i)
+                while j < content.endIndex && content[j] != "]" {
+                    j = content.index(after: j)
+                }
+                
+                if j < content.endIndex {
+                    // Extract URL from brackets
+                    let startIndex = content.index(after: i)
+                    let urlString = String(content[startIndex..<j])
+                    
+                    // Validate URL and add as image item
+                    if !urlString.isEmpty && (urlString.hasPrefix("http://") || urlString.hasPrefix("https://")) {
+                        items.append(.image(urlString))
+                    }
+                    
+                    // Move past the closing bracket
+                    i = content.index(after: j)
+                } else {
+                    // No closing bracket found, treat as regular text
+                    currentText.append(content[i])
+                    i = content.index(after: i)
+                }
+            } else {
+                currentText.append(content[i])
+                i = content.index(after: i)
+            }
+        }
+        
+        // Add any remaining text
+        if !currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            items.append(.text(currentText))
+        }
+        
+        return items
+    }
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
@@ -62,10 +131,36 @@ struct LessonSummaryView: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             
-                            Text(summaryContent)
-                                .font(.body)
-                                .lineSpacing(4)
-                                .foregroundColor(.primary)
+                            // Render parsed content (text and images)
+                            let contentItems = parseContent(summaryContent)
+                            ForEach(contentItems) { item in
+                                switch item {
+                                case .text(let text):
+                                    Text(text)
+                                        .font(.body)
+                                        .lineSpacing(4)
+                                        .foregroundColor(.primary)
+                                    
+                                case .image(let urlString):
+                                    CachedAsyncImage(url: URL(string: urlString)) { image in
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .cornerRadius(12)
+                                    } placeholder: {
+                                        Rectangle()
+                                            .fill(Color.gray.opacity(0.2))
+                                            .frame(height: 200)
+                                            .cornerRadius(12)
+                                            .overlay(
+                                                ProgressView()
+                                                    .tint(.orange)
+                                            )
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                }
+                            }
                         }
                     }
                     .padding()
@@ -142,10 +237,23 @@ struct LessonSummaryView: View {
     }
 }
 #Preview {
-    LessonSummaryView(
+    // Create test lesson sections with mixed content
+    let testContent = [
+        "content": AnyCodable("This is the chapter introduction with some text.\n\n[https://example.com/test-image1.jpg]\n\nThis is more explanation text that comes after the image.\n\n[https://example.com/test-image2.jpg]\n\nFinal thoughts on the chapter.")
+    ]
+    
+    let testSection = DBLessonSection(
+        id: UUID(),
+        lessonId: UUID(),
+        kind: .summary,
+        orderIdx: 1,
+        content: testContent
+    )
+    
+    return LessonSummaryView(
         lesson: DBLesson(id: UUID(), courseId: UUID(), orderIdx: 1, title: "Sankhya Yoga", imageUrl: nil),
         lessonTitle: "Sankhya Yoga",
-        lessonSections: [],
+        lessonSections: [testSection],
         lessonStartTime: Date(),
         onDismiss: {}
     )
