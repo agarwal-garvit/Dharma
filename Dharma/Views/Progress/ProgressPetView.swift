@@ -337,7 +337,12 @@ struct ProgressPetView: View {
         var activeDates = Set<String>()
         for session in loginSessions {
             if let date = isoFormatter.date(from: session.loginTimestamp) {
-                let dateString = dayFormatter.string(from: date)
+                // Use the original timezone from when the user logged in
+                let originalTimezone = session.userTimezone ?? TimeZone.current.identifier
+                let sessionDayFormatter = DateFormatter()
+                sessionDayFormatter.dateFormat = "yyyy-MM-dd"
+                sessionDayFormatter.timeZone = TimeZone(identifier: originalTimezone)
+                let dateString = sessionDayFormatter.string(from: date)
                 activeDates.insert(dateString)
             }
         }
@@ -410,8 +415,12 @@ struct ProgressPetView: View {
         
         return loginSessions.contains { session in
             if let sessionDate = isoFormatter.date(from: session.loginTimestamp) {
-                // Use calendar to ensure we're comparing dates in the user's timezone
-                let sessionDateString = dayFormatter.string(from: sessionDate)
+                // Use the original timezone from when the user logged in
+                let originalTimezone = session.userTimezone ?? TimeZone.current.identifier
+                let sessionDayFormatter = DateFormatter()
+                sessionDayFormatter.dateFormat = "yyyy-MM-dd"
+                sessionDayFormatter.timeZone = TimeZone(identifier: originalTimezone)
+                let sessionDateString = sessionDayFormatter.string(from: sessionDate)
                 return sessionDateString == dateString
             }
             return false

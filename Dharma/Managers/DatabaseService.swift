@@ -879,6 +879,7 @@ class DatabaseService: ObservableObject {
             authMethod: authMethod,
             ipAddress: nil,  // Captured by Supabase backend
             isFirstLogin: isFirstLogin,
+            userTimezone: TimeZone.current.identifier,  // Store user's current timezone
             createdAt: nil,
             updatedAt: nil
         )

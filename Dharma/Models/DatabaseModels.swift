@@ -391,6 +391,7 @@ struct DBUserLoginSession: Identifiable, Codable {
     let authMethod: String?
     let ipAddress: String?
     let isFirstLogin: Bool?
+    let userTimezone: String?
     let createdAt: String?
     let updatedAt: String?
     
@@ -407,6 +408,7 @@ struct DBUserLoginSession: Identifiable, Codable {
         case authMethod = "auth_method"
         case ipAddress = "ip_address"
         case isFirstLogin = "is_first_login"
+        case userTimezone = "user_timezone"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
