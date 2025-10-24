@@ -76,41 +76,14 @@ struct FinalThoughtsView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                if isLoading {
-                    loadingView
-                } else if let errorMessage = errorMessage {
-                    errorView(errorMessage)
-                } else if finalThoughtsContent == nil {
-                    noDataView
-                } else {
-                    contentView
-                }
-                
-                // Close in prayer button (only show when not loading and not in error state)
-                if !isLoading && errorMessage == nil {
-                    VStack {
-                        Button(action: {
-                            showPrayer = true
-                        }) {
-                            HStack {
-                                Image(systemName: "hands.clap.fill")
-                                Text("Closing Shloka")
-                            }
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.orange)
-                            )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    .padding()
-                    .background(Color(.systemBackground))
-                }
+            if isLoading {
+                loadingView
+            } else if let errorMessage = errorMessage {
+                errorView(errorMessage)
+            } else if finalThoughtsContent == nil {
+                noDataView
+            } else {
+                contentView
             }
         }
         .navigationTitle("Final Thoughts")
@@ -341,6 +314,28 @@ struct FinalThoughtsView: View {
                         }
                     }
                 }
+                
+                // Closing Shloka button - now inside ScrollView
+                VStack {
+                    Button(action: {
+                        showPrayer = true
+                    }) {
+                        HStack {
+                            Image(systemName: "hands.clap.fill")
+                            Text("Closing Shloka")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.orange)
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                .padding(.top, 16)
             }
             .padding()
         }

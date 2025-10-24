@@ -107,87 +107,83 @@ struct LessonSummaryView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Summary content
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        // Header
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Summary")
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
-                            
-                            Text(lessonTitle)
-                                .font(.title2)
-                                .foregroundColor(.orange)
-                                .fontWeight(.semibold)
-                        }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Summary")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
                         
-                        // Summary content
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Chapter Overview")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
-                            
-                            // Render parsed content (text and images)
-                            let contentItems = parseContent(summaryContent)
-                            ForEach(contentItems) { item in
-                                switch item {
-                                case .text(let text):
-                                    Text(text)
-                                        .font(.body)
-                                        .lineSpacing(4)
-                                        .foregroundColor(.primary)
-                                    
-                                case .image(let urlString):
-                                    CachedAsyncImage(url: URL(string: urlString)) { image in
-                                        image
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fit)
-                                            .cornerRadius(12)
-                                    } placeholder: {
-                                        Rectangle()
-                                            .fill(Color.gray.opacity(0.2))
-                                            .frame(height: 200)
-                                            .cornerRadius(12)
-                                            .overlay(
-                                                ProgressView()
-                                                    .tint(.orange)
-                                            )
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
+                        Text(lessonTitle)
+                            .font(.title2)
+                            .foregroundColor(.orange)
+                            .fontWeight(.semibold)
+                    }
+                    
+                    // Summary content
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Chapter Overview")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        
+                        // Render parsed content (text and images)
+                        let contentItems = parseContent(summaryContent)
+                        ForEach(contentItems) { item in
+                            switch item {
+                            case .text(let text):
+                                Text(text)
+                                    .font(.body)
+                                    .lineSpacing(4)
+                                    .foregroundColor(.primary)
+                                
+                            case .image(let urlString):
+                                CachedAsyncImage(url: URL(string: urlString)) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fit)
+                                        .cornerRadius(12)
+                                } placeholder: {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.2))
+                                        .frame(height: 200)
+                                        .cornerRadius(12)
+                                        .overlay(
+                                            ProgressView()
+                                                .tint(.orange)
+                                        )
                                 }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
                             }
                         }
                     }
-                    .padding()
-                }
-                
-                // Test mastery button
-                VStack {
-                    Button(action: {
-                        showQuiz = true
-                    }) {
-                        HStack {
-                            Image(systemName: "brain.head.profile")
-                            Text("Test My Mastery")
+                    
+                    // Test mastery button - now inside ScrollView
+                    VStack {
+                        Button(action: {
+                            showQuiz = true
+                        }) {
+                            HStack {
+                                Image(systemName: "brain.head.profile")
+                                Text("Test My Mastery")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.orange)
+                            )
                         }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.orange)
-                        )
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .padding(.top, 16)
                 }
                 .padding()
-                .background(Color(.systemBackground))
             }
             .navigationTitle("Summary")
             .navigationBarTitleDisplayMode(.inline)
