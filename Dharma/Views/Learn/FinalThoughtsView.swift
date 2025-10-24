@@ -95,7 +95,7 @@ struct FinalThoughtsView: View {
                         }) {
                             HStack {
                                 Image(systemName: "hands.clap.fill")
-                                Text("Close in Prayer")
+                                Text("Closing Shloka")
                             }
                             .font(.headline)
                             .foregroundColor(.white)

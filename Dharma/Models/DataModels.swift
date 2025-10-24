@@ -359,3 +359,27 @@ struct SeedData: Codable {
     let lessons: [Lesson]
     let exercises: [Exercise]
 }
+
+// MARK: - Shloka Content Model
+
+struct ShlokaContent {
+    let location: String
+    let script: String
+    let transliteration: String
+    let translation: String
+    
+    init?(from content: [String: AnyCodable]?) {
+        guard let content = content,
+              let location = content["location"]?.value as? String,
+              let script = content["script"]?.value as? String,
+              let transliteration = content["transliteration"]?.value as? String,
+              let translation = content["translation"]?.value as? String else {
+            return nil
+        }
+        
+        self.location = location
+        self.script = script
+        self.transliteration = transliteration
+        self.translation = translation
+    }
+}
