@@ -14,15 +14,17 @@ class ChatManager: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    private let supabase = SupabaseClient(
-        supabaseURL: Config.supabaseURLObject,
-        supabaseKey: Config.supabaseKey
-    )
+    private let supabase: SupabaseClient
     
     private var currentConversationId: UUID?
     private let authManager = DharmaAuthManager.shared
     
     init() {
+        // Use the same Supabase client as AuthManager to ensure authentication context is shared
+        self.supabase = SupabaseClient(
+            supabaseURL: Config.supabaseURLObject,
+            supabaseKey: Config.supabaseKey
+        )
         // Start with empty chat - will create conversation when first message is sent
     }
     
@@ -95,8 +97,12 @@ class ChatManager: ObservableObject {
     
     private func createConversation(title: String) async throws -> UUID {
         guard let userId = authManager.user?.id else {
+            print("❌ [CHAT] No authenticated user found")
             throw ChatError.authenticationError
         }
+        
+        print("🔍 [CHAT] Creating conversation for user: \(userId)")
+        print("🔍 [CHAT] Title: \(title)")
         
         let conversation = ChatConversation(
             id: UUID(),
@@ -107,18 +113,35 @@ class ChatManager: ObservableObject {
             messageCount: 0
         )
         
-        let response: ChatConversation = try await supabase.database
-            .from("chat_conversations")
-            .insert(conversation)
-            .select()
-            .single()
-            .execute()
-            .value
-        
-        return response.id
+        do {
+            let response: ChatConversation = try await supabase.database
+                .from("chat_conversations")
+                .insert(conversation)
+                .select()
+                .single()
+                .execute()
+                .value
+            
+            print("✅ [CHAT] Conversation created successfully: \(response.id)")
+            return response.id
+        } catch {
+            print("❌ [CHAT] Failed to create conversation: \(error)")
+            print("❌ [CHAT] Error details: \(error.localizedDescription)")
+            if let nsError = error as NSError? {
+                print("❌ [CHAT] Error domain: \(nsError.domain), code: \(nsError.code)")
+                print("❌ [CHAT] User info: \(nsError.userInfo)")
+            }
+            throw error
+        }
     }
     
     private func saveMessageToDatabase(_ message: ChatMessage) async throws {
+        print("🔍 [CHAT] Saving message to database")
+        print("🔍 [CHAT] Message ID: \(message.id)")
+        print("🔍 [CHAT] Conversation ID: \(message.conversationId?.uuidString ?? "nil")")
+        print("🔍 [CHAT] Content: \(message.content)")
+        print("🔍 [CHAT] Is User: \(message.isUser)")
+        
         // Create a proper message object for database insertion
         let messageForDB = ChatMessageForDB(
             id: message.id,
@@ -128,10 +151,22 @@ class ChatManager: ObservableObject {
             timestamp: message.timestamp
         )
         
-        try await supabase.database
-            .from("chat_messages")
-            .insert(messageForDB)
-            .execute()
+        do {
+            try await supabase.database
+                .from("chat_messages")
+                .insert(messageForDB)
+                .execute()
+            
+            print("✅ [CHAT] Message saved successfully")
+        } catch {
+            print("❌ [CHAT] Failed to save message: \(error)")
+            print("❌ [CHAT] Error details: \(error.localizedDescription)")
+            if let nsError = error as NSError? {
+                print("❌ [CHAT] Error domain: \(nsError.domain), code: \(nsError.code)")
+                print("❌ [CHAT] User info: \(nsError.userInfo)")
+            }
+            throw error
+        }
     }
     
     private func getAIResponse(for userMessage: String) async throws -> String {

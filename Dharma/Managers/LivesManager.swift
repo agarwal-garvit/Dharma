@@ -108,6 +108,16 @@ class LivesManager: ObservableObject {
                     }
                     
                     print("💚 LivesManager: Regenerated life - Total lives now: \(userLives.currentLives)")
+                    
+                    // If this was the first life back (from 0 to 1), reset the regeneration queue
+                    // This prevents the old stacking from carrying over
+                    if userLives.currentLives == 1 {
+                        print("💡 LivesManager: First life back - resetting regeneration queue to prevent old stacking")
+                        userLives.life2RegeneratesAt = nil
+                        userLives.life3RegeneratesAt = nil
+                        userLives.life4RegeneratesAt = nil
+                        userLives.life5RegeneratesAt = nil
+                    }
                 }
             }
             
@@ -218,11 +228,18 @@ class LivesManager: ObservableObject {
                 newRegenerationTime = tenMinutesLater
             }
             
+            // Special case: If user has 0 lives, the first regeneration should always be 10 minutes from now
+            // This prevents the user from waiting too long to get their first life back
+            if userLives.currentLives == 0 {
+                newRegenerationTime = tenMinutesLater
+                print("💡 LivesManager: User has 0 lives - setting first regeneration to 10 minutes from now")
+            }
+            
             let newRegenerationTimeString = ISO8601DateFormatter().string(from: newRegenerationTime)
             
             // Assign to the life slot that corresponds to the life that was just lost
-            // If currentLives = 4, assign to life5RegeneratesAt (life 5 was lost)
-            // If currentLives = 3, assign to life4RegeneratesAt (life 4 was lost)
+            // If currentLives = 4 (after deduction), assign to life5RegeneratesAt (life 5 was lost)
+            // If currentLives = 3 (after deduction), assign to life4RegeneratesAt (life 4 was lost)
             // And so on...
             let assignedSlot = userLives.currentLives + 1
             

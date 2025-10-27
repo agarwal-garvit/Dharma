@@ -530,3 +530,100 @@ struct QuestionWithOptions: Identifiable {
     
     var id: UUID { question.id }
 }
+
+// MARK: - Survey Models
+
+struct DBSurveyQuestion: Identifiable, Codable {
+    let id: UUID
+    let questionText: String
+    let questionType: SurveyQuestionType
+    let options: [SurveyOption]
+    let orderIdx: Int
+    let isActive: Bool
+    let createdAt: String?
+    let updatedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case questionText = "question_text"
+        case questionType = "question_type"
+        case options
+        case orderIdx = "order_idx"
+        case isActive = "is_active"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+enum SurveyQuestionType: String, Codable, CaseIterable {
+    case multipleChoice = "MULTIPLE_CHOICE"
+    case multiSelect = "MULTI_SELECT"
+    
+    var displayName: String {
+        switch self {
+        case .multipleChoice: return "Multiple Choice"
+        case .multiSelect: return "Multi-Select"
+        }
+    }
+}
+
+struct SurveyOption: Codable {
+    let id: String
+    let text: String
+}
+
+struct DBSurveyResponse: Identifiable, Codable {
+    let id: UUID
+    let userId: UUID
+    let answers: [String: [String]] // question_id -> [option_id(s)]
+    let completed: Bool
+    let startedAt: String
+    let completedAt: String?
+    let createdAt: String?
+    let updatedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case answers
+        case completed
+        case startedAt = "started_at"
+        case completedAt = "completed_at"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+// MARK: - Feedback Models
+
+struct DBUserFeedback: Identifiable, Codable {
+    let id: UUID
+    let userId: UUID
+    let feedbackType: FeedbackType
+    let message: String
+    let pageContext: String?
+    let createdAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case feedbackType = "feedback_type"
+        case message
+        case pageContext = "page_context"
+        case createdAt = "created_at"
+    }
+}
+
+enum FeedbackType: String, Codable, CaseIterable {
+    case issue = "ISSUE"
+    case feedback = "FEEDBACK"
+    case question = "QUESTION"
+    
+    var displayName: String {
+        switch self {
+        case .issue: return "Report Issue"
+        case .feedback: return "General Feedback"
+        case .question: return "Ask Question"
+        }
+    }
+}

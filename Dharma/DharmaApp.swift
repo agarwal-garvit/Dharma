@@ -14,8 +14,11 @@ import Supabase
 struct DharmaApp: App {
     @State private var hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     @State private var isAuthenticated = false
+    @State private var hasCompletedSurvey = false
+    @State private var isCheckingSurveyStatus = true
     
     private let authManager = DharmaAuthManager.shared
+    private let surveyManager = SurveyManager.shared
     
     var body: some Scene {
         WindowGroup {
@@ -31,6 +34,20 @@ struct DharmaApp: App {
                                 // Initialize Google Sign In
                                 setupGoogleSignIn()
                             }
+                    } else if isCheckingSurveyStatus {
+                        // Show loading while checking survey status
+                        VStack(spacing: 20) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                            
+                            Text("Loading...")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(ThemeManager.appBackground)
+                    } else if !hasCompletedSurvey {
+                        SurveyView()
                     } else if hasCompletedOnboarding {
                         MainTabView()
                             .onAppear {
@@ -62,7 +79,19 @@ struct DharmaApp: App {
                             await authManager.updateStreakIfNeeded()
                             // Notify that streak has been updated
                             NotificationCenter.default.post(name: .streakUpdated, object: nil)
+                            
+                            // Check survey status for authenticated user
+                            if let userId = authManager.user?.id {
+                                await surveyManager.checkSurveyStatus(userId: userId)
+                                hasCompletedSurvey = surveyManager.hasCompletedSurvey
+                                isCheckingSurveyStatus = false
+                            }
                         }
+                    } else if !isAuthenticated {
+                        // User signed out - reset survey state
+                        hasCompletedSurvey = false
+                        isCheckingSurveyStatus = true
+                        surveyManager.resetSurveyState()
                     }
                 }
                 .onAppear {
@@ -88,9 +117,18 @@ struct DharmaApp: App {
                             await authManager.updateStreakIfNeeded()
                             // Notify that streak has been updated
                             NotificationCenter.default.post(name: .streakUpdated, object: nil)
+                            
+                            // Check survey status for authenticated user
+                            if let userId = authManager.user?.id {
+                                await surveyManager.checkSurveyStatus(userId: userId)
+                                hasCompletedSurvey = surveyManager.hasCompletedSurvey
+                                isCheckingSurveyStatus = false
+                            }
+                            
                             print("✅ [LOGIN_TRACKING] Streak update completed, notification posted")
                         } else {
                             print("⚠️ [LOGIN_TRACKING] User not authenticated - skipping login tracking")
+                            isCheckingSurveyStatus = false
                         }
                     }
                     

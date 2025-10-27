@@ -577,6 +577,10 @@ class DharmaAuthManager {
                     .insert(userStats)
                     .execute()
                 
+                // Initialize survey response for new user
+                let databaseService = DatabaseService.shared
+                _ = try await databaseService.createSurveyResponse(userId: currentUser.id)
+                
                 print("Successfully initialized new user: \(currentUser.email ?? "No email")")
             } else {
                 print("User already exists in database")

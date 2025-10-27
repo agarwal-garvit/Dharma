@@ -1119,6 +1119,152 @@ class DatabaseService: ObservableObject {
         }
     }
     
+    // MARK: - Survey Operations
+    
+    func fetchActiveSurveyQuestions() async throws -> [DBSurveyQuestion] {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let questions: [DBSurveyQuestion] = try await supabase.database
+                .from("survey_questions")
+                .select()
+                .eq("is_active", value: true)
+                .order("order_idx")
+                .execute()
+                .value
+            
+            isLoading = false
+            return questions
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to fetch survey questions: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func createSurveyResponse(userId: UUID) async throws -> DBSurveyResponse {
+        let response = DBSurveyResponse(
+            id: UUID(),
+            userId: userId,
+            answers: [:],
+            completed: false,
+            startedAt: ISO8601DateFormatter().string(from: Date()),
+            completedAt: nil,
+            createdAt: nil,
+            updatedAt: nil
+        )
+        
+        do {
+            let inserted: DBSurveyResponse = try await supabase.database
+                .from("survey_responses")
+                .insert(response)
+                .select()
+                .single()
+                .execute()
+                .value
+            
+            return inserted
+        } catch {
+            errorMessage = "Failed to create survey response: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func fetchUserSurveyResponse(userId: UUID) async throws -> DBSurveyResponse? {
+        do {
+            let responses: [DBSurveyResponse] = try await supabase.database
+                .from("survey_responses")
+                .select()
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+            
+            return responses.first
+        } catch {
+            errorMessage = "Failed to fetch user survey response: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func updateSurveyAnswers(responseId: UUID, answers: [String: [String]]) async throws {
+        do {
+            // Create a proper update structure with encodable types
+            struct SurveyUpdate: Encodable {
+                let answers: [String: [String]]
+                let updated_at: String
+            }
+            
+            let updateData = SurveyUpdate(
+                answers: answers,
+                updated_at: ISO8601DateFormatter().string(from: Date())
+            )
+            
+            try await supabase.database
+                .from("survey_responses")
+                .update(updateData)
+                .eq("id", value: responseId)
+                .execute()
+        } catch {
+            errorMessage = "Failed to update survey answers: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func completeSurveyResponse(responseId: UUID) async throws {
+        do {
+            // Create a proper update structure with encodable types
+            struct SurveyCompletionUpdate: Encodable {
+                let completed: Bool
+                let completed_at: String
+                let updated_at: String
+            }
+            
+            let updateData = SurveyCompletionUpdate(
+                completed: true,
+                completed_at: ISO8601DateFormatter().string(from: Date()),
+                updated_at: ISO8601DateFormatter().string(from: Date())
+            )
+            
+            try await supabase.database
+                .from("survey_responses")
+                .update(updateData)
+                .eq("id", value: responseId)
+                .execute()
+        } catch {
+            errorMessage = "Failed to complete survey response: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    // MARK: - Feedback Operations
+    
+    func submitUserFeedback(userId: UUID, type: String, message: String, context: String?) async throws -> DBUserFeedback {
+        let feedback = DBUserFeedback(
+            id: UUID(),
+            userId: userId,
+            feedbackType: FeedbackType(rawValue: type) ?? .feedback,
+            message: message,
+            pageContext: context,
+            createdAt: nil
+        )
+        
+        do {
+            let inserted: DBUserFeedback = try await supabase.database
+                .from("user_feedback")
+                .insert(feedback)
+                .select()
+                .single()
+                .execute()
+                .value
+            
+            return inserted
+        } catch {
+            errorMessage = "Failed to submit user feedback: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
     // MARK: - Error Handling
     
     func clearError() {

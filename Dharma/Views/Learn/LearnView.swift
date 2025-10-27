@@ -26,6 +26,7 @@ struct LearnView: View {
     @State private var lockedAlertMessage = ""
     @State private var showLivesModal = false
     @State private var livesManager = LivesManager.shared
+    @State private var showingHelpFAQ = false
     
     // All courses sorted by course_order
     private var courses: [DBCourse] {
@@ -112,8 +113,26 @@ struct LearnView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if !isLoading {
-                        LivesDisplayView()
+                    HStack(spacing: 12) {
+                        // Help button
+                        Button(action: {
+                            showingHelpFAQ = true
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.orange.opacity(0.2))
+                                    .frame(width: 36, height: 36)
+                                
+                                Image(systemName: "questionmark.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.orange.opacity(0.7))
+                            }
+                        }
+                        
+                        // Lives display
+                        if !isLoading {
+                            LivesDisplayView()
+                        }
                     }
                 }
             }
@@ -177,6 +196,9 @@ struct LearnView: View {
         }
         .sheet(isPresented: $showLivesModal) {
             LivesModalView()
+        }
+        .sheet(isPresented: $showingHelpFAQ) {
+            HelpFAQView()
         }
     }
     
