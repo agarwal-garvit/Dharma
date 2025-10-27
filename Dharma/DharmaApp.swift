@@ -12,7 +12,6 @@ import Supabase
 
 @main
 struct DharmaApp: App {
-    @State private var hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     @State private var isAuthenticated = false
     @State private var hasCompletedSurvey = false
     @State private var isCheckingSurveyStatus = true
@@ -48,24 +47,13 @@ struct DharmaApp: App {
                         .background(ThemeManager.appBackground)
                     } else if !hasCompletedSurvey {
                         SurveyView()
-                    } else if hasCompletedOnboarding {
+                    } else {
                         MainTabView()
                             .onAppear {
                                 // Initialize managers
                                 _ = DataManager.shared
                                 _ = AudioManager.shared
                                 _ = HapticManager.shared
-                            }
-                    } else {
-                        OnboardingView()
-                            .onAppear {
-                                // Initialize managers
-                                _ = DataManager.shared
-                                _ = AudioManager.shared
-                                _ = HapticManager.shared
-                            }
-                            .onReceive(NotificationCenter.default.publisher(for: .onboardingCompleted)) { _ in
-                                hasCompletedOnboarding = true
                             }
                     }
                 }
@@ -233,7 +221,6 @@ struct DharmaApp: App {
 }
 
 extension Notification.Name {
-    static let onboardingCompleted = Notification.Name("onboardingCompleted")
     static let authStateChanged = Notification.Name("authStateChanged")
     static let switchToProgressTab = Notification.Name("switchToProgressTab")
     static let lessonCompleted = Notification.Name("lessonCompleted")

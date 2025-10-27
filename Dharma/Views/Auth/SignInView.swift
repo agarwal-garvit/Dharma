@@ -48,9 +48,11 @@ struct SignInView: View {
                     
                     // App Logo and Title
                     VStack(spacing: 20) {
-                        Image(systemName: "book.closed.fill")
-                            .font(.system(size: 80))
-                            .foregroundColor(.orange)
+                        Image("app-icon")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 60, height: 60)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         
                         VStack(spacing: 8) {
                             Text("Welcome to Dharma")

@@ -11,6 +11,7 @@ import Supabase
 struct SurveyView: View {
     @State private var surveyManager = SurveyManager.shared
     @State private var showingIntroduction = false
+    @State private var hasStartedSurvey = false
     
     var body: some View {
         ZStack {
@@ -46,12 +47,64 @@ struct SurveyView: View {
                     .buttonStyle(PrimaryButtonStyle())
                 }
                 .padding()
+            } else if !hasStartedSurvey {
+                // Welcome Page
+                VStack(spacing: 30) {
+                    Spacer()
+                    
+                    Image("app-icon")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 80, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    
+                    VStack(spacing: 16) {
+                        Text("Welcome to Dharma")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                        
+                        Text("Let's get to know you better")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    
+                    VStack(spacing: 12) {
+                        Text("We'll ask you a few questions to personalize your learning experience")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                        
+                        Text("This will help us recommend the best content for your spiritual journey")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(spacing: 16) {
+                        Button("Begin Survey") {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                hasStartedSurvey = true
+                            }
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        
+                        Text("\(surveyManager.questions.count) questions • Takes about 2-3 minutes")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding()
             } else {
                 VStack(spacing: 0) {
                     // Progress Header
                     VStack(spacing: 16) {
                         HStack {
-                            Text("Welcome to Dharma")
+                            Text("Survey")
                                 .font(.title2)
                                 .fontWeight(.bold)
                             
@@ -106,12 +159,21 @@ struct SurveyView: View {
                         Spacer()
                         
                         if surveyManager.isLastQuestion() {
-                            Button("Complete Survey") {
+                            Button(action: {
                                 Task {
                                     await surveyManager.submitSurvey()
-                                    if surveyManager.hasCompletedSurvey {
-                                        showingIntroduction = true
+                                    // Show introduction even if survey submission fails
+                                    // This ensures user can continue with the app
+                                    showingIntroduction = true
+                                }
+                            }) {
+                                HStack {
+                                    if surveyManager.isLoading {
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                            .foregroundColor(.white)
                                     }
+                                    Text(surveyManager.isLoading ? "Submitting..." : "Complete Survey")
                                 }
                             }
                             .buttonStyle(PrimaryButtonStyle())
@@ -135,6 +197,8 @@ struct SurveyView: View {
             Task {
                 if let userId = DharmaAuthManager.shared.user?.id {
                     await surveyManager.checkSurveyStatus(userId: userId)
+                    // Reset survey start state when loading survey
+                    hasStartedSurvey = false
                 }
             }
         }
@@ -142,8 +206,16 @@ struct SurveyView: View {
             AppIntroductionView()
         }
         .alert("Survey Error", isPresented: .constant(surveyManager.errorMessage != nil)) {
-            Button("OK") {
+            Button("Retry") {
                 surveyManager.errorMessage = nil
+                Task {
+                    await surveyManager.submitSurvey()
+                    showingIntroduction = true
+                }
+            }
+            Button("Continue Anyway") {
+                surveyManager.errorMessage = nil
+                showingIntroduction = true
             }
         } message: {
             Text(surveyManager.errorMessage ?? "")

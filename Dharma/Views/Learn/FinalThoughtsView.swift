@@ -252,6 +252,26 @@ struct FinalThoughtsView: View {
                     .padding(.horizontal)
             }
             
+            // Continue button
+            Button(action: {
+                showPrayer = true
+            }) {
+                HStack {
+                    Image(systemName: "arrow.right.circle.fill")
+                    Text("Continue to Closing Shloka")
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.orange)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal)
+            
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -155,27 +155,14 @@ class SurveyManager {
         errorMessage = nil
         
         do {
-            // Create survey response if it doesn't exist
-            if surveyResponse == nil {
-                self.surveyResponse = try await databaseService.createSurveyResponse(userId: userId)
-            }
-            
-            guard let response = surveyResponse else {
-                self.errorMessage = "Failed to create survey response"
-                return
-            }
-            
-            // Update answers in database
-            try await databaseService.updateSurveyAnswers(responseId: response.id, answers: answers)
-            
-            // Mark survey as completed
-            try await databaseService.completeSurveyResponse(responseId: response.id)
+            // Single optimized database call - much faster!
+            self.surveyResponse = try await databaseService.submitSurveyResponse(userId: userId, answers: answers)
             
             // Update local state
             self.hasCompletedSurvey = true
             self.isSurveyAvailable = false
             
-            print("✅ Survey completed successfully")
+            print("✅ Survey completed successfully with single database call")
             
         } catch {
             self.errorMessage = "Failed to submit survey: \(error.localizedDescription)"
@@ -184,6 +171,7 @@ class SurveyManager {
         
         isLoading = false
     }
+    
     
     // MARK: - Reset Survey State
     

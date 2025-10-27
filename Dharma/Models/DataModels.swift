@@ -229,28 +229,6 @@ struct ReviewItem: Identifiable, Codable {
 
 // MARK: - User Preferences
 
-enum StudyGoal: String, Codable, CaseIterable {
-    case daily5Min = "daily_5_min"
-    case daily10Min = "daily_10_min"
-    case weekendOnly = "weekend_only"
-    
-    var displayName: String {
-        switch self {
-        case .daily5Min: return "Daily 5 min"
-        case .daily10Min: return "Daily 10 min"
-        case .weekendOnly: return "Weekend only"
-        }
-    }
-    
-    var durationMinutes: Int {
-        switch self {
-        case .daily5Min: return 5
-        case .daily10Min: return 10
-        case .weekendOnly: return 15
-        }
-    }
-}
-
 enum ScriptDisplay: String, Codable, CaseIterable {
     case devanagari = "devanagari"
     case iast = "iast"
@@ -266,7 +244,6 @@ enum ScriptDisplay: String, Codable, CaseIterable {
 }
 
 struct UserPreferences: Codable {
-    var studyGoal: StudyGoal
     var scriptDisplay: ScriptDisplay
     var preferredLanguage: String
     var fontSize: Double
@@ -277,7 +254,6 @@ struct UserPreferences: Codable {
     var studyTime: Date
     
     init() {
-        self.studyGoal = .daily10Min
         self.scriptDisplay = .both
         self.preferredLanguage = "en"
         self.fontSize = 1.0

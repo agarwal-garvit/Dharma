@@ -1171,6 +1171,39 @@ class DatabaseService: ObservableObject {
         }
     }
     
+    // MARK: - Optimized Survey Submission (Single Database Call)
+    
+    func submitSurveyResponse(userId: UUID, answers: [String: [String]]) async throws -> DBSurveyResponse {
+        let now = ISO8601DateFormatter().string(from: Date())
+        
+        let response = DBSurveyResponse(
+            id: UUID(),
+            userId: userId,
+            answers: answers,
+            completed: true,
+            startedAt: now,
+            completedAt: now,
+            createdAt: now,
+            updatedAt: now
+        )
+        
+        do {
+            let inserted: DBSurveyResponse = try await supabase.database
+                .from("survey_responses")
+                .insert(response)
+                .select()
+                .single()
+                .execute()
+                .value
+            
+            print("✅ Survey submitted in single database call")
+            return inserted
+        } catch {
+            errorMessage = "Failed to submit survey response: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
     // MARK: - Feedback Operations
     
     func submitUserFeedback(userId: UUID, type: String, message: String, context: String?) async throws -> DBUserFeedback {

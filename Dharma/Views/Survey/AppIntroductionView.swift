@@ -8,188 +8,213 @@
 import SwiftUI
 
 struct AppIntroductionView: View {
-    @State private var showingOnboarding = false
+    @Environment(\.dismiss) private var dismiss
     
-    private let features = [
-        FeatureInfo(
+    private let appFeatures = [
+        AppFeature(
             icon: "book.closed.fill",
             title: "Learn",
-            description: "Explore the Bhagavad Gita through structured lessons, quizzes, and interactive content designed to deepen your understanding of this sacred text.",
+            points: [
+                "Structured lessons on Bhagavad Gita",
+                "Interactive quizzes and exercises",
+                "Progressive learning path"
+            ],
             color: .orange
         ),
-        FeatureInfo(
+        AppFeature(
             icon: "calendar",
             title: "Daily",
-            description: "Build a consistent practice with daily verses, reflections, and reminders. Track your progress and maintain your spiritual journey.",
+            points: [
+                "Daily verses and reflections",
+                "Study reminders and tracking",
+                "Consistent spiritual practice"
+            ],
             color: .blue
         ),
-        FeatureInfo(
-            icon: "chart.line.uptrend.xyaxis",
-            title: "Progress",
-            description: "Monitor your learning journey with detailed analytics, streak tracking, and achievement milestones to stay motivated.",
-            color: .green
-        ),
-        FeatureInfo(
-            icon: "person.circle",
-            title: "Profile",
-            description: "Manage your account, view your achievements, and customize your learning experience to match your spiritual goals.",
-            color: .purple
-        ),
-        FeatureInfo(
+        AppFeature(
             icon: "message.circle.fill",
             title: "AI Chatbot",
-            description: "Ask questions about Hinduism, get explanations of verses, or discuss spiritual concepts with our AI companion.",
+            points: [
+                "Ask questions about Hinduism",
+                "Get verse explanations",
+                "Discuss spiritual concepts"
+            ],
             color: .indigo
         ),
-        FeatureInfo(
-            icon: "flame.fill",
-            title: "Lives System",
-            description: "Earn and manage lives to participate in quizzes and learning activities. Lives regenerate over time to encourage consistent practice.",
-            color: .red
+        AppFeature(
+            icon: "chart.line.uptrend.xyaxis",
+            title: "Progress",
+            points: [
+                "Track your learning journey",
+                "View detailed analytics",
+                "Achievement milestones"
+            ],
+            color: .green
         )
     ]
     
     var body: some View {
-        ZStack {
-            // Background
-            ThemeManager.appBackground
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Header
-                VStack(spacing: 16) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 50))
-                        .foregroundColor(.orange)
-                    
-                    Text("Welcome to Dharma")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .multilineTextAlignment(.center)
-                    
-                    Text("Your spiritual journey begins here")
-                        .font(.title3)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.top, 40)
-                .padding(.horizontal)
+        NavigationView {
+            ZStack {
+                ThemeManager.appBackground
+                    .ignoresSafeArea()
                 
-                // Scrollable Content
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Introduction Text
-                        VStack(spacing: 16) {
-                            Text("Discover the timeless wisdom of the Bhagavad Gita through an immersive learning experience designed for the modern seeker.")
+                VStack(spacing: 0) {
+                    // Header
+                    VStack(spacing: 20) {
+                        Image("app-icon")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 80, height: 80)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        
+                        VStack(spacing: 8) {
+                            Text("Welcome to Dharma")
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                            
+                            Text("Your spiritual journey begins here")
+                                .font(.title3)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.top, 40)
+                    .padding(.horizontal, 24)
+                    
+                    // Content
+                    ScrollView {
+                        VStack(spacing: 32) {
+                            // App Features Section
+                            VStack(spacing: 20) {
+                                Text("App Features")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                VStack(spacing: 16) {
+                                    ForEach(appFeatures) { feature in
+                                        AppFeatureCard(feature: feature)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 24)
+                            
+                            // Lives System Section
+                            VStack(spacing: 16) {
+                                HStack {
+                                    Image(systemName: "flame.fill")
+                                        .font(.title2)
+                                        .foregroundColor(.red)
+                                    
+                                    Text("Lives System")
+                                        .font(.title2)
+                                        .fontWeight(.bold)
+                                    
+                                    Spacer()
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("• Earn lives to participate in quizzes")
+                                    Text("• Lives regenerate over time")
+                                    Text("• Encourages thoughtful learning")
+                                }
                                 .font(.body)
                                 .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-                            
-                            Text("Here's what you can explore:")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .padding(.top, 8)
-                        }
-                        .padding(.horizontal)
-                        
-                        // Features List
-                        VStack(spacing: 20) {
-                            ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
-                                FeatureCardView(feature: feature, index: index)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
+                            .padding(20)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.red.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                                    )
+                            )
+                            .padding(.horizontal, 24)
+                            
+                            // Bottom spacing for button
+                            Spacer(minLength: 100)
                         }
-                        .padding(.horizontal)
-                        
-                        // Bottom Spacing for Button
-                        Spacer(minLength: 100)
                     }
-                }
-                
-                // Start App Button (Fixed at bottom)
-                VStack(spacing: 12) {
-                    Button("Start Your Journey") {
-                        showingOnboarding = true
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .padding(.horizontal)
                     
-                    Text("Begin exploring Dharma's features")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.bottom, 40)
-                .background(
-                    // Gradient overlay to fade content behind button
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            ThemeManager.appBackground.opacity(0.8),
-                            ThemeManager.appBackground
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
+                    // Start Button (Fixed at bottom)
+                    VStack(spacing: 12) {
+                        Button("Start Your Journey") {
+                            dismiss()
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .padding(.horizontal, 24)
+                        
+                        Text("Begin exploring Dharma's features")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.bottom, 40)
+                    .background(
+                        LinearGradient(
+                            colors: [
+                                Color.clear,
+                                ThemeManager.appBackground.opacity(0.9),
+                                ThemeManager.appBackground
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 100)
+                        .allowsHitTesting(false)
                     )
-                    .frame(height: 80)
-                    .allowsHitTesting(false)
-                )
+                }
             }
-        }
-        .fullScreenCover(isPresented: $showingOnboarding) {
-            OnboardingView()
         }
     }
 }
 
-struct FeatureInfo {
+struct AppFeature: Identifiable {
+    let id = UUID()
     let icon: String
     let title: String
-    let description: String
+    let points: [String]
     let color: Color
 }
 
-struct FeatureCardView: View {
-    let feature: FeatureInfo
-    let index: Int
+struct AppFeatureCard: View {
+    let feature: AppFeature
     
     var body: some View {
-        HStack(spacing: 16) {
-            // Icon
-            ZStack {
-                Circle()
-                    .fill(feature.color.opacity(0.1))
-                    .frame(width: 60, height: 60)
-                
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
                 Image(systemName: feature.icon)
-                    .font(.system(size: 24))
+                    .font(.title2)
                     .foregroundColor(feature.color)
-            }
-            
-            // Content
-            VStack(alignment: .leading, spacing: 8) {
+                    .frame(width: 30, height: 30)
+                
                 Text(feature.title)
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.primary)
                 
-                Text(feature.description)
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(nil)
+                Spacer()
             }
             
-            Spacer()
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(feature.points, id: \.self) { point in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("•")
+                            .foregroundColor(feature.color)
+                            .fontWeight(.bold)
+                        
+                        Text(point)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
         }
-        .padding()
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(feature.color.opacity(0.2), lineWidth: 1)
+                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
         )
     }
 }
