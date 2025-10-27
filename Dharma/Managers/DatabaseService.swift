@@ -981,11 +981,8 @@ class DatabaseService: ObservableObject {
                 print("📥 DatabaseService: Fetched lives from DB")
                 print("   user_id: \(userLives.userId)")
                 print("   current_lives: \(userLives.currentLives)")
-                print("   life_1_regenerates_at: \(userLives.life1RegeneratesAt ?? "NULL")")
-                print("   life_2_regenerates_at: \(userLives.life2RegeneratesAt ?? "NULL")")
-                print("   life_3_regenerates_at: \(userLives.life3RegeneratesAt ?? "NULL")")
-                print("   life_4_regenerates_at: \(userLives.life4RegeneratesAt ?? "NULL")")
-                print("   life_5_regenerates_at: \(userLives.life5RegeneratesAt ?? "NULL")")
+                print("   regeneration_times: \(userLives.regenerationTimes)")
+                print("   regeneration_count: \(userLives.regenerationTimes.count)")
             } else {
                 print("📥 DatabaseService: No lives record found for user")
             }
@@ -1002,11 +999,7 @@ class DatabaseService: ObservableObject {
         let newLives = DBUserLives(
             userId: userId,
             currentLives: 5,
-            life1RegeneratesAt: nil,
-            life2RegeneratesAt: nil,
-            life3RegeneratesAt: nil,
-            life4RegeneratesAt: nil,
-            life5RegeneratesAt: nil,
+            regenerationTimes: [], // Empty array = all lives active
             updatedAt: nil
         )
         
@@ -1029,82 +1022,23 @@ class DatabaseService: ObservableObject {
     
     func updateUserLives(lives: DBUserLives) async throws {
         do {
-            // Create encodable update payload with explicit NULL handling
+            // Create simple update payload for the new structure
             struct LivesUpdate: Encodable {
                 let current_lives: Int
-                let life_1_regenerates_at: String?
-                let life_2_regenerates_at: String?
-                let life_3_regenerates_at: String?
-                let life_4_regenerates_at: String?
-                let life_5_regenerates_at: String?
+                let regeneration_times: [String]
                 let updated_at: String
-                
-                // Custom encoding to handle null values properly
-                func encode(to encoder: Encoder) throws {
-                    var container = encoder.container(keyedBy: CodingKeys.self)
-                    try container.encode(current_lives, forKey: .current_lives)
-                    try container.encode(updated_at, forKey: .updated_at)
-                    
-                    // Explicitly encode nil values as null in JSON
-                    if let life1 = life_1_regenerates_at {
-                        try container.encode(life1, forKey: .life_1_regenerates_at)
-                    } else {
-                        try container.encodeNil(forKey: .life_1_regenerates_at)
-                    }
-                    
-                    if let life2 = life_2_regenerates_at {
-                        try container.encode(life2, forKey: .life_2_regenerates_at)
-                    } else {
-                        try container.encodeNil(forKey: .life_2_regenerates_at)
-                    }
-                    
-                    if let life3 = life_3_regenerates_at {
-                        try container.encode(life3, forKey: .life_3_regenerates_at)
-                    } else {
-                        try container.encodeNil(forKey: .life_3_regenerates_at)
-                    }
-                    
-                    if let life4 = life_4_regenerates_at {
-                        try container.encode(life4, forKey: .life_4_regenerates_at)
-                    } else {
-                        try container.encodeNil(forKey: .life_4_regenerates_at)
-                    }
-                    
-                    if let life5 = life_5_regenerates_at {
-                        try container.encode(life5, forKey: .life_5_regenerates_at)
-                    } else {
-                        try container.encodeNil(forKey: .life_5_regenerates_at)
-                    }
-                }
-                
-                enum CodingKeys: String, CodingKey {
-                    case current_lives
-                    case life_1_regenerates_at
-                    case life_2_regenerates_at
-                    case life_3_regenerates_at
-                    case life_4_regenerates_at
-                    case life_5_regenerates_at
-                    case updated_at
-                }
             }
             
             let update = LivesUpdate(
                 current_lives: lives.currentLives,
-                life_1_regenerates_at: lives.life1RegeneratesAt,
-                life_2_regenerates_at: lives.life2RegeneratesAt,
-                life_3_regenerates_at: lives.life3RegeneratesAt,
-                life_4_regenerates_at: lives.life4RegeneratesAt,
-                life_5_regenerates_at: lives.life5RegeneratesAt,
+                regeneration_times: lives.regenerationTimes,
                 updated_at: ISO8601DateFormatter().string(from: Date())
             )
             
             print("📤 DatabaseService: Sending update to DB...")
             print("   current_lives: \(update.current_lives)")
-            print("   life_1_regenerates_at: \(update.life_1_regenerates_at ?? "NULL")")
-            print("   life_2_regenerates_at: \(update.life_2_regenerates_at ?? "NULL")")
-            print("   life_3_regenerates_at: \(update.life_3_regenerates_at ?? "NULL")")
-            print("   life_4_regenerates_at: \(update.life_4_regenerates_at ?? "NULL")")
-            print("   life_5_regenerates_at: \(update.life_5_regenerates_at ?? "NULL")")
+            print("   regeneration_times: \(update.regeneration_times)")
+            print("   regeneration_count: \(update.regeneration_times.count)")
             
             try await supabase.database
                 .from("user_lives")

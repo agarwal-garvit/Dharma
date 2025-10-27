@@ -47,7 +47,8 @@ struct LivesModalView: View {
                             .font(.headline)
                             .foregroundColor(.secondary)
                         
-                        if let timeString = livesManager.getFormattedTimeUntilNextLife() {
+                        let timeString = livesManager.getFormattedTimeUntilNextLife()
+                        if timeString != "00:00" {
                             Text(timeString)
                                 .font(.system(size: 36, weight: .bold, design: .monospaced))
                                 .foregroundColor(.orange)
