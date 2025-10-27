@@ -618,6 +618,58 @@ struct DBSurveyResponse: Identifiable, Codable {
     }
 }
 
+// MARK: - Daily Verse Models
+
+struct DBDailyVerse: Identifiable, Codable {
+    let id: UUID
+    let date: String
+    let verseId: String
+    let chapterIndex: Int
+    let verseIndex: Int
+    let devanagariText: String
+    let iastText: String
+    let translationEn: String
+    let keywords: [String]
+    let themes: [String]
+    let commentaryShort: String?
+    let audioUrl: String?
+    let createdAt: String?
+    let updatedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case date
+        case verseId = "verse_id"
+        case chapterIndex = "chapter_index"
+        case verseIndex = "verse_index"
+        case devanagariText = "devanagari_text"
+        case iastText = "iast_text"
+        case translationEn = "translation_en"
+        case keywords
+        case themes
+        case commentaryShort = "commentary_short"
+        case audioUrl = "audio_url"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    // Convert to app's Verse model
+    func toVerse() -> Verse {
+        return Verse(
+            id: verseId,
+            chapterIndex: chapterIndex,
+            verseIndex: verseIndex,
+            devanagariText: devanagariText,
+            iastText: iastText,
+            translationEn: translationEn,
+            keywords: keywords,
+            audioURL: audioUrl,
+            commentaryShort: commentaryShort,
+            themes: themes
+        )
+    }
+}
+
 // MARK: - Feedback Models
 
 struct DBUserFeedback: Identifiable, Codable {

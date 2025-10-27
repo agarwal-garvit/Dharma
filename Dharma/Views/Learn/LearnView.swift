@@ -138,8 +138,13 @@ struct LearnView: View {
             }
         }
         .onAppear {
-            loadContent()
-            loadUserMetrics()
+            // Only load content if not already loaded
+            if dataManager.courses.isEmpty {
+                loadContent()
+            } else {
+                // Data is already loaded, just refresh user metrics
+                loadUserMetrics()
+            }
             
             // Check and regenerate lives
             Task {
@@ -555,6 +560,13 @@ struct LearnView: View {
     
     
     private func loadContent() {
+        // Check if we already have courses loaded
+        if !dataManager.courses.isEmpty && !courseLessons.isEmpty {
+            print("📚 Content already loaded, skipping reload")
+            isLoading = false
+            return
+        }
+        
         isLoading = true
         print("🔄 Starting to load content...")
         
@@ -603,6 +615,7 @@ struct LearnView: View {
             }
         }
     }
+    
     
     private func preloadLessonImages() async {
         print("🖼️ Starting image preloading...")

@@ -301,26 +301,50 @@ struct DailyView: View {
             // Simulate loading
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             
-            // For now, get a verse based on the day of the year
-            // This ensures the same verse appears for everyone on the same day
-            let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-            
-            // Load verses from DataManager
-            let dataManager = DataManager.shared
-            
-            // If verses aren't loaded yet, load them
-            if dataManager.verses.isEmpty {
-                // Try to load from local JSON or use a fallback
-                // For now, create a sample verse
+            do {
+                let databaseService = DatabaseService.shared
+                
+                // First try to get verse for today's date
+                if let dailyVerse = try await databaseService.fetchDailyVerse(for: currentDate) {
+                    await MainActor.run {
+                        self.dailyVerse = dailyVerse.toVerse()
+                        self.isLoading = false
+                    }
+                    return
+                }
+                
+                // If no verse for today, try to get by day of year (cycling through available verses)
+                let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: currentDate) ?? 1
+                if let dailyVerse = try await databaseService.fetchDailyVerseByDayOfYear(dayOfYear: dayOfYear) {
+                    await MainActor.run {
+                        self.dailyVerse = dailyVerse.toVerse()
+                        self.isLoading = false
+                    }
+                    return
+                }
+                
+                // If still no verse, try to get the next available verse
+                if let dailyVerse = try await databaseService.fetchNextDailyVerse() {
+                    await MainActor.run {
+                        self.dailyVerse = dailyVerse.toVerse()
+                        self.isLoading = false
+                    }
+                    return
+                }
+                
+                // Fallback to sample verse if no database verses are available
                 await MainActor.run {
                     self.dailyVerse = createSampleVerse(dayOfYear: dayOfYear)
                     self.isLoading = false
                 }
-            } else {
-                // Pick a verse based on day of year
-                let verseIndex = (dayOfYear - 1) % dataManager.verses.count
+                
+            } catch {
+                print("Error loading daily verse from database: \(error)")
+                
+                // Fallback to sample verse on error
+                let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: currentDate) ?? 1
                 await MainActor.run {
-                    self.dailyVerse = dataManager.verses[verseIndex]
+                    self.dailyVerse = createSampleVerse(dayOfYear: dayOfYear)
                     self.isLoading = false
                 }
             }

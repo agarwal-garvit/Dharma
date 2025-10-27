@@ -1204,6 +1204,142 @@ class DatabaseService: ObservableObject {
         }
     }
     
+    // MARK: - Daily Verse Operations
+    
+    func fetchDailyVerse(for date: Date) async throws -> DBDailyVerse? {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let dateString = DateFormatter.dateOnly.string(from: date)
+            let verses: [DBDailyVerse] = try await supabase.database
+                .from("daily_verses")
+                .select()
+                .eq("date", value: dateString)
+                .execute()
+                .value
+            
+            isLoading = false
+            return verses.first
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to fetch daily verse: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func fetchDailyVerseByDayOfYear(dayOfYear: Int) async throws -> DBDailyVerse? {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let verses: [DBDailyVerse] = try await supabase.database
+                .rpc("get_daily_verse_by_day_of_year", params: [
+                    "p_day_of_year": String(dayOfYear)
+                ])
+                .execute()
+                .value
+            
+            isLoading = false
+            return verses.first
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to fetch daily verse by day of year: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func fetchNextDailyVerse() async throws -> DBDailyVerse? {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let verses: [DBDailyVerse] = try await supabase.database
+                .rpc("get_next_daily_verse")
+                .execute()
+                .value
+            
+            isLoading = false
+            return verses.first
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to fetch next daily verse: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func fetchAllDailyVerses() async throws -> [DBDailyVerse] {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let verses: [DBDailyVerse] = try await supabase.database
+                .from("daily_verses")
+                .select()
+                .order("date")
+                .execute()
+                .value
+            
+            isLoading = false
+            return verses
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to fetch all daily verses: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func createDailyVerse(
+        date: Date,
+        verseId: String,
+        chapterIndex: Int,
+        verseIndex: Int,
+        devanagariText: String,
+        iastText: String,
+        translationEn: String,
+        keywords: [String] = [],
+        themes: [String] = [],
+        commentaryShort: String? = nil,
+        audioUrl: String? = nil
+    ) async throws -> DBDailyVerse {
+        isLoading = true
+        errorMessage = nil
+        
+        let dailyVerse = DBDailyVerse(
+            id: UUID(),
+            date: DateFormatter.dateOnly.string(from: date),
+            verseId: verseId,
+            chapterIndex: chapterIndex,
+            verseIndex: verseIndex,
+            devanagariText: devanagariText,
+            iastText: iastText,
+            translationEn: translationEn,
+            keywords: keywords,
+            themes: themes,
+            commentaryShort: commentaryShort,
+            audioUrl: audioUrl,
+            createdAt: nil,
+            updatedAt: nil
+        )
+        
+        do {
+            let inserted: DBDailyVerse = try await supabase.database
+                .from("daily_verses")
+                .insert(dailyVerse)
+                .select()
+                .single()
+                .execute()
+                .value
+            
+            isLoading = false
+            return inserted
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to create daily verse: \(error.localizedDescription)"
+            throw error
+        }
+    }
+
     // MARK: - Feedback Operations
     
     func submitUserFeedback(userId: UUID, type: String, message: String, context: String?) async throws -> DBUserFeedback {

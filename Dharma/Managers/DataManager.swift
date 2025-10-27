@@ -59,12 +59,28 @@ class DataManager {
     }
     
     func refreshContent() async {
+        // Clear existing data to force reload
+        courses = []
+        lessons = []
+        lessonSections = []
+        await loadCourses()
+    }
+    
+    func forceLoadCourses() async {
+        // Force reload courses even if already loaded
+        courses = []
         await loadCourses()
     }
     
     // MARK: - Database Operations
     
     func loadCourses() async {
+        // If courses are already loaded, don't reload unless forced
+        if !courses.isEmpty {
+            print("📚 Courses already loaded (\(courses.count) courses), skipping reload")
+            return
+        }
+        
         isLoadingCourses = true
         errorMessage = nil
         

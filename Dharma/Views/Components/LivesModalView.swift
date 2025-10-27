@@ -10,6 +10,9 @@ import SwiftUI
 struct LivesModalView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var livesManager = LivesManager.shared
+    @State private var countdownTimer: Timer?
+    @State private var timeRemaining: TimeInterval = 0
+    @State private var isTimerActive = false
     
     var body: some View {
         NavigationView {
@@ -47,9 +50,8 @@ struct LivesModalView: View {
                             .font(.headline)
                             .foregroundColor(.secondary)
                         
-                        let timeString = livesManager.getFormattedTimeUntilNextLife()
-                        if timeString != "00:00" {
-                            Text(timeString)
+                        if isTimerActive && timeRemaining > 0 {
+                            Text(formatTimeRemaining(timeRemaining))
                                 .font(.system(size: 36, weight: .bold, design: .monospaced))
                                 .foregroundColor(.orange)
                         } else {
@@ -129,6 +131,54 @@ struct LivesModalView: View {
                 }
             }
         }
+        .onAppear {
+            startCountdownTimer()
+        }
+        .onDisappear {
+            stopCountdownTimer()
+        }
+    }
+    
+    // MARK: - Timer Management
+    
+    private func startCountdownTimer() {
+        // Get initial time remaining
+        if let timeInterval = livesManager.getTimeUntilNextLife() {
+            timeRemaining = timeInterval
+            isTimerActive = true
+            
+            // Start the countdown timer
+            countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                if timeRemaining > 0 {
+                    timeRemaining -= 1
+                } else {
+                    // Timer reached zero, check for regeneration
+                    Task {
+                        await livesManager.checkAndRegenerateLives()
+                        // Update time remaining with new value
+                        if let newTimeInterval = livesManager.getTimeUntilNextLife() {
+                            timeRemaining = newTimeInterval
+                        } else {
+                            isTimerActive = false
+                        }
+                    }
+                }
+            }
+        } else {
+            isTimerActive = false
+        }
+    }
+    
+    private func stopCountdownTimer() {
+        countdownTimer?.invalidate()
+        countdownTimer = nil
+        isTimerActive = false
+    }
+    
+    private func formatTimeRemaining(_ timeInterval: TimeInterval) -> String {
+        let minutes = Int(timeInterval) / 60
+        let seconds = Int(timeInterval) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 
