@@ -67,6 +67,7 @@ struct AppIntroductionView: View {
                             .fontWeight(.bold)
                     }
                     .padding(.top, 40)
+                    .padding(.bottom, 20)
                     .padding(.horizontal, 24)
                     
                     // Content

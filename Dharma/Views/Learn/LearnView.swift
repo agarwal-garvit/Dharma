@@ -10,6 +10,7 @@ import SwiftUI
 struct LearnView: View {
     @State private var dataManager = DataManager.shared
     @State private var isLoading = true
+    @State private var isContentLoaded = false
     @State private var showingLessonPlayer = false
     @State private var selectedLesson: DBLesson?
     @State private var showingProfile = false
@@ -560,10 +561,16 @@ struct LearnView: View {
     
     
     private func loadContent() {
-        // Check if we already have courses loaded
-        if !dataManager.courses.isEmpty && !courseLessons.isEmpty {
+        // Check if we already have courses loaded or are currently loading
+        if isContentLoaded || (!dataManager.courses.isEmpty && !courseLessons.isEmpty) {
             print("📚 Content already loaded, skipping reload")
             isLoading = false
+            return
+        }
+        
+        // Prevent multiple simultaneous loads
+        if isLoading {
+            print("🔄 Content is already loading, skipping duplicate load")
             return
         }
         
@@ -571,46 +578,70 @@ struct LearnView: View {
         print("🔄 Starting to load content...")
         
         Task {
-            // Load all courses
-            await dataManager.loadCourses()
-            print("📚 Courses loaded: \(dataManager.courses.count)")
-            
-            // Load lessons for ALL courses
-            for course in dataManager.courses {
-                print("📖 Loading lessons for course: \(course.title) (ID: \(course.id))")
-                let lessons = await dataManager.loadLessons(for: course.id)
-                
+            // Add timeout to prevent infinite loading
+            let timeoutTask = Task {
+                try? await Task.sleep(nanoseconds: 30_000_000_000) // 30 seconds timeout
                 await MainActor.run {
-                    // Store lessons for this specific course
-                    courseLessons[course.id] = lessons
-                    print("   ✅ Stored \(lessons.count) lessons for course: \(course.title)")
+                    if isLoading {
+                        print("⏰ Content loading timed out after 30 seconds")
+                        isLoading = false
+                        isContentLoaded = true
+                    }
                 }
             }
             
-            // Preload all lesson images in background
-            await preloadLessonImages()
-            
-            // Set first course as visible
-            if let firstCourse = dataManager.courses.first {
-                await MainActor.run {
-                    currentVisibleCourse = firstCourse
-                    print("✅ Content loading completed. All courses and images loaded.")
+            do {
+                // Load all courses
+                await dataManager.loadCourses()
+                print("📚 Courses loaded: \(dataManager.courses.count)")
+                
+                // Load lessons for ALL courses
+                for course in dataManager.courses {
+                    print("📖 Loading lessons for course: \(course.title) (ID: \(course.id))")
+                    let lessons = await dataManager.loadLessons(for: course.id)
                     
-                    // Load user progress for lessons after courses and lessons are loaded
-                    loadUserLessonProgress()
+                    await MainActor.run {
+                        // Store lessons for this specific course
+                        courseLessons[course.id] = lessons
+                        print("   ✅ Stored \(lessons.count) lessons for course: \(course.title)")
+                    }
                 }
+            
+                // Preload all lesson images in background
+                await preloadLessonImages()
                 
-                // Small delay to ensure UI is fully rendered before removing loading screen
-                try? await Task.sleep(nanoseconds: 400_000_000) // 0.4 seconds
-                
-                await MainActor.run {
-                    isLoading = false
-                    print("✅ Loading screen dismissed")
+                // Set first course as visible
+                if let firstCourse = dataManager.courses.first {
+                    await MainActor.run {
+                        currentVisibleCourse = firstCourse
+                        print("✅ Content loading completed. All courses and images loaded.")
+                        
+                        // Load user progress for lessons after courses and lessons are loaded
+                        loadUserLessonProgress()
+                    }
+                    
+                    // Small delay to ensure UI is fully rendered before removing loading screen
+                    try? await Task.sleep(nanoseconds: 400_000_000) // 0.4 seconds
+                    
+                    await MainActor.run {
+                        timeoutTask.cancel()
+                        isLoading = false
+                        isContentLoaded = true
+                        print("✅ Loading screen dismissed")
+                    }
+                } else {
+                    await MainActor.run {
+                        isLoading = false
+                        isContentLoaded = true
+                        print("❌ No courses found")
+                    }
                 }
-            } else {
+            } catch {
+                print("❌ Error loading content: \(error)")
                 await MainActor.run {
+                    timeoutTask.cancel()
                     isLoading = false
-                    print("❌ No courses found")
+                    isContentLoaded = true
                 }
             }
         }

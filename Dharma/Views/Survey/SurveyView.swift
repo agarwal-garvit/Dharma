@@ -52,45 +52,48 @@ struct SurveyView: View {
                 }
                 .padding()
             } else if !hasStartedSurvey {
-                // Welcome Page
-                VStack(spacing: 30) {
+                // Personalization Questionnaire Page
+                VStack(spacing: 0) {
                     Spacer()
                     
-                    Image("app-icon")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 80, height: 80)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                    
-                    VStack(spacing: 16) {
-                        Text("Personalization Survey")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
+                    VStack(spacing: 30) {
+                        Image("app-icon")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 80, height: 80)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
                         
-                        Text("Let's get to know you better")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    
-                    VStack(spacing: 12) {
-                        Text("We'll ask you a few questions about your spiritual interests and learning preferences")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
+                        VStack(spacing: 16) {
+                            Text("Personalization Questionnaire")
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .multilineTextAlignment(.center)
+                            
+                            Text("Let's get to know you better")
+                                .font(.title3)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
                         
-                        Text("This helps us customize your Dharma experience and recommend the most relevant content")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
+                        VStack(spacing: 12) {
+                            Text("We'll ask you a few questions about your spiritual interests and learning preferences")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                            
+                            Text("This helps us customize your Dharma experience and recommend the most relevant content")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                        }
                     }
                     
                     Spacer()
                     
                     VStack(spacing: 16) {
-                        Button("Begin Survey") {
+                        Button("Begin Questionnaire") {
                             withAnimation(.easeInOut(duration: 0.3)) {
                                 hasStartedSurvey = true
                             }
@@ -101,8 +104,10 @@ struct SurveyView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+                    .padding(.bottom, 40)
                 }
-                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 24)
             } else {
                 VStack(spacing: 0) {
                     // Progress Header
