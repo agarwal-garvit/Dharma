@@ -70,22 +70,65 @@ struct LivesModalView: View {
                     .padding(.bottom, 30)
                 }
                 
-                // Unlimited lives message
-                HStack(spacing: 8) {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
-                        .font(.title3)
+                // Unlimited lives message with enhanced styling
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.yellow.opacity(0.3), Color.yellow.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 40, height: 40)
+                            
+                            Image(systemName: "star.fill")
+                                .foregroundColor(.yellow)
+                                .font(.title3)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Unlimited Lives")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                            
+                            Text("Premium version coming soon!")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                    }
                     
-                    Text("Unlimited lives version coming soon!")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkles")
+                            .foregroundColor(ThemeManager.primaryOrange)
+                            .font(.caption)
+                        
+                        Text("Stay tuned for updates")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(ThemeManager.primaryOrange)
+                    }
                 }
-                .padding(.vertical, 16)
+                .padding(.vertical, 20)
                 .padding(.horizontal, 20)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.yellow.opacity(0.1))
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.yellow.opacity(0.1), Color.yellow.opacity(0.05)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+                        )
                 )
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)

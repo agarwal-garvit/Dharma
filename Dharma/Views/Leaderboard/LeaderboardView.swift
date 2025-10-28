@@ -55,31 +55,109 @@ struct LeaderboardView: View {
     }
     
     private var comingSoonView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 32) {
             Spacer()
             
-            // Icon
+            // Enhanced Icon with animation
             ZStack {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.1)],
+                            colors: [
+                                ThemeManager.primaryOrange.opacity(0.2),
+                                ThemeManager.primaryOrange.opacity(0.05)
+                            ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 120, height: 120)
+                    .frame(width: 140, height: 140)
+                    .shadow(color: ThemeManager.primaryOrange.opacity(0.3), radius: 20, x: 0, y: 10)
                 
                 Image(systemName: "trophy.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(.orange)
+                    .font(.system(size: 60, weight: .medium))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [ThemeManager.primaryOrange, ThemeManager.primaryOrange.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+            .scaleEffect(1.0)
+            .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: UUID())
+            
+            VStack(spacing: 16) {
+                Text("Leaderboard")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.primary, .primary.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                VStack(spacing: 12) {
+                    Text("Compete with fellow seekers")
+                        .font(.title3)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.center)
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkles")
+                            .foregroundColor(ThemeManager.primaryOrange)
+                            .font(.title3)
+                        
+                        Text("Coming Soon")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(ThemeManager.primaryOrange)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(ThemeManager.primaryOrange.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(ThemeManager.primaryOrange.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+                }
             }
             
-            // Coming Soon text
-            Text("Coming Soon")
-                .font(.title2)
-                .foregroundColor(.orange)
-                .fontWeight(.semibold)
+            VStack(spacing: 12) {
+                Text("Features:")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                VStack(spacing: 8) {
+                    ForEach(["Daily & Weekly Rankings", "XP & Streak Tracking", "Achievement Badges", "Global Leaderboards"], id: \.self) { feature in
+                        HStack(spacing: 12) {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(ThemeManager.primaryOrange)
+                                .font(.caption)
+                            
+                            Text(feature)
+                                .font(.body)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(.systemGray6))
+                        )
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
             
             Spacer()
         }

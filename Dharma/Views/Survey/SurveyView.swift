@@ -12,6 +12,7 @@ struct SurveyView: View {
     @State private var surveyManager = SurveyManager.shared
     @State private var showingIntroduction = false
     @State private var hasStartedSurvey = false
+    @State private var isSubmitting = false
     
     var body: some View {
         ZStack {
@@ -19,32 +20,35 @@ struct SurveyView: View {
             ThemeManager.appBackground
                 .ignoresSafeArea()
             
-            if surveyManager.isLoading {
-                ProgressView("Loading survey...")
-                    .font(.headline)
-                    .foregroundColor(.primary)
+            if isSubmitting {
+                submittingView
             } else if surveyManager.questions.isEmpty {
-                VStack(spacing: 20) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 60))
-                        .foregroundColor(.orange)
+                // Show welcome page while loading
+                VStack(spacing: 30) {
+                    Spacer()
                     
-                    Text("Survey Unavailable")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+                    Image("app-icon")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 80, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
                     
-                    Text("We're having trouble loading the survey. Please try again later.")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                    
-                    Button("Retry") {
-                        Task {
-                            await surveyManager.loadSurveyQuestions()
-                        }
+                    VStack(spacing: 16) {
+                        Text("Welcome to Dharma")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                        
+                        Text("Preparing your personalized experience...")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
-                    .buttonStyle(PrimaryButtonStyle())
+                    
+                    ProgressView()
+                        .scaleEffect(1.2)
+                        .progressViewStyle(CircularProgressViewStyle(tint: .orange))
+                    
+                    Spacer()
                 }
                 .padding()
             } else if !hasStartedSurvey {
@@ -160,11 +164,22 @@ struct SurveyView: View {
                         
                         if surveyManager.isLastQuestion() {
                             Button(action: {
+                                // Prevent multiple submissions
+                                guard !surveyManager.isLoading && !isSubmitting else { return }
+                                
+                                // Show submitting view immediately
+                                isSubmitting = true
+                                
                                 Task {
                                     await surveyManager.submitSurvey()
-                                    // Show introduction even if survey submission fails
-                                    // This ensures user can continue with the app
-                                    showingIntroduction = true
+                                    
+                                    // Small delay to show submitting view
+                                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                                    
+                                    await MainActor.run {
+                                        // Show introduction after submission
+                                        showingIntroduction = true
+                                    }
                                 }
                             }) {
                                 HStack {
@@ -177,7 +192,7 @@ struct SurveyView: View {
                                 }
                             }
                             .buttonStyle(PrimaryButtonStyle())
-                            .disabled(!surveyManager.canGoToNext() || surveyManager.isLoading)
+                            .disabled(!surveyManager.canGoToNext() || surveyManager.isLoading || isSubmitting)
                         } else {
                             Button("Next") {
                                 withAnimation(.easeInOut(duration: 0.3)) {
@@ -194,32 +209,72 @@ struct SurveyView: View {
             }
         }
         .onAppear {
-            Task {
-                if let userId = DharmaAuthManager.shared.user?.id {
-                    await surveyManager.checkSurveyStatus(userId: userId)
-                    // Reset survey start state when loading survey
-                    hasStartedSurvey = false
-                }
-            }
-        }
-        .fullScreenCover(isPresented: $showingIntroduction) {
-            AppIntroductionView()
-        }
-        .alert("Survey Error", isPresented: .constant(surveyManager.errorMessage != nil)) {
-            Button("Retry") {
-                surveyManager.errorMessage = nil
+            // Reset survey start state when loading survey
+            hasStartedSurvey = false
+            
+            // Load survey questions if not already loaded
+            if surveyManager.questions.isEmpty {
                 Task {
-                    await surveyManager.submitSurvey()
-                    showingIntroduction = true
+                    await surveyManager.loadSurveyQuestions()
                 }
             }
-            Button("Continue Anyway") {
-                surveyManager.errorMessage = nil
-                showingIntroduction = true
-            }
-        } message: {
-            Text(surveyManager.errorMessage ?? "")
         }
+        .overlay(
+            Group {
+                if showingIntroduction {
+                    AppIntroductionView()
+                        .onDisappear {
+                            // Survey is complete, reset state and notify main app
+                            surveyManager.resetSurveyState()
+                            isSubmitting = false
+                            // Notify that we're ready to show main app
+                            NotificationCenter.default.post(name: .surveyCompleted, object: nil)
+                        }
+                }
+            }
+        )
+    }
+    
+    // MARK: - Submitting View
+    
+    private var submittingView: some View {
+        VStack(spacing: 30) {
+            Spacer()
+            
+            // App icon
+            Image("app-icon")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+            
+            VStack(spacing: 16) {
+                Text("Submitting Survey")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                
+                Text("Please wait while we process your responses...")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
+            
+            VStack(spacing: 12) {
+                ProgressView()
+                    .scaleEffect(1.2)
+                    .progressViewStyle(CircularProgressViewStyle(tint: .orange))
+                
+                Text("Saving your preferences")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(ThemeManager.appBackground)
     }
 }
 

@@ -72,10 +72,6 @@ struct AppIntroductionView: View {
                             Text("Welcome to Dharma")
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
-                            
-                            Text("Your spiritual journey begins here")
-                                .font(.title3)
-                                .foregroundColor(.secondary)
                         }
                     }
                     .padding(.top, 40)
@@ -141,6 +137,8 @@ struct AppIntroductionView: View {
                     // Start Button (Fixed at bottom)
                     VStack(spacing: 12) {
                         Button("Start Your Journey") {
+                            // Notify that we're ready to show main app
+                            NotificationCenter.default.post(name: .surveyCompleted, object: nil)
                             dismiss()
                         }
                         .buttonStyle(PrimaryButtonStyle())

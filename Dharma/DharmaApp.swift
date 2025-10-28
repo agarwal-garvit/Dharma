@@ -14,7 +14,6 @@ import Supabase
 struct DharmaApp: App {
     @State private var isAuthenticated = false
     @State private var hasCompletedSurvey = false
-    @State private var isCheckingSurveyStatus = true
     
     private let authManager = DharmaAuthManager.shared
     private let surveyManager = SurveyManager.shared
@@ -33,18 +32,6 @@ struct DharmaApp: App {
                                 // Initialize Google Sign In
                                 setupGoogleSignIn()
                             }
-                    } else if isCheckingSurveyStatus {
-                        // Show loading while checking survey status
-                        VStack(spacing: 20) {
-                            ProgressView()
-                                .scaleEffect(1.5)
-                            
-                            Text("Loading...")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(ThemeManager.appBackground)
                     } else if !hasCompletedSurvey {
                         SurveyView()
                     } else {
@@ -72,14 +59,23 @@ struct DharmaApp: App {
                             if let userId = authManager.user?.id {
                                 await surveyManager.checkSurveyStatus(userId: userId)
                                 hasCompletedSurvey = surveyManager.hasCompletedSurvey
-                                isCheckingSurveyStatus = false
                             }
                         }
                     } else if !isAuthenticated {
                         // User signed out - reset survey state
                         hasCompletedSurvey = false
-                        isCheckingSurveyStatus = true
                         surveyManager.resetSurveyState()
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .surveyCompleted)) { _ in
+                    // Survey was completed and intro was dismissed - show main app
+                    // Add a small delay to ensure clean transition
+                    Task {
+                        try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+                        await MainActor.run {
+                            hasCompletedSurvey = true
+                            print("📋 Survey completed - showing main app")
+                        }
                     }
                 }
                 .onAppear {
@@ -110,13 +106,11 @@ struct DharmaApp: App {
                             if let userId = authManager.user?.id {
                                 await surveyManager.checkSurveyStatus(userId: userId)
                                 hasCompletedSurvey = surveyManager.hasCompletedSurvey
-                                isCheckingSurveyStatus = false
                             }
                             
                             print("✅ [LOGIN_TRACKING] Streak update completed, notification posted")
                         } else {
                             print("⚠️ [LOGIN_TRACKING] User not authenticated - skipping login tracking")
-                            isCheckingSurveyStatus = false
                         }
                     }
                     
@@ -126,6 +120,7 @@ struct DharmaApp: App {
                     #endif
                 }
             }
+            .preferredColorScheme(.light) // Force light mode
         }
     }
     
@@ -225,4 +220,5 @@ extension Notification.Name {
     static let switchToProgressTab = Notification.Name("switchToProgressTab")
     static let lessonCompleted = Notification.Name("lessonCompleted")
     static let streakUpdated = Notification.Name("streakUpdated")
+    static let surveyCompleted = Notification.Name("surveyCompleted")
 }
