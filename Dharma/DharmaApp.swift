@@ -14,6 +14,7 @@ import Supabase
 struct DharmaApp: App {
     @State private var isAuthenticated = false
     @State private var hasCompletedSurvey = false
+    @State private var isInitializing = true
     
     private let authManager = DharmaAuthManager.shared
     private let surveyManager = SurveyManager.shared
@@ -32,6 +33,31 @@ struct DharmaApp: App {
                                 // Initialize Google Sign In
                                 setupGoogleSignIn()
                             }
+                    } else if isInitializing {
+                        // Always show welcome page immediately after sign in
+                        VStack(spacing: 30) {
+                            Spacer()
+                            
+                            Image("app-icon")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 80, height: 80)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                            
+                            VStack(spacing: 16) {
+                                Text("Welcome to Dharma")
+                                    .font(.largeTitle)
+                                    .fontWeight(.bold)
+                            }
+                            
+                            ProgressView()
+                                .scaleEffect(1.2)
+                                .progressViewStyle(CircularProgressViewStyle(tint: .orange))
+                            
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(ThemeManager.appBackground)
                     } else if !hasCompletedSurvey {
                         SurveyView()
                     } else {
@@ -51,6 +77,14 @@ struct DharmaApp: App {
                     // Update streak when user becomes authenticated
                     if !wasAuthenticated && isAuthenticated {
                         Task {
+                            // Always show welcome page first, then add 2-second delay
+                            await MainActor.run {
+                                isInitializing = true
+                            }
+                            
+                            // Wait 1.25 seconds to show welcome page
+                            try? await Task.sleep(nanoseconds: 1_250_000_000) // 1.25 seconds
+                            
                             await authManager.updateStreakIfNeeded()
                             // Notify that streak has been updated
                             NotificationCenter.default.post(name: .streakUpdated, object: nil)
@@ -60,10 +94,14 @@ struct DharmaApp: App {
                                 await surveyManager.checkSurveyStatus(userId: userId)
                                 hasCompletedSurvey = surveyManager.hasCompletedSurvey
                             }
+                            
+                            // Mark initialization as complete
+                            isInitializing = false
                         }
                     } else if !isAuthenticated {
                         // User signed out - reset survey state
                         hasCompletedSurvey = false
+                        isInitializing = false
                         surveyManager.resetSurveyState()
                     }
                 }
@@ -95,6 +133,15 @@ struct DharmaApp: App {
                         
                         if isAuthenticated {
                             print("🔍 [LOGIN_TRACKING] User is authenticated, recording app open...")
+                            
+                            // Always show welcome page first, then add 2-second delay
+                            await MainActor.run {
+                                isInitializing = true
+                            }
+                            
+                            // Wait 1.25 seconds to show welcome page
+                            try? await Task.sleep(nanoseconds: 1_250_000_000) // 1.25 seconds
+                            
                             // Record this app open as a login session
                             await recordAppOpen()
                             // Update streak
@@ -108,9 +155,13 @@ struct DharmaApp: App {
                                 hasCompletedSurvey = surveyManager.hasCompletedSurvey
                             }
                             
+                            // Mark initialization as complete
+                            isInitializing = false
+                            
                             print("✅ [LOGIN_TRACKING] Streak update completed, notification posted")
                         } else {
                             print("⚠️ [LOGIN_TRACKING] User not authenticated - skipping login tracking")
+                            isInitializing = false
                         }
                     }
                     

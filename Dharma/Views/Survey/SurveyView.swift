@@ -63,7 +63,7 @@ struct SurveyView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                     
                     VStack(spacing: 16) {
-                        Text("Welcome to Dharma")
+                        Text("Personalization Survey")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                         
@@ -74,13 +74,13 @@ struct SurveyView: View {
                     }
                     
                     VStack(spacing: 12) {
-                        Text("We'll ask you a few questions to personalize your learning experience")
+                        Text("We'll ask you a few questions about your spiritual interests and learning preferences")
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 20)
                         
-                        Text("This will help us recommend the best content for your spiritual journey")
+                        Text("This helps us customize your Dharma experience and recommend the most relevant content")
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)

@@ -62,35 +62,20 @@ struct AppIntroductionView: View {
                 VStack(spacing: 0) {
                     // Header
                     VStack(spacing: 20) {
-                        Image("app-icon")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 80, height: 80)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                        
-                        VStack(spacing: 8) {
-                            Text("Welcome to Dharma")
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
-                        }
+                        Text("Features of Dharma")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
                     }
                     .padding(.top, 40)
                     .padding(.horizontal, 24)
                     
                     // Content
                     ScrollView {
-                        VStack(spacing: 32) {
-                            // App Features Section
-                            VStack(spacing: 20) {
-                                Text("App Features")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                
-                                VStack(spacing: 16) {
-                                    ForEach(appFeatures) { feature in
-                                        AppFeatureCard(feature: feature)
-                                    }
+                        VStack(spacing: 24) {
+                            // Features List
+                            VStack(spacing: 16) {
+                                ForEach(appFeatures) { feature in
+                                    AppFeatureCard(feature: feature)
                                 }
                             }
                             .padding(.horizontal, 24)
@@ -130,12 +115,12 @@ struct AppIntroductionView: View {
                             .padding(.horizontal, 24)
                             
                             // Bottom spacing for button
-                            Spacer(minLength: 100)
+                            Spacer(minLength: 120)
                         }
                     }
                     
                     // Start Button (Fixed at bottom)
-                    VStack(spacing: 12) {
+                    VStack(spacing: 8) {
                         Button("Start Your Journey") {
                             // Notify that we're ready to show main app
                             NotificationCenter.default.post(name: .surveyCompleted, object: nil)
@@ -143,23 +128,20 @@ struct AppIntroductionView: View {
                         }
                         .buttonStyle(PrimaryButtonStyle())
                         .padding(.horizontal, 24)
-                        
-                        Text("Begin exploring Dharma's features")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
+                    .padding(.top, 20)
                     .padding(.bottom, 40)
                     .background(
                         LinearGradient(
                             colors: [
                                 Color.clear,
-                                ThemeManager.appBackground.opacity(0.9),
+                                ThemeManager.appBackground.opacity(0.95),
                                 ThemeManager.appBackground
                             ],
                             startPoint: .top,
                             endPoint: .bottom
                         )
-                        .frame(height: 100)
+                        .frame(height: 80)
                         .allowsHitTesting(false)
                     )
                 }
