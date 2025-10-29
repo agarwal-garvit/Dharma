@@ -527,7 +527,8 @@ struct LearnView: View {
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
                         .multilineTextAlignment(.leading)
-                        .lineLimit(3)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
                     Spacer()

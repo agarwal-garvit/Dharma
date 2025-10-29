@@ -18,11 +18,11 @@ struct FinalThoughtsContent {
         if let content = content {
             // Try to get analysis from the new structure
             if let analysisValue = content["analysis"]?.value as? String {
-                self.analysis = analysisValue
+                self.analysis = analysisValue.replacingOccurrences(of: "\\n", with: "\n")
             } else if let titleValue = content["title"]?.value as? String,
                       let contentValue = content["content"]?.value as? String {
                 // Fallback to simple structure: combine title and content
-                self.analysis = "\(titleValue)\n\n\(contentValue)"
+                self.analysis = "\(titleValue)\n\n\(contentValue.replacingOccurrences(of: "\\n", with: "\n"))"
             } else {
                 self.analysis = "Deep analysis content will be loaded from the database..."
             }
@@ -32,7 +32,7 @@ struct FinalThoughtsContent {
                 var terms: [String: String] = [:]
                 for (key, value) in keyTermsValue {
                     if let stringValue = value as? String {
-                        terms[key] = stringValue
+                        terms[key] = stringValue.replacingOccurrences(of: "\\n", with: "\n")
                     }
                 }
                 self.keyTerms = terms

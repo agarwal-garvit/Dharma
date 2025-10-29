@@ -45,7 +45,7 @@ struct LessonSummaryView: View {
               let contentString = content["content"]?.value as? String else {
             return "No summary content available for this chapter."
         }
-        return contentString
+        return contentString.replacingOccurrences(of: "\\n", with: "\n")
     }
     
     private var quizSectionId: UUID? {

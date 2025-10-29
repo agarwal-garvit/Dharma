@@ -26,43 +26,43 @@ struct PrayerView: View {
     @State private var errorMessage: String?
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Content
-            ScrollView {
-                VStack(spacing: 32) {
-                    // Header with decorative elements
-                    VStack(spacing: 16) {
-                        // Decorative circle with Om symbol
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.orange.opacity(0.2), Color.orange.opacity(0.05)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 80, height: 80)
-                            
-                            Text("ॐ")
-                                .font(.system(size: 32, weight: .light))
-                                .foregroundColor(.orange)
-                        }
+        ZStack {
+            // Warm orange background fade
+            Color.orange.opacity(0.1)
+                .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.3), value: showResults)
+            
+            VStack(spacing: 0) {
+                // Content - No scrolling needed
+                VStack(spacing: 0) {
+                    // Header Section (matching Daily Scripture style)
+                    VStack(spacing: 12) {
+                        // Date/Title
+                        Text("Closing Shloka")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         
-                        VStack(spacing: 8) {
-                            Text("Closing Shloka")
-                                .font(.title)
+                        // Main Title
+                        VStack(spacing: 4) {
+                            Text(lessonTitle)
+                                .font(.title2)
                                 .fontWeight(.bold)
                                 .foregroundColor(.primary)
                             
-                            Text(lessonTitle)
-                                .font(.headline)
-                                .foregroundColor(.orange)
-                                .fontWeight(.medium)
+                            Text("Sacred Verse")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
+                        
+                        Divider()
+                            .padding(.horizontal, 40)
+                            .padding(.top, 8)
                     }
+                    .padding(.vertical, 20)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.white.opacity(0.5))
                     
-                    // Shloka content
+                    // Shloka content (matching Daily Scripture card style)
                     if isLoading {
                         VStack(spacing: 16) {
                             ProgressView()
@@ -88,41 +88,96 @@ struct PrayerView: View {
                         }
                         .padding(.vertical, 40)
                     } else if let shloka = shlokaContent {
-                        VStack(spacing: 28) {
-                            // Location Card
-                            ShlokaCard(
-                                title: "Verse Reference",
-                                content: shloka.location,
-                                icon: "book.closed.fill",
-                                isHighlighted: false,
-                                isSmall: true
+                        // Scripture Card (matching Daily Scripture style)
+                        VStack(spacing: 0) {
+                            // Sanskrit Script
+                            VStack(spacing: 12) {
+                                Text("Sanskrit Script")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.secondary)
+                                    .textCase(.uppercase)
+                                    .tracking(1)
+                                
+                                Text(shloka.script)
+                                    .font(.title3)
+                                    .fontWeight(.medium)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundColor(.primary)
+                                    .padding(.horizontal)
+                            }
+                            .padding(.vertical, 20)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.orange.opacity(0.05), Color.yellow.opacity(0.05)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
+                            .cornerRadius(16)
                             
-                            // Sanskrit Script Card
-                            ShlokaCard(
-                                title: "Sanskrit Script",
-                                content: shloka.script,
-                                icon: "textformat.abc",
-                                isSanskrit: true
-                            )
+                            // IAST Transliteration
+                            VStack(spacing: 12) {
+                                Text("Transliteration")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.secondary)
+                                    .textCase(.uppercase)
+                                    .tracking(1)
+                                
+                                Text(shloka.transliteration)
+                                    .font(.body)
+                                    .italic()
+                                    .multilineTextAlignment(.center)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal)
+                            }
                             
-                            // Transliteration Card
-                            ShlokaCard(
-                                title: "Transliteration",
-                                content: shloka.transliteration,
-                                icon: "textformat.alt",
-                                isItalic: true
-                            )
+                            Divider()
+                                .padding(.vertical, 8)
                             
-                            // Translation Card
-                            ShlokaCard(
-                                title: "Translation",
-                                content: shloka.translation,
-                                icon: "quote.bubble.fill",
-                                isTranslation: true
-                            )
+                            // English Translation
+                            VStack(spacing: 12) {
+                                Text("Translation")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.secondary)
+                                    .textCase(.uppercase)
+                                    .tracking(1)
+                                
+                                Text(shloka.translation)
+                                    .font(.body)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundColor(.primary)
+                                    .padding(.horizontal)
+                                    .lineSpacing(4)
+                            }
+                            
+                            // Verse Reference
+                            VStack(spacing: 12) {
+                                Text("Reference")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.secondary)
+                                    .textCase(.uppercase)
+                                    .tracking(1)
+                                
+                                Text(shloka.location)
+                                    .font(.subheadline)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundColor(.orange)
+                                    .fontWeight(.medium)
+                                    .padding(.horizontal)
+                            }
+                            .padding(.top, 16)
                         }
+                        .padding(24)
+                        .background(Color.white)
+                        .cornerRadius(20)
+                        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
                         .padding(.horizontal, 20)
+                        .padding(.top, 24)
                     } else {
                         VStack(spacing: 16) {
                             Image(systemName: "book.closed")
@@ -139,43 +194,44 @@ struct PrayerView: View {
                         .padding(.vertical, 40)
                     }
                 }
-                .padding(.vertical, 24)
-            }
-            
-            // Done button
-            VStack(spacing: 0) {
-                Divider()
-                    .background(Color.gray.opacity(0.3))
                 
-                Button(action: {
-                    showResults = true
-                }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "hands.clap.fill")
-                            .font(.system(size: 18))
-                        Text("Om Shanti, Shanti, Shanti")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.orange, Color.orange.opacity(0.8)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+                // Done button
+                VStack(spacing: 0) {
+                    Divider()
+                        .background(Color.gray.opacity(0.3))
+                    
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showResults = true
+                        }
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "hands.clap.fill")
+                                .font(.system(size: 18))
+                            Text("Om Shanti, Shanti, Shanti")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.orange, Color.orange.opacity(0.8)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
                                 )
-                            )
-                    )
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
                 }
-                .buttonStyle(PlainButtonStyle())
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
+                .background(Color(.systemBackground))
             }
-            .background(Color(.systemBackground))
         }
         .onAppear {
             loadShlokaContent()

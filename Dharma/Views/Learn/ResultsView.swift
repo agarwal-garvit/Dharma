@@ -35,7 +35,13 @@ struct ResultsView: View {
     }
     
     var body: some View {
-        VStack(spacing: 24) {
+        ZStack {
+            // Warm orange background fade that transitions back to original
+            Color.orange.opacity(0.1)
+                .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.3), value: showChatbot)
+            
+            VStack(spacing: 24) {
                 // Header
                 VStack(spacing: 16) {
                     Text("Lesson Complete!")
@@ -172,6 +178,7 @@ struct ResultsView: View {
                 .padding(.horizontal)
             }
             .padding()
+            }
         .sheet(isPresented: $showChatbot) {
             ChatbotView()
         }

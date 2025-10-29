@@ -11,7 +11,6 @@ struct DailyView: View {
     @State private var dailyVerse: Verse?
     @State private var isLoading = true
     @State private var currentDate = Date()
-    @State private var showingProfile = false
     @State private var livesManager = LivesManager.shared
     
     private var formattedDate: String {
@@ -21,53 +20,25 @@ struct DailyView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Header Section
-                    headerSection
-                    
-                    if isLoading {
-                        loadingView
-                    } else if let verse = dailyVerse {
-                        // Scripture Card
-                        scriptureCard(verse: verse)
-                        
-                        // Interpretation Section
-                        interpretationSection(verse: verse)
-                    } else {
-                        emptyStateView
-                    }
-                }
-            }
-            .background(ThemeManager.appBackground)
-            .navigationTitle("Daily")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        showingProfile = true
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.blue.opacity(0.2))
-                                .frame(width: 36, height: 36)
-                            
-                            Image(systemName: "person.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(.blue.opacity(0.7))
-                        }
-                    }
-                }
+        ScrollView {
+            VStack(spacing: 0) {
+                // Header Section
+                headerSection
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    LivesDisplayView()
+                if isLoading {
+                    loadingView
+                } else if let verse = dailyVerse {
+                    // Scripture Card
+                    scriptureCard(verse: verse)
+                    
+                    // Interpretation Section
+                    interpretationSection(verse: verse)
+                } else {
+                    emptyStateView
                 }
             }
         }
-        .sheet(isPresented: $showingProfile) {
-            ProfileView()
-        }
+        .background(ThemeManager.appBackground)
         .onAppear {
             loadDailyVerse()
             

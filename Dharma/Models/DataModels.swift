@@ -353,9 +353,9 @@ struct ShlokaContent {
             return nil
         }
         
-        self.location = location
-        self.script = script
-        self.transliteration = transliteration
-        self.translation = translation
+        self.location = location.replacingOccurrences(of: "\\n", with: "\n")
+        self.script = script.replacingOccurrences(of: "\\n", with: "\n")
+        self.transliteration = transliteration.replacingOccurrences(of: "\\n", with: "\n")
+        self.translation = translation.replacingOccurrences(of: "\\n", with: "\n")
     }
 }

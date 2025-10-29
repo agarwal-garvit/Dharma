@@ -201,32 +201,6 @@ struct ProfileView: View {
                     .foregroundColor(.primary)
                 
                 VStack(spacing: 12) {
-                // Settings Button
-            Button(action: {
-                    // TODO: Navigate to settings
-            }) {
-                HStack {
-                        Image(systemName: "gearshape.fill")
-                            .foregroundColor(.orange)
-                            .frame(width: 24)
-                        
-                        Text("Settings")
-                        .foregroundColor(.primary)
-                        
-                    Spacer()
-                        
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(.secondary)
-                            .font(.caption)
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemBackground))
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            
                 // Sign Out Button
             Button(action: {
                     showingSignOutAlert = true
