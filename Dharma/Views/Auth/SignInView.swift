@@ -54,18 +54,10 @@ struct SignInView: View {
                             .frame(width: 60, height: 60)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         
-                        VStack(spacing: 8) {
-                            Text("Welcome to Dharma")
-                                .font(.largeTitle)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
-                            
-                            Text("Your daily companion for learning the Bhagavad Gita")
-                                .font(.title3)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-                        }
+                        Text("Dharma")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
                     }
                     
                     Spacer()
