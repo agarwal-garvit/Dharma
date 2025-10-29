@@ -9,7 +9,7 @@ import SwiftUI
 
 struct LearnView: View {
     @State private var dataManager = DataManager.shared
-    @State private var isLoading = true
+    @State private var isLoading = false
     @State private var isContentLoaded = false
     @State private var showingLessonPlayer = false
     @State private var selectedLesson: DBLesson?
@@ -139,12 +139,16 @@ struct LearnView: View {
             }
         }
         .onAppear {
+            print("🔍 LearnView onAppear - courses.isEmpty: \(dataManager.courses.isEmpty), isLoading: \(isLoading)")
             // Only load content if not already loaded
             if dataManager.courses.isEmpty {
+                print("🔍 Courses are empty, calling loadContent()")
                 loadContent()
             } else {
+                print("🔍 Courses already loaded, just refreshing user metrics")
                 // Data is already loaded, just refresh user metrics
                 loadUserMetrics()
+                isLoading = false
             }
             
             // Check and regenerate lives
@@ -561,6 +565,8 @@ struct LearnView: View {
     
     
     private func loadContent() {
+        print("🔍 loadContent() called - isContentLoaded: \(isContentLoaded), courses.count: \(dataManager.courses.count), courseLessons.count: \(courseLessons.count), isLoading: \(isLoading)")
+        
         // Check if we already have courses loaded or are currently loading
         if isContentLoaded || (!dataManager.courses.isEmpty && !courseLessons.isEmpty) {
             print("📚 Content already loaded, skipping reload")
@@ -596,6 +602,7 @@ struct LearnView: View {
                 print("📚 Courses loaded: \(dataManager.courses.count)")
                 
                 // Load lessons for ALL courses
+                print("🔄 Starting to load lessons for \(dataManager.courses.count) courses")
                 for course in dataManager.courses {
                     print("📖 Loading lessons for course: \(course.title) (ID: \(course.id))")
                     let lessons = await dataManager.loadLessons(for: course.id)
@@ -606,6 +613,7 @@ struct LearnView: View {
                         print("   ✅ Stored \(lessons.count) lessons for course: \(course.title)")
                     }
                 }
+                print("✅ Finished loading lessons for all courses")
             
                 // Preload all lesson images in background
                 await preloadLessonImages()

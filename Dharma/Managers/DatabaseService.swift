@@ -746,40 +746,168 @@ class DatabaseService: ObservableObject {
         }
     }
     
+    // MARK: - Helper Functions for Metrics Calculation
+    
+    private func calculateLessonsCompleted(userId: UUID) async throws -> Int {
+        do {
+            let completions: [DBLessonCompletion] = try await supabase.database
+                .from("lesson_completions")
+                .select()
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+            
+            // Get unique lesson IDs that have been completed
+            let uniqueLessonIds = Set(completions.map { $0.lessonId })
+            return uniqueLessonIds.count
+        } catch {
+            print("❌ Error calculating lessons completed: \(error)")
+            return 0
+        }
+    }
+    
+    private func calculateTotalStudyTime(userId: UUID) async throws -> Int {
+        do {
+            let completions: [DBLessonCompletion] = try await supabase.database
+                .from("lesson_completions")
+                .select()
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+            
+            // Sum up all time elapsed in seconds, then convert to minutes
+            let totalSeconds = completions.reduce(0) { $0 + $1.timeElapsedSeconds }
+            return totalSeconds / 60 // Convert to minutes
+        } catch {
+            print("❌ Error calculating total study time: \(error)")
+            return 0
+        }
+    }
+    
+    private func calculateQuizAverageScore(userId: UUID) async throws -> Double {
+        do {
+            let completions: [DBLessonCompletion] = try await supabase.database
+                .from("lesson_completions")
+                .select()
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+            
+            guard !completions.isEmpty else { return 0.0 }
+            
+            // Calculate average score percentage
+            let totalScore = completions.reduce(0.0) { $0 + $1.scorePercentage }
+            return totalScore / Double(completions.count)
+        } catch {
+            print("❌ Error calculating quiz average score: \(error)")
+            return 0.0
+        }
+    }
+    
     func getUserMetrics(userId: UUID) async throws -> DBUserMetrics? {
         isLoading = true
         errorMessage = nil
         
         do {
-            let metrics: [DBUserMetrics] = try await supabase.database
-                .rpc("get_user_metrics", params: [
-                    "p_user_id": userId.uuidString
-                ])
-                .execute()
-                .value
+            // Try to get user stats first as fallback
+            let userStats = try await fetchUserStats(userId: userId)
             
-            isLoading = false
-            return metrics.first
+            if let stats = userStats {
+                // Calculate lessons completed and total study time
+                let lessonsCompleted = try await calculateLessonsCompleted(userId: userId)
+                let totalStudyTimeMinutes = try await calculateTotalStudyTime(userId: userId)
+                let quizAverageScore = try await calculateQuizAverageScore(userId: userId)
+                
+                // Convert DBUserStats to DBUserMetrics
+                let metrics = DBUserMetrics(
+                    totalXp: stats.xpTotal,
+                    currentStreak: stats.streakCount,
+                    longestStreak: stats.longestStreak,
+                    lessonsCompleted: lessonsCompleted,
+                    totalStudyTimeMinutes: totalStudyTimeMinutes,
+                    quizAverageScore: quizAverageScore
+                )
+                
+                isLoading = false
+                return metrics
+            } else {
+                // Return default metrics if no stats found
+                let defaultMetrics = DBUserMetrics(
+                    totalXp: 0,
+                    currentStreak: 0,
+                    longestStreak: 0,
+                    lessonsCompleted: 0,
+                    totalStudyTimeMinutes: 0,
+                    quizAverageScore: 0.0
+                )
+                
+                isLoading = false
+                return defaultMetrics
+            }
         } catch {
             isLoading = false
             errorMessage = "Failed to fetch user metrics: \(error.localizedDescription)"
-            throw error
+            print("❌ Error in getUserMetrics: \(error)")
+            
+            // Return default metrics on error
+            let defaultMetrics = DBUserMetrics(
+                totalXp: 0,
+                currentStreak: 0,
+                longestStreak: 0,
+                lessonsCompleted: 0,
+                totalStudyTimeMinutes: 0,
+                quizAverageScore: 0.0
+            )
+            return defaultMetrics
         }
     }
     
     func calculateUserStreak(userId: UUID) async throws -> Int {
+        // Use only local calculation - no RPC call
         do {
-            let result: [String: Int] = try await supabase.database
-                .rpc("calculate_user_streak", params: [
-                    "p_user_id": userId.uuidString
-                ])
+            let sessions: [DBUserLoginSession] = try await supabase.database
+                .from("user_login_sessions")
+                .select()
+                .eq("user_id", value: userId)
+                .order("login_timestamp", ascending: false)
                 .execute()
                 .value
             
-            return result["calculate_user_streak"] ?? 0
+            // Calculate streak based on consecutive days with login sessions
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            var streak = 0
+            var currentDate = today
+            
+            for session in sessions {
+                let sessionDate = calendar.startOfDay(for: ISO8601DateFormatter().date(from: session.loginTimestamp) ?? Date())
+                let daysDifference = calendar.dateComponents([.day], from: sessionDate, to: currentDate).day ?? 0
+                
+                if daysDifference == 0 {
+                    // Same day, continue
+                    continue
+                } else if daysDifference == 1 {
+                    // Consecutive day
+                    streak += 1
+                    currentDate = sessionDate
+                } else {
+                    // Streak broken
+                    break
+                }
+            }
+            
+            // If we have any sessions today, add 1 to streak
+            if !sessions.isEmpty {
+                let firstSessionDate = calendar.startOfDay(for: ISO8601DateFormatter().date(from: sessions[0].loginTimestamp) ?? Date())
+                if calendar.isDate(firstSessionDate, inSameDayAs: today) {
+                    streak += 1
+                }
+            }
+            
+            return max(streak, 0) // Return 0 if no sessions
         } catch {
-            errorMessage = "Failed to calculate user streak: \(error.localizedDescription)"
-            throw error
+            print("❌ Streak calculation failed: \(error)")
+            return 0
         }
     }
     
