@@ -140,14 +140,16 @@ struct LearnView: View {
         }
         .onAppear {
             print("🔍 LearnView onAppear - courses.isEmpty: \(dataManager.courses.isEmpty), isLoading: \(isLoading)")
+            
+            // Always load user metrics first (streak, XP, etc.)
+            loadUserMetrics()
+            
             // Only load content if not already loaded
             if dataManager.courses.isEmpty {
                 print("🔍 Courses are empty, calling loadContent()")
                 loadContent()
             } else {
-                print("🔍 Courses already loaded, just refreshing user metrics")
-                // Data is already loaded, just refresh user metrics
-                loadUserMetrics()
+                print("🔍 Courses already loaded, skipping content load")
                 isLoading = false
             }
             

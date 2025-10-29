@@ -69,6 +69,10 @@ struct MainTabView: View {
             // Switch to progress tab when requested
             selectedTab = 2
         }
+        .onChange(of: selectedTab) { _ in
+            // Dismiss keyboard when switching tabs
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
         .onAppear {
             // Initialize lives manager with current user
             Task {

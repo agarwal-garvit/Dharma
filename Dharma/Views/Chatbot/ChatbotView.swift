@@ -11,6 +11,7 @@ struct ChatbotView: View {
     @StateObject private var chatManager = ChatManager()
     @State private var currentMessage = ""
     @State private var authManager = DharmaAuthManager.shared
+    @FocusState private var isTextFieldFocused: Bool
     
     var body: some View {
         if !authManager.isAuthenticated {
@@ -91,12 +92,22 @@ struct ChatbotView: View {
                 .navigationTitle("Gita Guide")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Done") {
+                            isTextFieldFocused = false
+                        }
+                        .opacity(isTextFieldFocused ? 1 : 0)
+                    }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Clear") {
                             chatManager.clearConversation()
                         }
                         .disabled(chatManager.messages.isEmpty)
                     }
+                }
+                .onTapGesture {
+                    // Dismiss keyboard when tapping outside TextField
+                    isTextFieldFocused = false
                 }
             }
         }
@@ -158,6 +169,10 @@ struct ChatbotView: View {
                         RoundedRectangle(cornerRadius: 20)
                             .fill(Color(.systemGray6))
                     )
+                    .focused($isTextFieldFocused)
+                    .onSubmit {
+                        sendMessage()
+                    }
                 
                 Button(action: sendMessage) {
                     Image(systemName: "arrow.up.circle.fill")

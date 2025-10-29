@@ -46,8 +46,7 @@ struct AppIntroductionView: View {
             title: "Progress",
             points: [
                 "Track your learning journey",
-                "View detailed analytics",
-                "Achievement milestones"
+                "View detailed analytics"
             ],
             color: .green
         )
@@ -96,7 +95,7 @@ struct AppIntroductionView: View {
                                 }
                                 
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("• Earn lives to participate in quizzes")
+                                    Text("• Lose a life if you get a question wrong")
                                     Text("• Lives regenerate over time")
                                     Text("• Encourages thoughtful learning")
                                 }

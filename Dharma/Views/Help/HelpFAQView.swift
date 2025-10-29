@@ -47,8 +47,7 @@ struct HelpFAQView: View {
             title: "Progress",
             points: [
                 "Track your learning journey",
-                "View detailed analytics",
-                "Achievement milestones"
+                "View detailed analytics"
             ],
             color: .green
         )
@@ -94,6 +93,40 @@ struct HelpFAQView: View {
                                 }
                             }
                         }
+                        .padding(.horizontal)
+                        
+                        // Lives System Section
+                        VStack(spacing: 16) {
+                            HStack {
+                                Image(systemName: "flame.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.red)
+                                
+                                Text("Lives System")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                
+                                Spacer()
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("• Lose a life if you get a question wrong")
+                                Text("• Lives regenerate over time")
+                                Text("• Encourages thoughtful learning")
+                            }
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.red.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                                )
+                        )
                         .padding(.horizontal)
                         
                         // Contact Support Section

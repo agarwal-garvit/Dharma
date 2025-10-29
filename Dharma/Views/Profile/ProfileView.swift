@@ -35,6 +35,9 @@ struct ProfileView: View {
                         // App Information
                         appInfoSection
                         
+                        // Delete Account Section
+                        deleteAccountSection
+                        
                         Spacer(minLength: 50)
                     }
                     .padding()
@@ -181,31 +184,6 @@ struct ProfileView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
                 
-                // About Button
-                Button(action: {
-                    // TODO: Navigate to about page
-                }) {
-                    HStack {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundColor(.purple)
-                            .frame(width: 24)
-                        
-                        Text("About Dharma")
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                        
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.secondary)
-                            .font(.caption)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemBackground))
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding()
@@ -271,28 +249,6 @@ struct ProfileView: View {
             }
             .buttonStyle(PlainButtonStyle())
             
-            // Delete Account Button
-            Button(action: {
-                showingDeleteAccountAlert = true
-            }) {
-                HStack {
-                    Image(systemName: "trash.fill")
-                        .foregroundColor(.red)
-                        .frame(width: 24)
-                    
-                    Text("Delete Account")
-                        .foregroundColor(.red)
-                    
-                    Spacer()
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemBackground))
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            .disabled(isDeletingAccount)
             }
                 }
                 .padding()
@@ -300,6 +256,49 @@ struct ProfileView: View {
             RoundedRectangle(cornerRadius: 16)
                         .fill(Color(.systemGray6))
                 )
+    }
+    
+    private var deleteAccountSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Danger Zone")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.red)
+            
+            VStack(spacing: 12) {
+                // Delete Account Button
+                Button(action: {
+                    showingDeleteAccountAlert = true
+                }) {
+                    HStack {
+                        Image(systemName: "trash.fill")
+                            .foregroundColor(.red)
+                            .frame(width: 24)
+                        
+                        Text("Delete Account")
+                            .foregroundColor(.red)
+                        
+                        Spacer()
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemBackground))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(isDeletingAccount)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemGray6))
+        )
     }
     
     private func getUserDisplayName() -> String {
