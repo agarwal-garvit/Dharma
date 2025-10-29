@@ -175,6 +175,37 @@ class DataManager {
         }
     }
     
+    // MARK: - Cache Management
+    
+    func clearUserCache() {
+        print("🧹 Clearing DataManager cache for user change")
+        
+        // Clear all cached data
+        courses = []
+        lessons = []
+        lessonSections = []
+        quizQuestions = []
+        quizOptions = []
+        
+        // Clear legacy data
+        chapters = []
+        verses = []
+        exercises = []
+        
+        // Clear user-specific data
+        userProgress = UserProgress()
+        userPreferences = UserPreferences()
+        reviewItems = []
+        userStats = nil
+        
+        // Reset loading states
+        isLoadingCourses = false
+        isLoadingLessons = false
+        errorMessage = nil
+        
+        print("✅ DataManager cache cleared")
+    }
+    
     // MARK: - Helper Methods
     
     func getLessonsForCourse(_ courseId: UUID) -> [DBLesson] {

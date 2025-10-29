@@ -48,6 +48,9 @@ class DharmaAuthManager {
             self.currentUser = session.user
             print("🔍 [AUTH] Session found - User ID: \(session.user.id)")
             
+            // Check if user is deleted before allowing access
+            await checkIfUserIsDeleted()
+            
             // Post notification that auth state has been determined
             NotificationCenter.default.post(name: .authStateChanged, object: nil)
         } catch {
@@ -123,9 +126,6 @@ class DharmaAuthManager {
                 throw DharmaAuthError.noGoogleToken
             }
             
-            // Check if this is a new user (for first login tracking)
-            let isNewUser = await checkIfNewUser()
-            
             // Sign in to Supabase with Google token
             let session = try await supabase.auth.signInWithIdToken(
                 credentials: .init(
@@ -135,6 +135,9 @@ class DharmaAuthManager {
             )
             
             self.currentUser = session.user
+            
+            // Check if this is a new user (for first login tracking) - AFTER setting currentUser
+            let isNewUser = await checkIfNewUser()
             
             // Initialize user in custom users table if needed
             await initializeUserIfNeeded(displayName: user.profile?.name)
@@ -160,6 +163,9 @@ class DharmaAuthManager {
         do {
             try await supabase.auth.signOut()
             self.currentUser = nil
+            
+            // Clear DataManager cache when user signs out
+            DataManager.shared.clearUserCache()
             
             // Post notification to update UI state
             NotificationCenter.default.post(name: .authStateChanged, object: nil)
@@ -472,6 +478,29 @@ class DharmaAuthManager {
     }
     
     @MainActor
+    private func checkIfUserIsDeleted() async {
+        guard let currentUser = self.currentUser else { return }
+        
+        do {
+            let existingUser: [UserRecord] = try await supabase.database
+                .from("users")
+                .select()
+                .eq("id", value: currentUser.id)
+                .execute()
+                .value
+            
+            if let user = existingUser.first, user.deleted == true {
+                print("❌ User account has been deleted - signing out")
+                try await supabase.auth.signOut()
+                self.currentUser = nil
+                NotificationCenter.default.post(name: .authStateChanged, object: nil)
+            }
+        } catch {
+            print("Failed to check if user is deleted: \(error)")
+        }
+    }
+    
+    @MainActor
     private func checkIfNewUser() async -> Bool {
         guard let currentUser = self.currentUser else { return false }
         
@@ -547,7 +576,17 @@ class DharmaAuthManager {
                 .execute()
                 .value
             
-            if existingUser.isEmpty {
+            if let user = existingUser.first {
+                // User exists - check if they are deleted
+                if user.deleted == true {
+                    print("❌ User account has been deleted - signing out")
+                    try await supabase.auth.signOut()
+                    self.currentUser = nil
+                    NotificationCenter.default.post(name: .authStateChanged, object: nil)
+                    return
+                }
+                print("User already exists in database")
+            } else {
                 // User doesn't exist, create them
                 let newUser = UserRecord(
                     id: currentUser.id,
@@ -555,7 +594,8 @@ class DharmaAuthManager {
                     password_hash: "", // Not needed for OAuth users
                     display_name: displayName ?? (currentUser.userMetadata["full_name"] as? String),
                     created_at: ISO8601DateFormatter().string(from: Date()),
-                    status: "active"
+                    status: "active",
+                    deleted: false
                 )
                 
                 try await supabase.database
@@ -577,13 +617,9 @@ class DharmaAuthManager {
                     .insert(userStats)
                     .execute()
                 
-                // Initialize survey response for new user
-                let databaseService = DatabaseService.shared
-                _ = try await databaseService.createSurveyResponse(userId: currentUser.id)
+                // Survey response will be created when user submits survey
                 
                 print("Successfully initialized new user: \(currentUser.email ?? "No email")")
-            } else {
-                print("User already exists in database")
             }
         } catch {
             print("Failed to initialize user: \(error)")
@@ -621,6 +657,94 @@ class DharmaAuthManager {
             }
         }
     }
+    
+    // MARK: - Account Deletion
+    
+    @MainActor
+    func deleteAccount() async throws {
+        guard let currentUser = self.currentUser else {
+            throw DharmaAuthError.notAuthenticated
+        }
+        
+        let userId = currentUser.id
+        print("🗑️ Starting account deletion for user: \(userId)")
+        
+        do {
+            // Mark user as deleted in the database instead of actually deleting data
+            try await markUserAsDeleted(userId: userId)
+            
+            // Sign out the user (this will clear local state and take them to login)
+            try await supabase.auth.signOut()
+            self.currentUser = nil
+            
+            // Clear DataManager cache when account is deleted
+            DataManager.shared.clearUserCache()
+            
+            // Post notification to update UI state
+            NotificationCenter.default.post(name: .authStateChanged, object: nil)
+            
+            print("✅ Successfully marked account as deleted for user: \(userId)")
+        } catch {
+            print("❌ Account deletion failed: \(error)")
+            throw DharmaAuthError.accountDeletionFailed(error.localizedDescription)
+        }
+    }
+    
+    @MainActor
+    private func markUserAsDeleted(userId: UUID) async throws {
+        print("🗑️ Marking user as deleted: \(userId)")
+        
+        do {
+            // Update the user record to mark as deleted
+            try await supabase.database
+                .from("users")
+                .update(["deleted": true])
+                .eq("id", value: userId)
+                .execute()
+            
+            print("✅ Successfully marked user as deleted")
+        } catch {
+            print("❌ Failed to mark user as deleted: \(error)")
+            throw error
+        }
+    }
+    
+    @MainActor
+    private func deleteUserDataFromAllTables(userId: UUID) async throws {
+        print("🗑️ Deleting user data from all tables for user: \(userId)")
+        
+        // Delete from all user-related tables in order (respecting foreign key constraints)
+        let tablesToDelete = [
+            "xp_events",
+            "lesson_completions", 
+            "user_lesson_sessions",
+            "user_lesson_progress",
+            "user_quiz_attempts",
+            "user_quiz_answers",
+            "daily_usage",
+            "user_lives",
+            "user_stats",
+            "user_login_sessions",
+            "users"
+        ]
+        
+        for tableName in tablesToDelete {
+            do {
+                let deleteCount = try await supabase.database
+                    .from(tableName)
+                    .delete()
+                    .eq("user_id", value: userId)
+                    .execute()
+                
+                print("✅ Deleted from \(tableName): \(deleteCount.count ?? 0) records")
+            } catch {
+                print("⚠️ Warning: Failed to delete from \(tableName): \(error.localizedDescription)")
+                // Continue with other tables even if one fails
+            }
+        }
+        
+        print("✅ Completed user data deletion from all tables")
+    }
 }
 
 // MARK: - Database Models
@@ -632,6 +756,7 @@ struct UserRecord: Codable {
     let display_name: String?
     let created_at: String
     let status: String
+    let deleted: Bool?
 }
 
 struct UserStats: Codable {
@@ -669,6 +794,8 @@ enum DharmaAuthError: LocalizedError {
     case noPresentingViewController
     case noGoogleToken
     case signInFailed(String)
+    case notAuthenticated
+    case accountDeletionFailed(String)
     
     var errorDescription: String? {
         switch self {
@@ -678,6 +805,10 @@ enum DharmaAuthError: LocalizedError {
             return "Failed to get Google authentication token"
         case .signInFailed(let message):
             return "Sign in failed: \(message)"
+        case .notAuthenticated:
+            return "User is not authenticated"
+        case .accountDeletionFailed(let message):
+            return "Account deletion failed: \(message)"
         }
     }
 }

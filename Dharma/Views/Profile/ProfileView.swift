@@ -13,6 +13,8 @@ struct ProfileView: View {
     @State private var authManager = DharmaAuthManager.shared
     @State private var isLoading = false
     @State private var showingSignOutAlert = false
+    @State private var showingDeleteAccountAlert = false
+    @State private var isDeletingAccount = false
     @State private var userDisplayName: String?
     
     var body: some View {
@@ -55,6 +57,14 @@ struct ProfileView: View {
             }
         } message: {
             Text("Are you sure you want to sign out?")
+        }
+        .alert("Delete Account", isPresented: $showingDeleteAccountAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteAccount()
+            }
+        } message: {
+            Text("Are you sure you want to delete your account? You will be signed out immediately and will not be able to log back in.")
         }
         .onAppear {
             loadUserDisplayName()
@@ -117,7 +127,9 @@ struct ProfileView: View {
             VStack(spacing: 12) {
                 // Terms of Service Button
                 Button(action: {
-                    // TODO: Navigate to terms of service
+                    if let url = URL(string: "https://docs.google.com/document/d/1LSf_HDzM0Hl9SPF2NNzj4-7LtGyGgfkGEyJ1n3v-eWo/edit?usp=drive_link") {
+                        UIApplication.shared.open(url)
+                    }
                 }) {
                     HStack {
                         Image(systemName: "doc.text.fill")
@@ -143,7 +155,9 @@ struct ProfileView: View {
                 
                 // Privacy Policy Button
                 Button(action: {
-                    // TODO: Navigate to privacy policy
+                    if let url = URL(string: "https://docs.google.com/document/d/1yrDVbM_ebkaJ6w1_zGTcHqBQcu5XYu_aOsGxdIt3fvk/edit?usp=drive_link") {
+                        UIApplication.shared.open(url)
+                    }
                 }) {
                     HStack {
                         Image(systemName: "hand.raised.fill")
@@ -256,6 +270,29 @@ struct ProfileView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+            
+            // Delete Account Button
+            Button(action: {
+                showingDeleteAccountAlert = true
+            }) {
+                HStack {
+                    Image(systemName: "trash.fill")
+                        .foregroundColor(.red)
+                        .frame(width: 24)
+                    
+                    Text("Delete Account")
+                        .foregroundColor(.red)
+                    
+                    Spacer()
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemBackground))
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(isDeletingAccount)
             }
                 }
                 .padding()
@@ -327,6 +364,26 @@ struct ProfileView: View {
                 await MainActor.run {
                     isLoading = false
                     print("Sign out failed: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func deleteAccount() {
+        isDeletingAccount = true
+        
+        Task {
+            do {
+                try await authManager.deleteAccount()
+                await MainActor.run {
+                    isDeletingAccount = false
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    isDeletingAccount = false
+                    print("Account deletion failed: \(error)")
+                    // You could add an error alert here if needed
                 }
             }
         }

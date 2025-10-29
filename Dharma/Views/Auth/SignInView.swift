@@ -218,7 +218,9 @@ struct SignInView: View {
                             
                             HStack(spacing: 4) {
                                 Button("Terms of Service") {
-                                    // TODO: Open terms of service
+                                    if let url = URL(string: "https://docs.google.com/document/d/1LSf_HDzM0Hl9SPF2NNzj4-7LtGyGgfkGEyJ1n3v-eWo/edit?usp=drive_link") {
+                                        UIApplication.shared.open(url)
+                                    }
                                 }
                                 .font(.caption)
                                 .foregroundColor(.orange)
@@ -228,7 +230,9 @@ struct SignInView: View {
                                     .foregroundColor(.secondary)
                                 
                                 Button("Privacy Policy") {
-                                    // TODO: Open privacy policy
+                                    if let url = URL(string: "https://docs.google.com/document/d/1yrDVbM_ebkaJ6w1_zGTcHqBQcu5XYu_aOsGxdIt3fvk/edit?usp=drive_link") {
+                                        UIApplication.shared.open(url)
+                                    }
                                 }
                                 .font(.caption)
                                 .foregroundColor(.orange)

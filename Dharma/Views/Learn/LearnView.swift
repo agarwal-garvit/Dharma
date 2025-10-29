@@ -165,6 +165,11 @@ struct LearnView: View {
             print("📊 LearnView received streakUpdated notification - reloading metrics")
             loadUserMetrics()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .authStateChanged)) { _ in
+            // Clear local cache when user changes (login/logout)
+            print("🔄 LearnView received authStateChanged notification - clearing local cache")
+            clearLocalCache()
+        }
         .fullScreenCover(item: $selectedLesson) { lesson in
             LessonDetailView(lesson: lesson, onLessonSelected: { legacyLesson in
                 showingLessonPlayer = true
@@ -868,12 +873,17 @@ struct LearnView: View {
         dayFormatter.dateFormat = "yyyy-MM-dd"
         dayFormatter.timeZone = TimeZone.current
         
+        print("🔍 calculateCurrentStreak: Login sessions count: \(loginSessions.count)")
+        
         // Start from today and go backwards day by day
         var currentDate = calendar.startOfDay(for: Date())
         var streak = 0
         
         // Check if today is active
-        if isDateActive(currentDate) {
+        let todayActive = isDateActive(currentDate)
+        print("🔍 calculateCurrentStreak: Today active: \(todayActive)")
+        
+        if todayActive {
             streak = 1
             
             // Keep going backwards day by day
@@ -884,7 +894,10 @@ struct LearnView: View {
                 }
                 
                 // Check if the previous day is active
-                if isDateActive(previousDate) {
+                let previousActive = isDateActive(previousDate)
+                print("🔍 calculateCurrentStreak: Previous day \(dayFormatter.string(from: previousDate)) active: \(previousActive)")
+                
+                if previousActive {
                     streak += 1
                     currentDate = previousDate
                 } else {
@@ -894,6 +907,7 @@ struct LearnView: View {
             }
         }
         
+        print("🔍 calculateCurrentStreak: Final streak: \(streak)")
         return streak
     }
     
@@ -911,6 +925,7 @@ struct LearnView: View {
                 
                 // Calculate streak locally using login sessions (same logic as calendar)
                 let calculatedStreak = self.calculateCurrentStreak()
+                print("🔍 LearnView: Calculated streak: \(calculatedStreak), Login sessions count: \(self.loginSessions.count)")
                 
                 // Update the metrics with our locally calculated streak
                 if var updatedMetrics = fetchedMetrics {
@@ -930,6 +945,22 @@ struct LearnView: View {
                 self.userStreak = calculatedStreak
             }
         }
+    }
+    
+    private func clearLocalCache() {
+        print("🧹 Clearing LearnView local cache")
+        
+        // Reset all local state
+        isLoading = false
+        isContentLoaded = false
+        currentVisibleCourse = nil
+        courseLessons = [:]
+        lessonProgress = [:]
+        userStreak = 0
+        userMetrics = nil
+        loginSessions = []
+        
+        print("✅ LearnView local cache cleared")
     }
     
     private func loadUserLessonProgress() {

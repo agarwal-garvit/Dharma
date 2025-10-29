@@ -805,7 +805,6 @@ class DatabaseService: ObservableObject {
     }
     
     func getUserMetrics(userId: UUID) async throws -> DBUserMetrics? {
-        isLoading = true
         errorMessage = nil
         
         do {
@@ -828,7 +827,6 @@ class DatabaseService: ObservableObject {
                     quizAverageScore: quizAverageScore
                 )
                 
-                isLoading = false
                 return metrics
             } else {
                 // Return default metrics if no stats found
@@ -841,11 +839,9 @@ class DatabaseService: ObservableObject {
                     quizAverageScore: 0.0
                 )
                 
-                isLoading = false
                 return defaultMetrics
             }
         } catch {
-            isLoading = false
             errorMessage = "Failed to fetch user metrics: \(error.localizedDescription)"
             print("❌ Error in getUserMetrics: \(error)")
             
