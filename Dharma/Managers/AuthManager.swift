@@ -84,13 +84,13 @@ class DharmaAuthManager {
     }
     
     @MainActor
-    func signUpWithEmail(email: String, password: String, displayName: String? = nil) async throws {
+    func signUpWithEmail(email: String, password: String, displayName: String? = nil, emailShared: Bool = false) async throws {
         do {
             let session = try await supabase.auth.signUp(email: email, password: password)
             self.currentUser = session.user
             
             // Initialize user in custom users table
-            await initializeUserIfNeeded(displayName: displayName)
+            await initializeUserIfNeeded(displayName: displayName, emailShared: emailShared)
             
             // Record login session (first login)
             await recordLoginSession(authMethod: "email", isFirstLogin: true)
@@ -140,7 +140,8 @@ class DharmaAuthManager {
             let isNewUser = await checkIfNewUser()
             
             // Initialize user in custom users table if needed
-            await initializeUserIfNeeded(displayName: user.profile?.name)
+            // Google sign-in users don't explicitly consent to email sharing, so set to false
+            await initializeUserIfNeeded(displayName: user.profile?.name, emailShared: false)
             
             // Record login session with device info
             await recordLoginSession(authMethod: "google", isFirstLogin: isNewUser)
@@ -564,7 +565,7 @@ class DharmaAuthManager {
     // MARK: - User Initialization
     
     @MainActor
-    private func initializeUserIfNeeded(displayName: String? = nil) async {
+    private func initializeUserIfNeeded(displayName: String? = nil, emailShared: Bool = false) async {
         guard let currentUser = self.currentUser else { return }
         
         do {
@@ -595,7 +596,8 @@ class DharmaAuthManager {
                     display_name: displayName ?? (currentUser.userMetadata["full_name"] as? String),
                     created_at: ISO8601DateFormatter().string(from: Date()),
                     status: "active",
-                    deleted: false
+                    deleted: false,
+                    email_shared: emailShared
                 )
                 
                 try await supabase.database
@@ -757,6 +759,7 @@ struct UserRecord: Codable {
     let created_at: String
     let status: String
     let deleted: Bool?
+    let email_shared: Bool?
 }
 
 struct UserStats: Codable {

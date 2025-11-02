@@ -17,6 +17,7 @@ struct SignInView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var displayName = ""
+    @State private var emailShared = false
     
     private let authManager = DharmaAuthManager.shared
     
@@ -84,6 +85,27 @@ struct SignInView: View {
                             
                             SecureField("Password", text: $password)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
+                            
+                            // Email sharing checkbox (only shown during signup)
+                            if isSignUpMode {
+                                HStack(spacing: 12) {
+                                    Button(action: {
+                                        emailShared.toggle()
+                                    }) {
+                                        Image(systemName: emailShared ? "checkmark.square.fill" : "square")
+                                            .foregroundColor(emailShared ? ThemeManager.primaryOrange : .gray)
+                                            .font(.title3)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    Text("Share my email with Dharma")
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 4)
+                            }
                         }
                         .padding(.horizontal, 32)
                         
@@ -120,6 +142,7 @@ struct SignInView: View {
                                 errorMessage = nil
                                 isEmailLoading = false
                                 isGoogleLoading = false
+                                emailShared = false // Reset checkbox when switching modes
                             }
                         }) {
                             Text(isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
@@ -272,7 +295,8 @@ struct SignInView: View {
                 try await authManager.signUpWithEmail(
                     email: email, 
                     password: password, 
-                    displayName: displayName.isEmpty ? nil : displayName
+                    displayName: displayName.isEmpty ? nil : displayName,
+                    emailShared: emailShared
                 )
                 // Authentication success is handled by the auth state listener
             } catch {

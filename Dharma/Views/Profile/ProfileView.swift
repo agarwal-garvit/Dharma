@@ -102,12 +102,6 @@ struct ProfileView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
                 
-                if let email = authManager.user?.email {
-                    Text(email)
-                    .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                
                 Text("Member since \(getMemberSinceText())")
                     .font(.caption)
                     .foregroundColor(.secondary)

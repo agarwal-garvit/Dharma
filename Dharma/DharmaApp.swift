@@ -15,6 +15,7 @@ struct DharmaApp: App {
     @State private var isAuthenticated = false
     @State private var hasCompletedSurvey = false
     @State private var isInitializing = true
+    @State private var surveyCheckCompleted = false
     
     private let authManager = DharmaAuthManager.shared
     private let surveyManager = SurveyManager.shared
@@ -33,8 +34,8 @@ struct DharmaApp: App {
                                 // Initialize Google Sign In
                                 setupGoogleSignIn()
                             }
-                    } else if isInitializing {
-                        // Always show welcome page immediately after sign in
+                    } else if isInitializing || !surveyCheckCompleted {
+                        // Always show welcome page while initializing or checking survey status
                         VStack(spacing: 30) {
                             Spacer()
                             
@@ -92,16 +93,27 @@ struct DharmaApp: App {
                             // Check survey status for authenticated user
                             if let userId = authManager.user?.id {
                                 await surveyManager.checkSurveyStatus(userId: userId)
-                                hasCompletedSurvey = surveyManager.hasCompletedSurvey
+                                await MainActor.run {
+                                    hasCompletedSurvey = surveyManager.hasCompletedSurvey
+                                    surveyCheckCompleted = true
+                                }
+                            } else {
+                                // No user ID, mark survey check as complete anyway
+                                await MainActor.run {
+                                    surveyCheckCompleted = true
+                                }
                             }
                             
                             // Mark initialization as complete
-                            isInitializing = false
+                            await MainActor.run {
+                                isInitializing = false
+                            }
                         }
                     } else if !isAuthenticated {
                         // User signed out - reset survey state
                         hasCompletedSurvey = false
                         isInitializing = false
+                        surveyCheckCompleted = false
                         surveyManager.resetSurveyState()
                     }
                 }
@@ -152,16 +164,29 @@ struct DharmaApp: App {
                             // Check survey status for authenticated user
                             if let userId = authManager.user?.id {
                                 await surveyManager.checkSurveyStatus(userId: userId)
-                                hasCompletedSurvey = surveyManager.hasCompletedSurvey
+                                await MainActor.run {
+                                    hasCompletedSurvey = surveyManager.hasCompletedSurvey
+                                    surveyCheckCompleted = true
+                                }
+                            } else {
+                                // No user ID, mark survey check as complete anyway
+                                await MainActor.run {
+                                    surveyCheckCompleted = true
+                                }
                             }
                             
                             // Mark initialization as complete
-                            isInitializing = false
+                            await MainActor.run {
+                                isInitializing = false
+                            }
                             
                             print("✅ [LOGIN_TRACKING] Streak update completed, notification posted")
                         } else {
                             print("⚠️ [LOGIN_TRACKING] User not authenticated - skipping login tracking")
-                            isInitializing = false
+                            await MainActor.run {
+                                isInitializing = false
+                                surveyCheckCompleted = false
+                            }
                         }
                     }
                     
