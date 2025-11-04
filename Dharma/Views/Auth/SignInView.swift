@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import GoogleSignIn
+// import GoogleSignIn
 
 struct SignInView: View {
     @State private var isEmailLoading = false
@@ -150,7 +150,8 @@ struct SignInView: View {
                                 .foregroundColor(.orange)
                         }
                         
-                        // Divider
+                        // Divider - Commented out since Google login is disabled
+                        /*
                         HStack {
                             Rectangle()
                                 .frame(height: 1)
@@ -166,8 +167,10 @@ struct SignInView: View {
                                 .foregroundColor(.gray.opacity(0.3))
                         }
                         .padding(.horizontal, 32)
+                        */
                         
-                        // Google Sign In Button
+                        // Google Sign In Button - Commented out
+                        /*
                         Button(action: signInWithGoogle) {
                             HStack(spacing: 12) {
                                 if isGoogleLoading {
@@ -200,6 +203,7 @@ struct SignInView: View {
                         }
                         .disabled(isEmailLoading || isGoogleLoading)
                         .padding(.horizontal, 32)
+                        */
                         
                         // Loading Status Message
                         if isEmailLoading || isGoogleLoading {
@@ -214,6 +218,8 @@ struct SignInView: View {
                                         .foregroundColor(.secondary)
                                 }
                                 
+                                // Google loading message - Commented out
+                                /*
                                 if isGoogleLoading {
                                     Text("This may take a moment for first-time users...")
                                         .font(.caption)
@@ -221,6 +227,7 @@ struct SignInView: View {
                                         .multilineTextAlignment(.center)
                                         .transition(.opacity)
                                 }
+                                */
                             }
                             .padding(.horizontal, 32)
                         }
@@ -309,6 +316,8 @@ struct SignInView: View {
         }
     }
     
+    // Google Sign In function - Commented out
+    /*
     private func signInWithGoogle() {
         isGoogleLoading = true
         errorMessage = nil
@@ -326,6 +335,7 @@ struct SignInView: View {
             }
         }
     }
+    */
 }
 
 // MARK: - Google Logo Asset
