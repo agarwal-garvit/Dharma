@@ -13,7 +13,7 @@ struct SignInView: View {
     @State private var isGoogleLoading = false
     @State private var errorMessage: String?
     @State private var showingError = false
-    @State private var isSignUpMode = false
+    @State private var isSignUpMode = true
     @State private var email = ""
     @State private var password = ""
     @State private var displayName = ""
@@ -145,8 +145,8 @@ struct SignInView: View {
                                 emailShared = false // Reset checkbox when switching modes
                             }
                         }) {
-                            Text(isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
-                                .font(.subheadline)
+                            Text(isSignUpMode ? "Already have an account? Log in here" : "Don't have an account? Sign Up")
+                                .font(.body)
                                 .foregroundColor(.orange)
                         }
                         
