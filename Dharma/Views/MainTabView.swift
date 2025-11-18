@@ -9,7 +9,7 @@ import SwiftUI
 import Combine
 
 struct MainTabView: View {
-    @State private var selectedTab = 0
+    @State private var selectedTab = 0  // Start on Daily view
     @State private var dataManager = DataManager.shared
     @State private var livesManager = LivesManager.shared
     
@@ -24,37 +24,21 @@ struct MainTabView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            LearnView()
-                .background(ThemeManager.appBackground)
-                .tabItem {
-                    Image(systemName: "book.fill")
-                    Text("Learn")
-                }
-                .tag(0)
-            
             DailyView()
                 .background(ThemeManager.appBackground)
                 .tabItem {
                     Image(systemName: "sun.max.fill")
                     Text("Daily")
                 }
+                .tag(0)
+            
+            LearnView()
+                .background(ThemeManager.appBackground)
+                .tabItem {
+                    Image(systemName: "book.fill")
+                    Text("Learn")
+                }
                 .tag(1)
-            
-            ProgressPetView()
-                .background(ThemeManager.appBackground)
-                .tabItem {
-                    Image(systemName: "chart.bar.fill")
-                    Text("Progress")
-                }
-                .tag(2)
-            
-            SacredTextView()
-                .background(ThemeManager.appBackground)
-                .tabItem {
-                    Image(systemName: "scroll.fill")
-                    Text("Texts")
-                }
-                .tag(3)
             
             ChatbotView()
                 .background(ThemeManager.appBackground)
@@ -62,12 +46,20 @@ struct MainTabView: View {
                     Image(systemName: "message.fill")
                     Text("AI")
                 }
-                .tag(4)
+                .tag(2)
+            
+            ProfileView()
+                .background(ThemeManager.appBackground)
+                .tabItem {
+                    Image(systemName: "person.fill")
+                    Text("Profile")
+                }
+                .tag(3)
         }
         .accentColor(.orange)
         .onReceive(NotificationCenter.default.publisher(for: .switchToProgressTab)) { _ in
-            // Switch to progress tab when requested
-            selectedTab = 2
+            // Switch to profile tab when requested (progress is now in profile)
+            selectedTab = 3
         }
         .onChange(of: selectedTab) { _ in
             // Dismiss keyboard when switching tabs

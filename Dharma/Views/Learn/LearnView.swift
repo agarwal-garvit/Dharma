@@ -13,7 +13,6 @@ struct LearnView: View {
     @State private var isContentLoaded = false
     @State private var showingLessonPlayer = false
     @State private var selectedLesson: DBLesson?
-    @State private var showingProfile = false
     @State private var currentVisibleCourse: DBCourse?
     @State private var showingCourseSelector = false
     @State private var userStreak = 0
@@ -97,22 +96,6 @@ struct LearnView: View {
             .navigationTitle("Learn")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        showingProfile = true
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.orange.opacity(0.2))
-                                .frame(width: 36, height: 36)
-                            
-                            Image(systemName: "person.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(.orange.opacity(0.7))
-                        }
-                    }
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
                         // Help button
@@ -139,18 +122,20 @@ struct LearnView: View {
             }
         }
         .onAppear {
-            print("🔍 LearnView onAppear - courses.isEmpty: \(dataManager.courses.isEmpty), isLoading: \(isLoading)")
+            print("🔍 LearnView onAppear - courses.isEmpty: \(dataManager.courses.isEmpty), courseLessons.isEmpty: \(courseLessons.isEmpty), isLoading: \(isLoading)")
             
             // Always load user metrics first (streak, XP, etc.)
             loadUserMetrics()
             
-            // Only load content if not already loaded
-            if dataManager.courses.isEmpty {
-                print("🔍 Courses are empty, calling loadContent()")
+            // Only load content if courses OR lessons are not loaded
+            // This handles the case where DataManager loaded courses but LearnView hasn't loaded lessons yet
+            if dataManager.courses.isEmpty || courseLessons.isEmpty {
+                print("🔍 Courses or lessons are empty, calling loadContent()")
                 loadContent()
             } else {
-                print("🔍 Courses already loaded, skipping content load")
+                print("🔍 Content already loaded, skipping content load")
                 isLoading = false
+                isContentLoaded = true
             }
             
             // Check and regenerate lives
@@ -195,9 +180,6 @@ struct LearnView: View {
                     selectedLesson = nil
                 }
             }
-        }
-        .sheet(isPresented: $showingProfile) {
-            ProfileView()
         }
         .onChange(of: navigateToProgress) { _, shouldNavigate in
             if shouldNavigate {

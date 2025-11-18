@@ -92,11 +92,12 @@ struct ChatbotView: View {
                 .navigationTitle("Gita Guide")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Done") {
-                            isTextFieldFocused = false
+                    if isTextFieldFocused {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("Done") {
+                                isTextFieldFocused = false
+                            }
                         }
-                        .opacity(isTextFieldFocused ? 1 : 0)
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Clear") {

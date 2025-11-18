@@ -101,28 +101,28 @@ struct ProgressPetView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 16) {
-                MetricCard(
+                ProgressMetricCard(
                     title: "Current Streak",
                     value: "\(userMetrics?.currentStreak ?? 0) days",
                     icon: "flame.fill",
                     color: .orange
                 )
                 
-                MetricCard(
+                ProgressMetricCard(
                     title: "Lessons Complete",
                     value: "\(userMetrics?.lessonsCompleted ?? 0)",
                     icon: "book.fill",
                     color: .blue
                 )
                 
-                MetricCard(
+                ProgressMetricCard(
                     title: "Total Study Time",
                     value: "\(userMetrics?.totalStudyTimeMinutes ?? 0) min",
                     icon: "clock.fill",
                     color: .green
                 )
                 
-                MetricCard(
+                ProgressMetricCard(
                     title: "Average Quiz Score",
                     value: String(format: "%.0f%%", userMetrics?.quizAverageScore ?? 0.0),
                     icon: "chart.bar.fill",
@@ -184,7 +184,7 @@ struct ProgressPetView: View {
                     // Calendar days with proper alignment
                     ForEach(getMonthDays(), id: \.self) { dateWrapper in
                         if let date = dateWrapper.date {
-                            CalendarDayView(
+                            ProgressCalendarDayView(
                                 date: date,
                                 isActive: isDateActive(date),
                                 isToday: Calendar.current.isDateInToday(date),
@@ -374,7 +374,7 @@ struct ProgressPetView: View {
         }
     }
     
-    private func getMonthDays() -> [DateWrapper] {
+    private func getMonthDays() -> [ProgressDateWrapper] {
         let calendar = Calendar.current
         
         // Get the first day of the month
@@ -387,17 +387,17 @@ struct ProgressPetView: View {
         let range = calendar.range(of: .day, in: .month, for: currentMonth)!
         let numDays = range.count
         
-        var days: [DateWrapper] = []
+        var days: [ProgressDateWrapper] = []
         
         // Add empty cells for days before the month starts
         for _ in 1..<firstWeekday {
-            days.append(DateWrapper(date: nil))
+            days.append(ProgressDateWrapper(date: nil))
         }
         
         // Add all days in the month
         for day in 1...numDays {
             if let date = calendar.date(byAdding: .day, value: day - 1, to: monthStart) {
-                days.append(DateWrapper(date: date))
+                days.append(ProgressDateWrapper(date: date))
             }
         }
         
@@ -468,7 +468,7 @@ struct ProgressPetView: View {
 
 // MARK: - Helper Structures
 
-struct DateWrapper: Hashable {
+private struct ProgressDateWrapper: Hashable {
     let date: Date?
     let id = UUID()
     
@@ -476,12 +476,12 @@ struct DateWrapper: Hashable {
         hasher.combine(id)
     }
     
-    static func == (lhs: DateWrapper, rhs: DateWrapper) -> Bool {
+    static func == (lhs: ProgressDateWrapper, rhs: ProgressDateWrapper) -> Bool {
         lhs.id == rhs.id
     }
 }
 
-struct MetricCard: View {
+private struct ProgressMetricCard: View {
     let title: String
     let value: String
     let icon: String
@@ -543,7 +543,7 @@ struct StatRow: View {
     }
 }
 
-struct CalendarDayView: View {
+private struct ProgressCalendarDayView: View {
     let date: Date
     let isActive: Bool
     let isToday: Bool
