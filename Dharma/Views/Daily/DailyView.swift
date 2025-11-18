@@ -6,265 +6,654 @@
 //
 
 import SwiftUI
+import Supabase
 
+enum VerseLanguage: String, CaseIterable {
+    case sanskrit = "Sanskrit"
+    case hindi = "Hindi"
+    case english = "English"
+}
+ v cxz
 struct DailyView: View {
     @State private var dailyVerse: Verse?
     @State private var isLoading = true
     @State private var currentDate = Date()
     @State private var livesManager = LivesManager.shared
+    @State private var isFlipped = false
+    @State private var selectedLanguage: VerseLanguage = .english
+    @State private var preferredLanguage: VerseLanguage = .english
+    @State private var userMetrics: DBUserMetrics?
+    @State private var showLanguageSettings = false
+    @State private var audioManager = AudioManager.shared
     
     private var formattedDate: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMMM d, yyyy"
+        formatter.dateFormat = "EEEE, MMMM d"
         return formatter.string(from: currentDate)
     }
     
     var body: some View {
+        ZStack {
+            // Futuristic gradient background
+            LinearGradient(
+                colors: [
+                    Color(red: 0.05, green: 0.05, blue: 0.12),
+                    Color(red: 0.08, green: 0.08, blue: 0.18),
+                    Color(red: 0.12, green: 0.10, blue: 0.22)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
         ScrollView {
             VStack(spacing: 0) {
-                // Header Section
+                    // Header with streak and settings
                 headerSection
+                        .padding(.top, 20)
                 
                 if isLoading {
                     loadingView
+                            .padding(.top, 100)
                 } else if let verse = dailyVerse {
-                    // Scripture Card
-                    scriptureCard(verse: verse)
-                    
-                    // Interpretation Section
-                    interpretationSection(verse: verse)
+                        // Flip Card
+                        flipCard(verse: verse)
+                            .padding(.top, 40)
+                            .padding(.horizontal, 24)
                 } else {
                     emptyStateView
+                            .padding(.top, 100)
+                    }
                 }
             }
         }
-        .background(ThemeManager.appBackground)
         .onAppear {
             loadDailyVerse()
+            loadUserMetrics()
+            loadUserDailyLanguage()
             
             // Check and regenerate lives
             Task {
                 await livesManager.checkAndRegenerateLives()
             }
         }
+        .sheet(isPresented: $showLanguageSettings) {
+            languageSettingsSheet
+        }
     }
     
     private var headerSection: some View {
-        VStack(spacing: 12) {
-            // Date
-            Text(formattedDate)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            
-            // Title
-            VStack(spacing: 4) {
-                Text("Daily Scripture")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+        HStack {
+            // Left side - Title and Date
+            VStack(alignment: .leading, spacing: 8) {
+                // Date with futuristic styling
+                Text(formattedDate.uppercased())
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.6))
+                    .tracking(2)
                 
-                Text("Wisdom from the Bhagavad Gita")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                // Title with bold, modern font
+                Text("DAILY SHLOKA")
+                    .font(.system(size: 32, weight: .black, design: .rounded))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.white, .white.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .tracking(3)
             }
             
-            Divider()
-                .padding(.horizontal, 40)
-                .padding(.top, 8)
+            Spacer()
+            
+            // Right side - Streak and Settings
+            VStack(alignment: .trailing, spacing: 12) {
+                // Streak display
+                if let metrics = userMetrics {
+                    HStack(spacing: 8) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.orange, .red],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                        
+                        Text("\(metrics.currentStreak)")
+                            .font(.system(size: 24, weight: .black, design: .rounded))
+                            .foregroundColor(.white)
+                        
+                        Text("DAY")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundColor(.white.opacity(0.6))
+                            .tracking(1)
+                    }
+                }
+                
+                // Language preference button
+                Button(action: {
+                    showLanguageSettings = true
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "globe")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(preferredLanguage.rawValue.uppercased())
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .tracking(1)
+                    }
+                    .foregroundColor(.white.opacity(0.8))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(Color.white.opacity(0.15))
+                    )
+                }
+            }
         }
-        .padding(.vertical, 20)
-        .frame(maxWidth: .infinity)
-        .background(Color.white.opacity(0.5))
+        .padding(.horizontal, 24)
     }
     
-    private func scriptureCard(verse: Verse) -> some View {
-        VStack(spacing: 24) {
-            // Chapter and Verse Reference
-            HStack {
-                Image(systemName: "book.closed.fill")
-                    .foregroundColor(.orange)
-                Text("Chapter \(verse.chapterIndex), Verse \(verse.verseIndex)")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.orange)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Color.orange.opacity(0.1))
-            .cornerRadius(20)
+    private var languageSettingsSheet: some View {
+        ZStack {
+            // Background
+            LinearGradient(
+                colors: [
+                    Color(red: 0.05, green: 0.05, blue: 0.12),
+                    Color(red: 0.08, green: 0.08, blue: 0.18)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
             
-            // Sanskrit/Devanagari Text
-            VStack(spacing: 16) {
-                Text("Sanskrit")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(1)
+            VStack(spacing: 32) {
+                // Header
+                VStack(spacing: 8) {
+                    Text("LANGUAGE PREFERENCE")
+                        .font(.system(size: 24, weight: .black, design: .rounded))
+                        .foregroundColor(.white)
+                        .tracking(2)
+                    
+                    Text("Choose your default language")
+                        .font(.system(size: 14, weight: .regular, design: .rounded))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+                .padding(.top, 40)
                 
-                Text(verse.devanagariText)
-                    .font(.title3)
-                    .fontWeight(.medium)
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.primary)
-                    .padding(.horizontal)
+                // Language options
+                VStack(spacing: 16) {
+                    ForEach(VerseLanguage.allCases, id: \.self) { language in
+                        Button(action: {
+                            Task {
+                                await updateUserDailyLanguage(language: language)
+                            }
+                            preferredLanguage = language
+                            selectedLanguage = language
+                            showLanguageSettings = false
+                        }) {
+            HStack {
+                                Text(language.rawValue)
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                                
+                                Spacer()
+                                
+                                if preferredLanguage == language {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 24, weight: .bold))
+                                        .foregroundStyle(
+                                            LinearGradient(
+                                                colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                }
+                            }
+                            .padding(20)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(preferredLanguage == language ? Color.white.opacity(0.2) : Color.white.opacity(0.1))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(
+                                        preferredLanguage == language ?
+                                        LinearGradient(
+                                            colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ) : LinearGradient(colors: [Color.white.opacity(0.1)], startPoint: .leading, endPoint: .trailing),
+                                        lineWidth: preferredLanguage == language ? 2 : 1
+                                    )
+                            )
+                        }
+                    }
+                }
+                .padding(.horizontal, 24)
+                
+                Spacer()
             }
-            .padding(.vertical, 20)
-            .frame(maxWidth: .infinity)
-            .background(
+        }
+    }
+    
+    private func flipCard(verse: Verse) -> some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Front of card (Verse)
+                if !isFlipped {
+                    cardFront(verse: verse)
+                        .rotation3DEffect(
+                            .degrees(isFlipped ? 180 : 0),
+                            axis: (x: 0, y: 1, z: 0),
+                            perspective: 0.5
+                        )
+                        .opacity(isFlipped ? 0 : 1)
+                }
+                
+                // Back of card (Details)
+                if isFlipped {
+                    cardBack(verse: verse)
+                        .rotation3DEffect(
+                            .degrees(isFlipped ? 0 : -180),
+                            axis: (x: 0, y: 1, z: 0),
+                            perspective: 0.5
+                        )
+                        .opacity(isFlipped ? 1 : 0)
+                }
+            }
+            .frame(height: geometry.size.width * 1.5)
+        }
+        .frame(height: UIScreen.main.bounds.width * 1.5)
+        .onTapGesture {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                isFlipped.toggle()
+            }
+        }
+    }
+    
+    private func cardFront(verse: Verse) -> some View {
+        ZStack {
+            // Futuristic card background with glow
+            RoundedRectangle(cornerRadius: 32)
+                .fill(
                 LinearGradient(
-                    colors: [Color.orange.opacity(0.05), Color.yellow.opacity(0.05)],
+                        colors: [
+                            Color(red: 0.15, green: 0.15, blue: 0.25),
+                            Color(red: 0.20, green: 0.18, blue: 0.30),
+                            Color(red: 0.18, green: 0.16, blue: 0.28)
+                        ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
-            .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 32)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.3),
+                                    Color.white.opacity(0.1),
+                                    Color.white.opacity(0.05)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+                )
+                .shadow(color: Color.purple.opacity(0.3), radius: 30, x: 0, y: 15)
+                .shadow(color: Color.blue.opacity(0.2), radius: 20, x: 0, y: 10)
             
-            // IAST Transliteration
-            VStack(spacing: 12) {
-                Text("Transliteration")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(1)
+            VStack(spacing: 0) {
+                // Top bar with play audio and flip hint
+                HStack {
+                    // Play audio button (top left)
+                    Button(action: {
+                        if audioManager.isPlaying && audioManager.currentVerse?.id == verse.id {
+                            audioManager.stop()
+                        } else {
+                            audioManager.playVerse(verse, language: selectedLanguage.rawValue)
+                        }
+                    }) {
+                        Image(systemName: audioManager.isPlaying && audioManager.currentVerse?.id == verse.id ? "pause.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    .padding(.top, 20)
+                    .padding(.leading, 20)
+                    
+                    Spacer()
+                    
+                    // Flip hint (top right)
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("TAP TO FLIP")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .tracking(1)
+                    }
+                    .foregroundColor(.white.opacity(0.4))
+                    .padding(.top, 20)
+                    .padding(.trailing, 20)
+                }
                 
-                Text(verse.iastText)
-                    .font(.body)
-                    .italic()
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal)
-            }
-            
-            Divider()
-                .padding(.vertical, 8)
-            
-            // English Translation
-            VStack(spacing: 12) {
-                Text("Translation")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(1)
+                Spacer()
                 
-                Text(verse.translationEn)
-                    .font(.body)
+                // Main verse text - changes based on selected language
+                Text(verseText(for: verse, language: selectedLanguage))
+                    .font(fontForLanguage(selectedLanguage))
+                    .foregroundColor(.white)
                     .multilineTextAlignment(.center)
-                    .foregroundColor(.primary)
-                    .padding(.horizontal)
-                    .lineSpacing(4)
+                    .lineSpacing(8)
+                    .padding(.horizontal, 32)
+                    .shadow(color: .black.opacity(0.3), radius: 5, x: 0, y: 2)
+                
+                Spacer()
+                
+                // Language selector bar (smaller)
+                languageSelectorBar
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 20)
             }
         }
-        .padding(24)
-        .background(Color.white)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
-        .padding(.horizontal, 20)
-        .padding(.top, 24)
     }
     
-    private func interpretationSection(verse: Verse) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Section Header
-            HStack {
-                Image(systemName: "lightbulb.fill")
-                    .foregroundColor(.blue)
-                Text("Interpretation")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+    private var languageSelectorBar: some View {
+        HStack(spacing: 0) {
+            ForEach(VerseLanguage.allCases, id: \.self) { language in
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedLanguage = language
+                    }
+                }) {
+                    Text(language.rawValue.uppercased())
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(selectedLanguage == language ? .white : .white.opacity(0.5))
+                        .tracking(0.5)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            selectedLanguage == language ?
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.6, green: 0.8, blue: 1.0).opacity(0.3),
+                                    Color(red: 0.8, green: 0.6, blue: 1.0).opacity(0.3)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ) : LinearGradient(colors: [Color.clear], startPoint: .leading, endPoint: .trailing)
+                        )
+                }
             }
-            
-            // Commentary
-            if let commentary = verse.commentaryShort, !commentary.isEmpty {
-                Text(commentary)
-                    .font(.body)
-                    .foregroundColor(.primary)
-                    .lineSpacing(6)
-            } else {
-                Text("This verse speaks to the eternal wisdom of dharma and the path of righteousness. Through regular contemplation of these teachings, we develop clarity in our thoughts and actions.")
-                    .font(.body)
-                    .foregroundColor(.primary)
-                    .lineSpacing(6)
-            }
-            
-            
-            // Reflection Prompt
-            reflectionPrompt
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 32)
-    }
-    
-    private var reflectionPrompt: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Divider()
-                .padding(.vertical, 8)
-            
-            HStack {
-                Image(systemName: "sparkles")
-                    .foregroundColor(.purple)
-                Text("Daily Reflection")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.purple)
-            }
-            
-            Text("How can you apply this wisdom to your life today?")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .italic()
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
+            Capsule()
+                .fill(Color.white.opacity(0.1))
+        )
+        .overlay(
+            Capsule()
+                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+        )
+    }
+    
+    private func verseText(for verse: Verse, language: VerseLanguage) -> String {
+        switch language {
+        case .sanskrit:
+            return verse.devanagariText
+        case .hindi:
+            // Only use Hindi translation from database, show nothing if blank
+            return verse.translationHi ?? ""
+        case .english:
+            return verse.translationEn
+        }
+    }
+    
+    private func fontForLanguage(_ language: VerseLanguage) -> Font {
+        switch language {
+        case .sanskrit:
+            return .system(size: 28, weight: .medium, design: .default)
+        case .hindi:
+            return .system(size: 24, weight: .regular, design: .serif)
+        case .english:
+            return .system(size: 28, weight: .bold, design: .serif)
+        }
+    }
+    
+    private func cardBack(verse: Verse) -> some View {
+        ZStack {
+            // Back card background
+            RoundedRectangle(cornerRadius: 32)
+                .fill(
             LinearGradient(
-                colors: [Color.purple.opacity(0.05), Color.blue.opacity(0.05)],
+                        colors: [
+                            Color(red: 0.20, green: 0.18, blue: 0.30),
+                            Color(red: 0.15, green: 0.15, blue: 0.25),
+                            Color(red: 0.18, green: 0.16, blue: 0.28)
+                        ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         )
-        .cornerRadius(12)
-        .padding(.top, 8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 32)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.3),
+                                    Color.white.opacity(0.1),
+                                    Color.white.opacity(0.05)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+                )
+                .shadow(color: Color.purple.opacity(0.3), radius: 30, x: 0, y: 15)
+                .shadow(color: Color.blue.opacity(0.2), radius: 20, x: 0, y: 10)
+            
+            VStack(spacing: 0) {
+                // Top bar with play audio and return hint
+                HStack {
+                    // Play audio button (top left)
+                    Button(action: {
+                        if audioManager.isPlaying && audioManager.currentVerse?.id == verse.id {
+                            audioManager.stop()
+                        } else {
+                            // Use Sanskrit language for audio (which will use IAST with English)
+                            audioManager.playVerse(verse, language: "sanskrit")
+                        }
+                    }) {
+                        Image(systemName: audioManager.isPlaying && audioManager.currentVerse?.id == verse.id ? "pause.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    .padding(.top, 20)
+                    .padding(.leading, 20)
+                    
+                    Spacer()
+                    
+                    // Return hint (top right)
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("TAP TO RETURN")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .tracking(1)
+                    }
+                    .foregroundColor(.white.opacity(0.4))
+                    .padding(.top, 20)
+                    .padding(.trailing, 20)
+                }
+                
+                ScrollView {
+                    VStack(spacing: 32) {
+                        // Verse Location
+                        VStack(spacing: 8) {
+                            Text("BHAGAVAD GITA")
+                                .font(.system(size: 12, weight: .black, design: .rounded))
+                                .foregroundColor(.white.opacity(0.6))
+                                .tracking(3)
+                            
+                            Text("\(verse.chapterIndex).\(verse.verseIndex)")
+                                .font(.system(size: 48, weight: .black, design: .rounded))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        }
+                        .padding(.top, 20)
+                    
+                    Divider()
+                        .background(Color.white.opacity(0.2))
+                        .padding(.horizontal, 32)
+                    
+                    // Explanation/Commentary
+                    if let commentary = verse.commentaryShort, !commentary.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("EXPLANATION")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundColor(.white.opacity(0.5))
+                                .tracking(2)
+                            
+                            Text(commentary)
+                                .font(.system(size: 17, weight: .regular, design: .default))
+                                .foregroundColor(.white.opacity(0.9))
+                                .lineSpacing(8)
+                        }
+                        .padding(.horizontal, 32)
+                    } else {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("EXPLANATION")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .foregroundColor(.white.opacity(0.5))
+                                .tracking(2)
+                            
+                            Text("This verse speaks to the eternal wisdom of dharma and the path of righteousness. Through regular contemplation of these teachings, we develop clarity in our thoughts and actions.")
+                                .font(.system(size: 17, weight: .regular, design: .default))
+                                .foregroundColor(.white.opacity(0.9))
+                                .lineSpacing(8)
+                        }
+                        .padding(.horizontal, 32)
+                    }
+                    
+                    Spacer()
+                        .frame(height: 20)
+                    }
+                }
+                .padding(.bottom, 20)
+            }
+        }
     }
     
     private var loadingView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 24) {
             ProgressView()
-                .scaleEffect(1.2)
+                .scaleEffect(1.5)
+                .tint(.white.opacity(0.6))
             
-            Text("Loading today's wisdom...")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            Text("LOADING WISDOM...")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(.white.opacity(0.5))
+                .tracking(2)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
     }
     
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             Image(systemName: "book.closed")
-                .font(.system(size: 50))
-                .foregroundColor(.secondary)
+                .font(.system(size: 60, weight: .light))
+                .foregroundColor(.white.opacity(0.4))
             
-            Text("No scripture available")
-                .font(.headline)
-                .foregroundColor(.secondary)
-            
-            Text("Please check back later")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            Text("NO WISDOM AVAILABLE")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundColor(.white.opacity(0.5))
+                .tracking(2)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
+    }
+    
+    private func loadUserMetrics() {
+        Task {
+            let authManager = DharmaAuthManager.shared
+            let metrics = await authManager.getUserMetrics()
+            await MainActor.run {
+                self.userMetrics = metrics
+            }
+        }
+    }
+    
+    private func loadUserDailyLanguage() {
+        Task {
+            let authManager = DharmaAuthManager.shared
+            guard let userId = authManager.user?.id else {
+                // If not authenticated, use default
+                await MainActor.run {
+                    self.preferredLanguage = .english
+                    self.selectedLanguage = .english
+                }
+                return
+            }
+            
+            do {
+                let databaseService = DatabaseService.shared
+                if let languageString = try await databaseService.getUserDailyLanguage(userId: userId),
+                   let language = VerseLanguage(rawValue: languageString) {
+                    await MainActor.run {
+                        self.preferredLanguage = language
+                        self.selectedLanguage = language
+                    }
+                } else {
+                    // No preference set, use default
+                    await MainActor.run {
+                        self.preferredLanguage = .english
+                        self.selectedLanguage = .english
+                    }
+                }
+            } catch {
+                print("Error loading user daily language: \(error)")
+                // On error, use default
+                await MainActor.run {
+                    self.preferredLanguage = .english
+                    self.selectedLanguage = .english
+                }
+            }
+        }
+    }
+    
+    private func updateUserDailyLanguage(language: VerseLanguage) async {
+        let authManager = DharmaAuthManager.shared
+        guard let userId = authManager.user?.id else {
+            // If not authenticated, just update local state
+            await MainActor.run {
+                self.preferredLanguage = language
+                self.selectedLanguage = language
+            }
+            return
+        }
+        
+        do {
+            let databaseService = DatabaseService.shared
+            try await databaseService.updateUserDailyLanguage(userId: userId, language: language.rawValue)
+            await MainActor.run {
+                self.preferredLanguage = language
+                self.selectedLanguage = language
+            }
+        } catch {
+            print("Error updating user daily language: \(error)")
+            // Still update local state even if database update fails
+            await MainActor.run {
+                self.preferredLanguage = language
+                self.selectedLanguage = language
+            }
+        }
     }
     
     private func loadDailyVerse() {
@@ -376,6 +765,7 @@ struct DailyView: View {
             devanagariText: sample.devanagari,
             iastText: sample.iast,
             translationEn: sample.translation,
+            translationHi: nil, // Sample data doesn't have Hindi translation
             keywords: sample.keywords,
             audioURL: nil,
             commentaryShort: sample.commentary,
@@ -384,59 +774,6 @@ struct DailyView: View {
     }
 }
 
-// Flow Layout for wrapping tags
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-    
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = FlowResult(
-            in: proposal.replacingUnspecifiedDimensions().width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        return result.size
-    }
-    
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = FlowResult(
-            in: bounds.width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        for (index, subview) in subviews.enumerated() {
-            subview.place(at: result.positions[index], proposal: .unspecified)
-        }
-    }
-    
-    struct FlowResult {
-        var size: CGSize = .zero
-        var positions: [CGPoint] = []
-        
-        init(in maxWidth: CGFloat, subviews: Subviews, spacing: CGFloat) {
-            var currentX: CGFloat = 0
-            var currentY: CGFloat = 0
-            var lineHeight: CGFloat = 0
-            
-            for subview in subviews {
-                let size = subview.sizeThatFits(.unspecified)
-                
-                if currentX + size.width > maxWidth && currentX > 0 {
-                    currentX = 0
-                    currentY += lineHeight + spacing
-                    lineHeight = 0
-                }
-                
-                positions.append(CGPoint(x: currentX, y: currentY))
-                currentX += size.width + spacing
-                lineHeight = max(lineHeight, size.height)
-            }
-            
-            self.size = CGSize(width: maxWidth, height: currentY + lineHeight)
-        }
-    }
-}
-
 #Preview {
     DailyView()
 }
-

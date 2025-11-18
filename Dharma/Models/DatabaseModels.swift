@@ -629,6 +629,7 @@ struct DBDailyVerse: Identifiable, Codable {
     let devanagariText: String
     let iastText: String
     let translationEn: String
+    let translationHi: String?
     let keywords: [String]
     let themes: [String]
     let commentaryShort: String?
@@ -645,6 +646,7 @@ struct DBDailyVerse: Identifiable, Codable {
         case devanagariText = "devanagari_text"
         case iastText = "iast_text"
         case translationEn = "translation_en"
+        case translationHi = "hindi_translation"
         case keywords
         case themes
         case commentaryShort = "commentary_short"
@@ -662,6 +664,7 @@ struct DBDailyVerse: Identifiable, Codable {
             devanagariText: devanagariText,
             iastText: iastText,
             translationEn: translationEn,
+            translationHi: translationHi,
             keywords: keywords,
             audioURL: audioUrl,
             commentaryShort: commentaryShort,

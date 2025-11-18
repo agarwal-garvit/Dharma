@@ -46,6 +46,13 @@ struct Config {
         return scheme
     }
     
+    static var cartesiaAPIKey: String {
+        guard let key = Bundle.main.object(forInfoDictionaryKey: "CARTESIA_API_KEY") as? String else {
+            fatalError("CARTESIA_API_KEY not found in build settings")
+        }
+        return key
+    }
+    
     // MARK: - Computed Properties
     
     static var supabaseURLObject: URL {
@@ -61,6 +68,7 @@ struct Config {
         _ = openAIAPIKey
         _ = googleClientID
         _ = googleURLScheme
+        _ = cartesiaAPIKey
         _ = supabaseURLObject
         return true
     }
@@ -74,6 +82,7 @@ struct Config {
         print("OpenAI Key: \(openAIAPIKey.prefix(20))...")
         print("Google Client ID: \(googleClientID)")
         print("Google URL Scheme: \(googleURLScheme)")
+        print("Cartesia Key: \(cartesiaAPIKey.prefix(20))...")
         print("==========================")
     }
     
@@ -82,7 +91,7 @@ struct Config {
         if let infoDict = Bundle.main.infoDictionary {
             print("All keys in Info.plist:")
             for key in infoDict.keys.sorted() {
-                if key.contains("SUPABASE") || key.contains("OPENAI") || key.contains("GOOGLE") {
+                if key.contains("SUPABASE") || key.contains("OPENAI") || key.contains("GOOGLE") || key.contains("CARTESIA") {
                     let value = infoDict[key] as? String ?? "nil"
                     let maskedValue = key.contains("KEY") || key.contains("ID") ? 
                         "\(value.prefix(10))..." : value

@@ -1421,6 +1421,7 @@ class DatabaseService: ObservableObject {
         devanagariText: String,
         iastText: String,
         translationEn: String,
+        translationHi: String? = nil,
         keywords: [String] = [],
         themes: [String] = [],
         commentaryShort: String? = nil,
@@ -1438,6 +1439,7 @@ class DatabaseService: ObservableObject {
             devanagariText: devanagariText,
             iastText: iastText,
             translationEn: translationEn,
+            translationHi: translationHi,
             keywords: keywords,
             themes: themes,
             commentaryShort: commentaryShort,
@@ -1464,6 +1466,58 @@ class DatabaseService: ObservableObject {
         }
     }
 
+    // MARK: - User Preferences Operations
+    
+    func getUserDailyLanguage(userId: UUID) async throws -> String? {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            struct UserLanguageResponse: Codable {
+                let daily_language: String?
+            }
+            
+            let response: [UserLanguageResponse] = try await supabase.database
+                .from("users")
+                .select("daily_language")
+                .eq("id", value: userId)
+                .execute()
+                .value
+            
+            isLoading = false
+            return response.first?.daily_language
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to fetch user daily language: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func updateUserDailyLanguage(userId: UUID, language: String) async throws {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            struct LanguageUpdate: Encodable {
+                let daily_language: String
+            }
+            
+            let update = LanguageUpdate(daily_language: language)
+            
+            try await supabase.database
+                .from("users")
+                .update(update)
+                .eq("id", value: userId)
+                .execute()
+            
+            isLoading = false
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to update user daily language: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
     // MARK: - Feedback Operations
     
     func submitUserFeedback(userId: UUID, type: String, message: String, context: String?) async throws -> DBUserFeedback {

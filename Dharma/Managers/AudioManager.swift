@@ -36,7 +36,7 @@ class AudioManager: NSObject {
     
     // MARK: - Verse Audio Playback
     
-    func playVerse(_ verse: Verse) {
+    func playVerse(_ verse: Verse, language: String? = nil) {
         currentVerse = verse
         
         // First try to play bundled audio file
@@ -44,8 +44,8 @@ class AudioManager: NSObject {
            let url = Bundle.main.url(forResource: audioURL.replacingOccurrences(of: "bundle://audio/", with: "").replacingOccurrences(of: ".mp3", with: ""), withExtension: "mp3") {
             playAudioFile(url: url)
         } else {
-            // Fallback to TTS
-            playVerseWithTTS(verse)
+            // Fallback to TTS with language context
+            playVerseWithTTS(verse, language: language)
         }
     }
     
@@ -57,15 +57,125 @@ class AudioManager: NSObject {
             isPlaying = true
         } catch {
             print("Failed to play audio file: \(error)")
-            // Fallback to TTS
+            // Fallback to TTS (default to Sanskrit)
             if let verse = currentVerse {
-                playVerseWithTTS(verse)
+                playVerseWithTTS(verse, language: "sanskrit")
             }
         }
     }
     
-    private func playVerseWithTTS(_ verse: Verse) {
-        // Stop any current speech
+    private func playVerseWithTTS(_ verse: Verse, language: String? = nil) {
+        // Stop any current speech/audio
+        speechSynthesizer.stopSpeaking(at: .immediate)
+        audioPlayer?.stop()
+        
+        // Use Cartesia API for TTS
+        Task {
+            do {
+                try await playVerseWithCartesia(verse: verse, selectedLanguage: language)
+            } catch {
+                print("Cartesia TTS failed: \(error), falling back to system TTS")
+                // Fallback to system TTS
+                await MainActor.run {
+                    playVerseWithSystemTTS(verse)
+                }
+            }
+        }
+    }
+    
+    private func playVerseWithCartesia(verse: Verse, selectedLanguage: String?) async throws {
+        // Determine language and transcript based on selected language
+        let (transcript, language): (String, String) = {
+            // If language is provided, use it to determine transcript and language code
+            if let lang = selectedLanguage {
+                switch lang.lowercased() {
+                case "sanskrit":
+                    // Sanskrit: use IAST text with English language
+                    return (verse.iastText, "en")
+                case "hindi":
+                    // Hindi: use Hindi translation with Hindi language
+                    if let hindiText = verse.translationHi, !hindiText.isEmpty {
+                        return (hindiText, "hi")
+                    } else {
+                        // Fallback to English if no Hindi translation
+                        return (verse.translationEn, "en")
+                    }
+                case "english":
+                    // English: use English translation with English language
+                    return (verse.translationEn, "en")
+                default:
+                    // Default to IAST with English
+                    return (verse.iastText, "en")
+                }
+            } else {
+                // Default to IAST with English for Sanskrit pronunciation
+                return (verse.iastText, "en")
+            }
+        }()
+        
+        // Cartesia API endpoint
+        let url = URL(string: "https://api.cartesia.ai/tts/bytes")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("2025-04-16", forHTTPHeaderField: "Cartesia-Version")
+        request.setValue(Config.cartesiaAPIKey, forHTTPHeaderField: "X-API-Key")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // Request body matching Cartesia API format
+        let requestBody: [String: Any] = [
+            "model_id": "sonic-3",
+            "transcript": transcript,
+            "voice": [
+                "mode": "id",
+                "id": "28ca2041-5dda-42df-8123-f58ea9c3da00"
+            ],
+            "output_format": [
+                "container": "wav",
+                "encoding": "pcm_f32le",
+                "sample_rate": 44100
+            ],
+            "language": language,
+            "speed": "normal",
+            "generation_config": [
+                "speed": 0.9,
+                "volume": 1
+            ]
+        ]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AudioError.networkError
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("Cartesia API error (\(httpResponse.statusCode)): \(errorMessage)")
+            throw AudioError.apiError
+        }
+        
+        // Save audio data to temporary file and play
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("wav")
+        try data.write(to: tempURL)
+        
+        await MainActor.run {
+            do {
+                self.audioPlayer = try AVAudioPlayer(contentsOf: tempURL)
+                self.audioPlayer?.delegate = self
+                self.audioPlayer?.play()
+                self.isPlaying = true
+            } catch {
+                print("Failed to play Cartesia audio: \(error)")
+                // Fallback to system TTS
+                self.playVerseWithSystemTTS(verse)
+            }
+        }
+    }
+    
+    private func playVerseWithSystemTTS(_ verse: Verse) {
+        // Fallback to iOS system TTS
         speechSynthesizer.stopSpeaking(at: .immediate)
         
         // Create utterance for IAST text
@@ -83,6 +193,7 @@ class AudioManager: NSObject {
         // Stop any current audio
         stop()
         
+        // Use system TTS for individual words (faster response)
         let utterance = AVSpeechUtterance(string: word)
         utterance.rate = 0.3 // Even slower for individual words
         utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
@@ -123,6 +234,25 @@ class AudioManager: NSObject {
     func setVolume(_ volume: Float) {
         audioPlayer?.volume = volume
         // Note: AVSpeechSynthesizer volume is controlled by system volume
+    }
+}
+
+// MARK: - Audio Errors
+
+enum AudioError: Error, LocalizedError {
+    case networkError
+    case apiError
+    case invalidResponse
+    
+    var errorDescription: String? {
+        switch self {
+        case .networkError:
+            return "Network error occurred"
+        case .apiError:
+            return "API error occurred"
+        case .invalidResponse:
+            return "Invalid response from server"
+        }
     }
 }
 

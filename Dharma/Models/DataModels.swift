@@ -104,6 +104,7 @@ struct Verse: Identifiable, Codable {
     let devanagariText: String
     let iastText: String
     let translationEn: String
+    let translationHi: String?
     let keywords: [String]
     let audioURL: String?
     let commentaryShort: String?
@@ -116,6 +117,7 @@ struct Verse: Identifiable, Codable {
         case devanagariText = "devanagari_text"
         case iastText = "iast_text"
         case translationEn = "translation_en"
+        case translationHi = "hindi_translation"
         case keywords
         case audioURL = "audio_url"
         case commentaryShort = "commentary_short"
