@@ -137,9 +137,15 @@ struct DailyView: View {
             languageSettingsSheet
         }
         .overlay(
+            // Background overlay - fades in/out without scaling
+            Color.black.opacity(showCelebration ? 0.5 : 0.0)
+                .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.3), value: showCelebration)
+        )
+        .overlay(
+            // Celebration content - only this scales
             celebrationView
         )
-        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: showCelebration)
     }
     
     private var headerSection: some View {
@@ -1170,60 +1176,58 @@ struct DailyView: View {
     }
     
     private var celebrationView: some View {
-        ZStack {
-            Color.black.opacity(0.5)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 24) {
-                // Celebration icon
-                ZStack {
-                    Circle()
+        Group {
+            if showCelebration {
+                VStack(spacing: 24) {
+                    // Celebration icon
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color.yellow, Color.orange],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 120, height: 120)
+                            .shadow(color: .yellow.opacity(0.5), radius: 20)
+                        
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 50, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    
+                    VStack(spacing: 8) {
+                        Text("Daily Shloka Complete! 🎉")
+                            .font(.system(size: 24, weight: .black, design: .rounded))
+                            .foregroundColor(.white)
+                        
+                        Text("You've completed your reflection for today")
+                            .font(.system(size: 16, weight: .regular, design: .default))
+                            .foregroundColor(.white.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .padding(40)
+                .background(
+                    RoundedRectangle(cornerRadius: 32)
                         .fill(
                             LinearGradient(
-                                colors: [Color.yellow, Color.orange],
+                                colors: [
+                                    Color(red: 1.0, green: 0.27, blue: 0.0),
+                                    Color(red: 0.9, green: 0.25, blue: 0.0)
+                                ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 120, height: 120)
-                        .shadow(color: .yellow.opacity(0.5), radius: 20)
-                    
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 50, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                .scaleEffect(showCelebration ? 1.0 : 0.5)
+                )
+                .shadow(color: .black.opacity(0.3), radius: 30, x: 0, y: 15)
                 .opacity(showCelebration ? 1.0 : 0.0)
-                
-                VStack(spacing: 8) {
-                    Text("Daily Shloka Complete! 🎉")
-                        .font(.system(size: 24, weight: .black, design: .rounded))
-                        .foregroundColor(.white)
-                    
-                    Text("You've completed your reflection for today")
-                        .font(.system(size: 16, weight: .regular, design: .default))
-                        .foregroundColor(.white.opacity(0.8))
-                        .multilineTextAlignment(.center)
-                }
+                .scaleEffect(showCelebration ? 1.0 : 0.9)
+                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: showCelebration)
             }
-            .padding(40)
-            .background(
-                RoundedRectangle(cornerRadius: 32)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 1.0, green: 0.27, blue: 0.0),
-                                Color(red: 0.9, green: 0.25, blue: 0.0)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            )
-            .shadow(color: .black.opacity(0.3), radius: 30, x: 0, y: 15)
         }
-        .opacity(showCelebration ? 1.0 : 0.0)
-        .scaleEffect(showCelebration ? 1.0 : 0.8)
     }
 }
 
