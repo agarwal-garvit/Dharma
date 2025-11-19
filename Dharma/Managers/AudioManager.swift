@@ -36,7 +36,7 @@ class AudioManager: NSObject {
     
     // MARK: - Verse Audio Playback
     
-    func playVerse(_ verse: Verse, language: String? = nil) {
+    func playVerse(_ verse: Verse, language: String? = nil, customText: String? = nil) {
         currentVerse = verse
         
         // First try to play bundled audio file
@@ -45,7 +45,7 @@ class AudioManager: NSObject {
             playAudioFile(url: url)
         } else {
             // Fallback to TTS with language context
-            playVerseWithTTS(verse, language: language)
+            playVerseWithTTS(verse, language: language, customText: customText)
         }
     }
     
@@ -64,7 +64,7 @@ class AudioManager: NSObject {
         }
     }
     
-    private func playVerseWithTTS(_ verse: Verse, language: String? = nil) {
+    private func playVerseWithTTS(_ verse: Verse, language: String? = nil, customText: String? = nil) {
         // Stop any current speech/audio
         speechSynthesizer.stopSpeaking(at: .immediate)
         audioPlayer?.stop()
@@ -72,20 +72,25 @@ class AudioManager: NSObject {
         // Use Cartesia API for TTS
         Task {
             do {
-                try await playVerseWithCartesia(verse: verse, selectedLanguage: language)
+                try await playVerseWithCartesia(verse: verse, selectedLanguage: language, customText: customText)
             } catch {
                 print("Cartesia TTS failed: \(error), falling back to system TTS")
                 // Fallback to system TTS
                 await MainActor.run {
-                    playVerseWithSystemTTS(verse)
+                    playVerseWithSystemTTS(verse, customText: customText)
                 }
             }
         }
     }
     
-    private func playVerseWithCartesia(verse: Verse, selectedLanguage: String?) async throws {
-        // Determine language and transcript based on selected language
+    private func playVerseWithCartesia(verse: Verse, selectedLanguage: String?, customText: String?) async throws {
+        // Determine language and transcript based on selected language or custom text
         let (transcript, language): (String, String) = {
+            // If custom text is provided (e.g., commentary), use it with English
+            if let custom = customText, !custom.isEmpty {
+                return (custom, "en")
+            }
+            
             // If language is provided, use it to determine transcript and language code
             if let lang = selectedLanguage {
                 switch lang.lowercased() {
@@ -174,13 +179,16 @@ class AudioManager: NSObject {
         }
     }
     
-    private func playVerseWithSystemTTS(_ verse: Verse) {
+    private func playVerseWithSystemTTS(_ verse: Verse, customText: String? = nil) {
         // Fallback to iOS system TTS
         speechSynthesizer.stopSpeaking(at: .immediate)
         
-        // Create utterance for IAST text
-        let utterance = AVSpeechUtterance(string: verse.iastText)
-        utterance.rate = 0.4 // Slower for Sanskrit pronunciation
+        // Use custom text if provided, otherwise use IAST text
+        let textToSpeak = customText ?? verse.iastText
+        
+        // Create utterance
+        let utterance = AVSpeechUtterance(string: textToSpeak)
+        utterance.rate = 0.4 // Slower for better pronunciation
         utterance.voice = AVSpeechSynthesisVoice(language: "en-US") // Best available voice
         
         currentSpeechUtterance = utterance

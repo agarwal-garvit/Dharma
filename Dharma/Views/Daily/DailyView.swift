@@ -13,9 +13,10 @@ enum VerseLanguage: String, CaseIterable {
     case hindi = "Hindi"
     case english = "English"
 }
- v cxz
+
 struct DailyView: View {
     @State private var dailyVerse: Verse?
+    @State private var dailyVerseData: DBDailyVerse?
     @State private var isLoading = true
     @State private var currentDate = Date()
     @State private var livesManager = LivesManager.shared
@@ -25,6 +26,8 @@ struct DailyView: View {
     @State private var userMetrics: DBUserMetrics?
     @State private var showLanguageSettings = false
     @State private var audioManager = AudioManager.shared
+    @State private var reflectionText: String = ""
+    @State private var isFavorite: Bool = false
     
     private var formattedDate: String {
         let formatter = DateFormatter()
@@ -52,16 +55,25 @@ struct DailyView: View {
                 headerSection
                         .padding(.top, 20)
                 
-                if isLoading {
-                    loadingView
+                    if isLoading {
+                        loadingView
                             .padding(.top, 100)
-                } else if let verse = dailyVerse {
-                        // Flip Card
-                        flipCard(verse: verse)
-                            .padding(.top, 40)
-                            .padding(.horizontal, 24)
-                } else {
-                    emptyStateView
+                    } else if let verse = dailyVerse {
+                        VStack(spacing: 24) {
+                            // Flip Card
+                            flipCard(verse: verse)
+                                .padding(.top, 40)
+                                .padding(.horizontal, 24)
+                            
+                            // Reflection Card
+                            if let verseData = dailyVerseData, let reflectionPrompt = verseData.reflectionPrompt, !reflectionPrompt.isEmpty {
+                                reflectionCard(prompt: reflectionPrompt)
+                                    .padding(.horizontal, 24)
+                                    .padding(.bottom, 32)
+                            }
+                        }
+                    } else {
+                        emptyStateView
                             .padding(.top, 100)
                     }
                 }
@@ -465,8 +477,9 @@ struct DailyView: View {
                         if audioManager.isPlaying && audioManager.currentVerse?.id == verse.id {
                             audioManager.stop()
                         } else {
-                            // Use Sanskrit language for audio (which will use IAST with English)
-                            audioManager.playVerse(verse, language: "sanskrit")
+                            // Play the commentary text on the back of the card
+                            let commentaryText = verse.commentaryShort ?? "This verse speaks to the eternal wisdom of dharma and the path of righteousness. Through regular contemplation of these teachings, we develop clarity in our thoughts and actions."
+                            audioManager.playVerse(verse, language: "english", customText: commentaryText)
                         }
                     }) {
                         Image(systemName: audioManager.isPlaying && audioManager.currentVerse?.id == verse.id ? "pause.circle.fill" : "play.circle.fill")
@@ -495,21 +508,40 @@ struct DailyView: View {
                     VStack(spacing: 32) {
                         // Verse Location
                         VStack(spacing: 8) {
-                            Text("BHAGAVAD GITA")
-                                .font(.system(size: 12, weight: .black, design: .rounded))
-                                .foregroundColor(.white.opacity(0.6))
-                                .tracking(3)
-                            
-                            Text("\(verse.chapterIndex).\(verse.verseIndex)")
-                                .font(.system(size: 48, weight: .black, design: .rounded))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
+                            if let verseData = dailyVerseData {
+                                if let sacredText = verseData.sacredText, !sacredText.isEmpty {
+                                    Text(sacredText.uppercased())
+                                        .font(.system(size: 48, weight: .black, design: .rounded))
+                                        .foregroundStyle(
+                                            LinearGradient(
+                                                colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                }
+                                
+                                if let verseLocation = verseData.verseLocation, !verseLocation.isEmpty {
+                                    Text(verseLocation)
+                                        .font(.system(size: 12, weight: .black, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.6))
+                                        .tracking(3)
+                                } else {
+                                    // Fallback to chapter.verse if verse_location is not available
+                                    Text("\(verse.chapterIndex).\(verse.verseIndex)")
+                                        .font(.system(size: 12, weight: .black, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.6))
+                                        .tracking(3)
+                                }
+                            } else {
+                                // Fallback if no verse data
+                                Text("\(verse.chapterIndex).\(verse.verseIndex)")
+                                    .font(.system(size: 12, weight: .black, design: .rounded))
+                                    .foregroundColor(.white.opacity(0.6))
+                                    .tracking(3)
+                            }
                         }
+                        .frame(maxWidth: .infinity)
                         .padding(.top, 20)
                     
                     Divider()
@@ -578,6 +610,148 @@ struct DailyView: View {
                 .foregroundColor(.white.opacity(0.5))
                 .tracking(2)
         }
+    }
+    
+    private func reflectionCard(prompt: String) -> some View {
+        VStack(alignment: .leading, spacing: 20) {
+            // Header
+            HStack {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                
+                Text("REFLECTION")
+                    .font(.system(size: 16, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                    .tracking(2)
+            }
+            
+            // Prompt
+            Text(prompt)
+                .font(.system(size: 17, weight: .regular, design: .default))
+                .foregroundColor(.white.opacity(0.9))
+                .lineSpacing(6)
+            
+            // Text input
+            ZStack(alignment: .topLeading) {
+                if reflectionText.isEmpty {
+                    Text("Share your thoughts...")
+                        .font(.system(size: 15, weight: .regular, design: .default))
+                        .foregroundColor(.white.opacity(0.4))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                }
+                
+                TextEditor(text: $reflectionText)
+                    .font(.system(size: 15, weight: .regular, design: .default))
+                    .foregroundColor(.white)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 120)
+                    .padding(8)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white.opacity(0.1))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+            )
+            
+            // Action buttons
+            HStack(spacing: 12) {
+                // Favorite button
+                Button(action: {
+                    isFavorite.toggle()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: isFavorite ? "heart.fill" : "heart")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text(isFavorite ? "FAVORITED" : "FAVORITE")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .tracking(1)
+                    }
+                    .foregroundColor(isFavorite ? .pink : .white.opacity(0.7))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        Capsule()
+                            .fill(isFavorite ? Color.pink.opacity(0.2) : Color.white.opacity(0.1))
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(isFavorite ? Color.pink.opacity(0.5) : Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                }
+                
+                Spacer()
+                
+                // Save button
+                Button(action: {
+                    // Save functionality will be implemented later
+                    print("Saving reflection...")
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("SAVE")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .tracking(1)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                    )
+                }
+            }
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 32)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.15, green: 0.15, blue: 0.25),
+                            Color(red: 0.20, green: 0.18, blue: 0.30),
+                            Color(red: 0.18, green: 0.16, blue: 0.28)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 32)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.3),
+                            Color.white.opacity(0.1),
+                            Color.white.opacity(0.05)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 2
+                )
+        )
+        .shadow(color: Color.purple.opacity(0.3), radius: 30, x: 0, y: 15)
+        .shadow(color: Color.blue.opacity(0.2), radius: 20, x: 0, y: 10)
     }
     
     private func loadUserMetrics() {
@@ -667,6 +841,7 @@ struct DailyView: View {
                 // First try to get verse for today's date
                 if let dailyVerse = try await databaseService.fetchDailyVerse(for: currentDate) {
                     await MainActor.run {
+                        self.dailyVerseData = dailyVerse
                         self.dailyVerse = dailyVerse.toVerse()
                         self.isLoading = false
                     }
@@ -677,6 +852,7 @@ struct DailyView: View {
                 let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: currentDate) ?? 1
                 if let dailyVerse = try await databaseService.fetchDailyVerseByDayOfYear(dayOfYear: dayOfYear) {
                     await MainActor.run {
+                        self.dailyVerseData = dailyVerse
                         self.dailyVerse = dailyVerse.toVerse()
                         self.isLoading = false
                     }
@@ -686,6 +862,7 @@ struct DailyView: View {
                 // If still no verse, try to get the next available verse
                 if let dailyVerse = try await databaseService.fetchNextDailyVerse() {
                     await MainActor.run {
+                        self.dailyVerseData = dailyVerse
                         self.dailyVerse = dailyVerse.toVerse()
                         self.isLoading = false
                     }
@@ -695,6 +872,7 @@ struct DailyView: View {
                 // Fallback to sample verse if no database verses are available
                 await MainActor.run {
                     self.dailyVerse = createSampleVerse(dayOfYear: dayOfYear)
+                    self.dailyVerseData = nil // No database data for sample
                     self.isLoading = false
                 }
                 
@@ -705,6 +883,7 @@ struct DailyView: View {
                 let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: currentDate) ?? 1
                 await MainActor.run {
                     self.dailyVerse = createSampleVerse(dayOfYear: dayOfYear)
+                    self.dailyVerseData = nil // No database data for sample
                     self.isLoading = false
                 }
             }

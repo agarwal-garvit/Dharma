@@ -630,10 +630,10 @@ struct DBDailyVerse: Identifiable, Codable {
     let iastText: String
     let translationEn: String
     let translationHi: String?
-    let keywords: [String]
-    let themes: [String]
     let commentaryShort: String?
-    let audioUrl: String?
+    let sacredText: String?
+    let reflectionPrompt: String?
+    let verseLocation: String?
     let createdAt: String?
     let updatedAt: String?
     
@@ -647,10 +647,10 @@ struct DBDailyVerse: Identifiable, Codable {
         case iastText = "iast_text"
         case translationEn = "translation_en"
         case translationHi = "hindi_translation"
-        case keywords
-        case themes
         case commentaryShort = "commentary_short"
-        case audioUrl = "audio_url"
+        case sacredText = "sacred_text"
+        case reflectionPrompt = "reflection_prompt"
+        case verseLocation = "verse_location"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -665,10 +665,10 @@ struct DBDailyVerse: Identifiable, Codable {
             iastText: iastText,
             translationEn: translationEn,
             translationHi: translationHi,
-            keywords: keywords,
-            audioURL: audioUrl,
+            keywords: [], // No longer in database
+            audioURL: nil, // No longer in database
             commentaryShort: commentaryShort,
-            themes: themes
+            themes: [] // No longer in database
         )
     }
 }

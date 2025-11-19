@@ -1422,10 +1422,10 @@ class DatabaseService: ObservableObject {
         iastText: String,
         translationEn: String,
         translationHi: String? = nil,
-        keywords: [String] = [],
-        themes: [String] = [],
         commentaryShort: String? = nil,
-        audioUrl: String? = nil
+        sacredText: String? = nil,
+        reflectionPrompt: String? = nil,
+        verseLocation: String? = nil
     ) async throws -> DBDailyVerse {
         isLoading = true
         errorMessage = nil
@@ -1440,10 +1440,10 @@ class DatabaseService: ObservableObject {
             iastText: iastText,
             translationEn: translationEn,
             translationHi: translationHi,
-            keywords: keywords,
-            themes: themes,
             commentaryShort: commentaryShort,
-            audioUrl: audioUrl,
+            sacredText: sacredText,
+            reflectionPrompt: reflectionPrompt,
+            verseLocation: verseLocation,
             createdAt: nil,
             updatedAt: nil
         )
