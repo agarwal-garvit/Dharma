@@ -12,6 +12,7 @@ struct ChatbotView: View {
     @State private var currentMessage = ""
     @State private var authManager = DharmaAuthManager.shared
     @FocusState private var isTextFieldFocused: Bool
+    @State private var contextLoaded = false
     
     var body: some View {
         if !authManager.isAuthenticated {
@@ -110,6 +111,28 @@ struct ChatbotView: View {
                     // Dismiss keyboard when tapping outside TextField
                     isTextFieldFocused = false
                 }
+                .onAppear {
+                    // Always load today's shloka context when view appears
+                    if !contextLoaded {
+                        Task {
+                            await chatManager.loadTodayShlokaContext()
+                            await MainActor.run {
+                                contextLoaded = true
+                            }
+                        }
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .switchToAITab)) { notification in
+                    // Handle context passed from DailyView
+                    if let context = notification.userInfo?["context"] as? DailyShlokaContext {
+                        chatManager.setDailyShlokaContext(context)
+                    } else {
+                        // Load context if not passed
+                        Task {
+                            await chatManager.loadTodayShlokaContext()
+                        }
+                    }
+                }
             }
         }
     }
@@ -188,29 +211,61 @@ struct ChatbotView: View {
     }
     
     private var exampleQuestionsScroll: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(exampleQuestions, id: \.self) { question in
-                    Button(action: {
-                        sendExampleQuestion(question)
-                    }) {
-                        Text(question)
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.orange.opacity(0.1))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                                    )
+        VStack(spacing: 12) {
+            // Ask about today's shloka button
+            Button(action: {
+                Task {
+                    await chatManager.loadTodayShlokaContext()
+                    sendExampleQuestion("Tell me about today's shloka")
+                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Ask about today's shloka")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(
+                            LinearGradient(
+                                colors: [.orange, .orange.opacity(0.8)],
+                                startPoint: .leading,
+                                endPoint: .trailing
                             )
+                        )
+                )
+            }
+            
+            // Other example questions
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(exampleQuestions, id: \.self) { question in
+                        Button(action: {
+                            sendExampleQuestion(question)
+                        }) {
+                            Text(question)
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.orange.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                                        )
+                                )
+                        }
                     }
                 }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, 16)
         }
         .padding(.vertical, 8)
     }

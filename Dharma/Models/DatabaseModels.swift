@@ -623,9 +623,6 @@ struct DBSurveyResponse: Identifiable, Codable {
 struct DBDailyVerse: Identifiable, Codable {
     let id: UUID
     let date: String
-    let verseId: String
-    let chapterIndex: Int
-    let verseIndex: Int
     let devanagariText: String
     let iastText: String
     let translationEn: String
@@ -640,9 +637,6 @@ struct DBDailyVerse: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case id
         case date
-        case verseId = "verse_id"
-        case chapterIndex = "chapter_index"
-        case verseIndex = "verse_index"
         case devanagariText = "devanagari_text"
         case iastText = "iast_text"
         case translationEn = "translation_en"
@@ -656,9 +650,28 @@ struct DBDailyVerse: Identifiable, Codable {
     }
     
     // Convert to app's Verse model
+    // Note: Verse model requires chapterIndex and verseIndex, so we extract from verseLocation or use defaults
     func toVerse() -> Verse {
+        // Try to extract chapter and verse from verseLocation if available
+        var chapterIndex = 1
+        var verseIndex = 1
+        
+        if let location = verseLocation {
+            // Try to parse "Chapter X, Verse Y" format
+            let pattern = #"Chapter\s+(\d+).*?Verse\s+(\d+)"#
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: location, range: NSRange(location.startIndex..., in: location)) {
+                if let chapterRange = Range(match.range(at: 1), in: location),
+                   let verseRange = Range(match.range(at: 2), in: location) {
+                    chapterIndex = Int(location[chapterRange]) ?? 1
+                    verseIndex = Int(location[verseRange]) ?? 1
+                }
+            }
+        }
+        
+        // Use id as verseId since verse_id doesn't exist in database
         return Verse(
-            id: verseId,
+            id: id.uuidString,
             chapterIndex: chapterIndex,
             verseIndex: verseIndex,
             devanagariText: devanagariText,
@@ -670,6 +683,30 @@ struct DBDailyVerse: Identifiable, Codable {
             commentaryShort: commentaryShort,
             themes: [] // No longer in database
         )
+    }
+}
+
+// MARK: - Daily Shloka Response Models
+
+struct DBDailyShlokaResponse: Identifiable, Codable {
+    let id: UUID
+    let userId: UUID
+    let dailyVerseId: UUID
+    let date: String
+    let responseText: String?
+    let isFavorite: Bool
+    let createdAt: String?
+    let updatedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case dailyVerseId = "daily_verse_id"
+        case date
+        case responseText = "response_text"
+        case isFavorite = "is_favorite"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
     }
 }
 

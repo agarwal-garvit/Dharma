@@ -61,6 +61,10 @@ struct MainTabView: View {
             // Switch to profile tab when requested (progress is now in profile)
             selectedTab = 3
         }
+        .onReceive(NotificationCenter.default.publisher(for: .switchToAITab)) { _ in
+            // Switch to AI tab when requested
+            selectedTab = 2
+        }
         .onChange(of: selectedTab) { _ in
             // Dismiss keyboard when switching tabs
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

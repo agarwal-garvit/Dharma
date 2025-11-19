@@ -1415,9 +1415,6 @@ class DatabaseService: ObservableObject {
     
     func createDailyVerse(
         date: Date,
-        verseId: String,
-        chapterIndex: Int,
-        verseIndex: Int,
         devanagariText: String,
         iastText: String,
         translationEn: String,
@@ -1433,9 +1430,6 @@ class DatabaseService: ObservableObject {
         let dailyVerse = DBDailyVerse(
             id: UUID(),
             date: DateFormatter.dateOnly.string(from: date),
-            verseId: verseId,
-            chapterIndex: chapterIndex,
-            verseIndex: verseIndex,
             devanagariText: devanagariText,
             iastText: iastText,
             translationEn: translationEn,
@@ -1466,6 +1460,179 @@ class DatabaseService: ObservableObject {
         }
     }
 
+    // MARK: - Daily Shloka Response Operations
+    
+    func getDailyShlokaResponse(userId: UUID, dailyVerseId: UUID) async throws -> DBDailyShlokaResponse? {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            let responses: [DBDailyShlokaResponse] = try await supabase.database
+                .from("daily_shloka_responses")
+                .select()
+                .eq("user_id", value: userId)
+                .eq("daily_verse_id", value: dailyVerseId)
+                .execute()
+                .value
+            
+            isLoading = false
+            return responses.first
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to fetch daily shloka response: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func saveDailyShlokaResponse(
+        userId: UUID,
+        dailyVerseId: UUID,
+        date: Date,
+        responseText: String?,
+        isFavorite: Bool
+    ) async throws -> DBDailyShlokaResponse {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            // Check if response already exists
+            let existing: [DBDailyShlokaResponse] = try await supabase.database
+                .from("daily_shloka_responses")
+                .select()
+                .eq("user_id", value: userId)
+                .eq("daily_verse_id", value: dailyVerseId)
+                .execute()
+                .value
+            
+            let dateString = DateFormatter.dateOnly.string(from: date)
+            
+            if let existingResponse = existing.first {
+                // Update existing response - only update updated_at, preserve created_at
+                struct ResponseUpdate: Encodable {
+                    let response_text: String?
+                    let is_favorite: Bool
+                    let updated_at: String
+                }
+                
+                let update = ResponseUpdate(
+                    response_text: responseText,
+                    is_favorite: isFavorite,
+                    updated_at: ISO8601DateFormatter().string(from: Date())
+                )
+                
+                let updated: DBDailyShlokaResponse = try await supabase.database
+                    .from("daily_shloka_responses")
+                    .update(update)
+                    .eq("id", value: existingResponse.id)
+                    .select()
+                    .single()
+                    .execute()
+                    .value
+                
+                isLoading = false
+                return updated
+            } else {
+                // Insert new response - set both created_at and updated_at to now (first time)
+                let now = ISO8601DateFormatter().string(from: Date())
+                let newResponse = DBDailyShlokaResponse(
+                    id: UUID(),
+                    userId: userId,
+                    dailyVerseId: dailyVerseId,
+                    date: dateString,
+                    responseText: responseText,
+                    isFavorite: isFavorite,
+                    createdAt: now,  // First time - set created_at
+                    updatedAt: now    // First time - also set updated_at
+                )
+                
+                let inserted: DBDailyShlokaResponse = try await supabase.database
+                    .from("daily_shloka_responses")
+                    .insert(newResponse)
+                    .select()
+                    .single()
+                    .execute()
+                    .value
+                
+                isLoading = false
+                return inserted
+            }
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to save daily shloka response: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
+    func toggleDailyShlokaFavorite(userId: UUID, dailyVerseId: UUID, isFavorite: Bool) async throws -> DBDailyShlokaResponse {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            // Get existing response or create one
+            let existing: [DBDailyShlokaResponse] = try await supabase.database
+                .from("daily_shloka_responses")
+                .select()
+                .eq("user_id", value: userId)
+                .eq("daily_verse_id", value: dailyVerseId)
+                .execute()
+                .value
+            
+            if let existingResponse = existing.first {
+                // Update favorite status - only update updated_at, preserve created_at
+                struct FavoriteUpdate: Encodable {
+                    let is_favorite: Bool
+                    let updated_at: String
+                }
+                
+                let update = FavoriteUpdate(
+                    is_favorite: isFavorite,
+                    updated_at: ISO8601DateFormatter().string(from: Date())
+                )
+                
+                let updated: DBDailyShlokaResponse = try await supabase.database
+                    .from("daily_shloka_responses")
+                    .update(update)
+                    .eq("id", value: existingResponse.id)
+                    .select()
+                    .single()
+                    .execute()
+                    .value
+                
+                isLoading = false
+                return updated
+            } else {
+                // Create new response with just favorite status - set both created_at and updated_at (first time)
+                let dateString = DateFormatter.dateOnly.string(from: Date())
+                let now = ISO8601DateFormatter().string(from: Date())
+                let newResponse = DBDailyShlokaResponse(
+                    id: UUID(),
+                    userId: userId,
+                    dailyVerseId: dailyVerseId,
+                    date: dateString,
+                    responseText: nil,
+                    isFavorite: isFavorite,
+                    createdAt: now,  // First time - set created_at
+                    updatedAt: now   // First time - also set updated_at
+                )
+                
+                let inserted: DBDailyShlokaResponse = try await supabase.database
+                    .from("daily_shloka_responses")
+                    .insert(newResponse)
+                    .select()
+                    .single()
+                    .execute()
+                    .value
+                
+                isLoading = false
+                return inserted
+            }
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to toggle favorite: \(error.localizedDescription)"
+            throw error
+        }
+    }
+    
     // MARK: - User Preferences Operations
     
     func getUserDailyLanguage(userId: UUID) async throws -> String? {

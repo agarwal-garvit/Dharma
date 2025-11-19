@@ -294,6 +294,7 @@ struct DharmaApp: App {
 extension Notification.Name {
     static let authStateChanged = Notification.Name("authStateChanged")
     static let switchToProgressTab = Notification.Name("switchToProgressTab")
+    static let switchToAITab = Notification.Name("switchToAITab")
     static let lessonCompleted = Notification.Name("lessonCompleted")
     static let streakUpdated = Notification.Name("streakUpdated")
     static let surveyCompleted = Notification.Name("surveyCompleted")

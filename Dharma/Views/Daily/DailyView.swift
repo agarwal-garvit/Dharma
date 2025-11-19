@@ -28,6 +28,8 @@ struct DailyView: View {
     @State private var audioManager = AudioManager.shared
     @State private var reflectionText: String = ""
     @State private var isFavorite: Bool = false
+    @State private var userResponse: DBDailyShlokaResponse?
+    @State private var scrollOffset: CGFloat = 0
     
     private var formattedDate: String {
         let formatter = DateFormatter()
@@ -36,46 +38,93 @@ struct DailyView: View {
     }
     
     var body: some View {
-        ZStack {
-            // Futuristic gradient background
-            LinearGradient(
-                colors: [
-                    Color(red: 0.05, green: 0.05, blue: 0.12),
-                    Color(red: 0.08, green: 0.08, blue: 0.18),
-                    Color(red: 0.12, green: 0.10, blue: 0.22)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
+        GeometryReader { geometry in
+            ZStack {
+                // Futuristic gradient background
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.05, green: 0.05, blue: 0.12),
+                        Color(red: 0.08, green: 0.08, blue: 0.18),
+                        Color(red: 0.12, green: 0.10, blue: 0.22)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
         ScrollView {
             VStack(spacing: 0) {
-                    // Header with streak and settings
+                        // Spacer for sticky header (invisible, just for scroll tracking)
                 headerSection
-                        .padding(.top, 20)
+                            .frame(height: 120)
+                            .padding(.top, 20)
+                            .opacity(0) // Make it invisible
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear
+                                        .preference(key: ScrollOffsetPreferenceKey.self, value: geo.frame(in: .named("scroll")).minY)
+                                }
+                            )
                 
-                    if isLoading {
-                        loadingView
-                            .padding(.top, 100)
-                    } else if let verse = dailyVerse {
-                        VStack(spacing: 24) {
-                            // Flip Card
-                            flipCard(verse: verse)
-                                .padding(.top, 40)
-                                .padding(.horizontal, 24)
-                            
-                            // Reflection Card
-                            if let verseData = dailyVerseData, let reflectionPrompt = verseData.reflectionPrompt, !reflectionPrompt.isEmpty {
-                                reflectionCard(prompt: reflectionPrompt)
+                if isLoading {
+                    loadingView
+                                .padding(.top, 100)
+                } else if let verse = dailyVerse {
+                            VStack(spacing: 12) {
+                                // Flip Card
+                                flipCard(verse: verse)
+                                    .padding(.top, 20)
                                     .padding(.horizontal, 24)
+                                
+                                // Reflection Card
+                                if let verseData = dailyVerseData, let reflectionPrompt = verseData.reflectionPrompt, !reflectionPrompt.isEmpty {
+                                    reflectionCard(prompt: reflectionPrompt)
+                                        .padding(.horizontal, 24)
+                                }
+                                
+                                // Bottom action buttons (Favorite and Ask AI)
+                                bottomActionButtons
+                                    .padding(.horizontal, 24)
+                                    .padding(.top, 16)
                                     .padding(.bottom, 32)
                             }
+                } else {
+                    emptyStateView
+                                .padding(.top, 100)
                         }
-                    } else {
-                        emptyStateView
-                            .padding(.top, 100)
                     }
+                }
+                .coordinateSpace(name: "scroll")
+                .scrollIndicators(.hidden)
+                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
+                    scrollOffset = value
+                }
+                
+                // Sticky header with solid top and transparent bottom
+                VStack(spacing: 0) {
+                    headerSection
+                        .padding(.top, 20)
+                        .padding(.bottom, 20)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            // Gradient that fades from darkest color at top to transparent at bottom
+                            // Using darkest color (0.05, 0.05, 0.12) for solid header
+                            VStack(spacing: 0) {
+                                LinearGradient(
+                                    stops: [
+                                        .init(color: Color(red: 0.05, green: 0.05, blue: 0.12), location: 0.0), // Darkest color
+                                        .init(color: Color(red: 0.05, green: 0.05, blue: 0.12), location: 0.9), // Keep darkest until 90%
+                                        .init(color: Color(red: 0.05, green: 0.05, blue: 0.12).opacity(0.0), location: 1.0) // Fade to transparent in bottom 10%
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                                .frame(height: 200) // Extend beyond header for fade
+                                .ignoresSafeArea(edges: .top)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .top)
+                        )
+                    Spacer()
                 }
             }
         }
@@ -128,7 +177,7 @@ struct DailyView: View {
                             .font(.system(size: 18, weight: .bold))
                             .foregroundStyle(
                                 LinearGradient(
-                                    colors: [.orange, .red],
+                                    colors: [Color(red: 1.0, green: 0.27, blue: 0.0), Color(red: 0.8, green: 0.2, blue: 0.0)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -322,7 +371,7 @@ struct DailyView: View {
                 .shadow(color: Color.blue.opacity(0.2), radius: 20, x: 0, y: 10)
             
             VStack(spacing: 0) {
-                // Top bar with play audio and flip hint
+                // Top bar with play audio, favorite star, and flip hint
                 HStack {
                     // Play audio button (top left)
                     Button(action: {
@@ -347,7 +396,7 @@ struct DailyView: View {
                             .font(.system(size: 10, weight: .semibold))
                         Text("TAP TO FLIP")
                             .font(.system(size: 9, weight: .bold, design: .rounded))
-                            .tracking(1)
+                    .tracking(1)
                     }
                     .foregroundColor(.white.opacity(0.4))
                     .padding(.top, 20)
@@ -470,7 +519,7 @@ struct DailyView: View {
                 .shadow(color: Color.blue.opacity(0.2), radius: 20, x: 0, y: 10)
             
             VStack(spacing: 0) {
-                // Top bar with play audio and return hint
+                // Top bar with play audio, favorite star, and return hint
                 HStack {
                     // Play audio button (top left)
                     Button(action: {
@@ -511,10 +560,10 @@ struct DailyView: View {
                             if let verseData = dailyVerseData {
                                 if let sacredText = verseData.sacredText, !sacredText.isEmpty {
                                     Text(sacredText.uppercased())
-                                        .font(.system(size: 48, weight: .black, design: .rounded))
+                                        .font(.system(size: 24, weight: .black, design: .rounded))
                                         .foregroundStyle(
                                             LinearGradient(
-                                                colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
+                                                colors: [Color(red: 1.0, green: 0.27, blue: 0.0), Color(red: 0.8, green: 0.2, blue: 0.0)],
                                                 startPoint: .leading,
                                                 endPoint: .trailing
                                             )
@@ -527,15 +576,14 @@ struct DailyView: View {
                                         .foregroundColor(.white.opacity(0.6))
                                         .tracking(3)
                                 } else {
-                                    // Fallback to chapter.verse if verse_location is not available
-                                    Text("\(verse.chapterIndex).\(verse.verseIndex)")
+                                    Text("Daily Shloka")
                                         .font(.system(size: 12, weight: .black, design: .rounded))
                                         .foregroundColor(.white.opacity(0.6))
                                         .tracking(3)
                                 }
                             } else {
                                 // Fallback if no verse data
-                                Text("\(verse.chapterIndex).\(verse.verseIndex)")
+                                Text("Daily Shloka")
                                     .font(.system(size: 12, weight: .black, design: .rounded))
                                     .foregroundColor(.white.opacity(0.6))
                                     .tracking(3)
@@ -664,61 +712,36 @@ struct DailyView: View {
                     .stroke(Color.white.opacity(0.2), lineWidth: 1)
             )
             
-            // Action buttons
-            HStack(spacing: 12) {
-                // Favorite button
-                Button(action: {
-                    isFavorite.toggle()
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: isFavorite ? "heart.fill" : "heart")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text(isFavorite ? "FAVORITED" : "FAVORITE")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .tracking(1)
+            // Save button
+            Button(action: {
+                if let verseData = dailyVerseData {
+                    Task {
+                        await saveReflection(dailyVerseId: verseData.id)
                     }
-                    .foregroundColor(isFavorite ? .pink : .white.opacity(0.7))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        Capsule()
-                            .fill(isFavorite ? Color.pink.opacity(0.2) : Color.white.opacity(0.1))
-                    )
-                    .overlay(
-                        Capsule()
-                            .stroke(isFavorite ? Color.pink.opacity(0.5) : Color.white.opacity(0.2), lineWidth: 1)
-                    )
                 }
-                
-                Spacer()
-                
-                // Save button
-                Button(action: {
-                    // Save functionality will be implemented later
-                    print("Saving reflection...")
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("SAVE")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .tracking(1)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(
-                        Capsule()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("SAVE")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .tracking(1)
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 1.0, green: 0.27, blue: 0.0), Color(red: 0.8, green: 0.2, blue: 0.0)],
+                                startPoint: .leading,
+                                endPoint: .trailing
                             )
-                    )
-                }
+                        )
+                )
             }
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding(24)
         .background(
@@ -830,6 +853,136 @@ struct DailyView: View {
         }
     }
     
+    private func loadUserResponse(dailyVerseId: UUID) async {
+        let authManager = DharmaAuthManager.shared
+        guard let userId = authManager.user?.id else {
+            // If not authenticated, reset favorite state
+            await MainActor.run {
+                self.isFavorite = false
+                self.userResponse = nil
+                self.reflectionText = ""
+            }
+            return
+        }
+        
+        do {
+            let databaseService = DatabaseService.shared
+            if let response = try await databaseService.getDailyShlokaResponse(userId: userId, dailyVerseId: dailyVerseId) {
+                await MainActor.run {
+                    self.userResponse = response
+                    self.isFavorite = response.isFavorite
+                    self.reflectionText = response.responseText ?? ""
+                }
+            } else {
+                // No response yet
+                await MainActor.run {
+                    self.isFavorite = false
+                    self.userResponse = nil
+                    self.reflectionText = ""
+                }
+            }
+        } catch {
+            print("Error loading user response: \(error)")
+            await MainActor.run {
+                self.isFavorite = false
+                self.userResponse = nil
+                self.reflectionText = ""
+            }
+        }
+    }
+    
+    private func toggleFavorite(dailyVerseId: UUID) async {
+        let authManager = DharmaAuthManager.shared
+        guard let userId = authManager.user?.id else {
+            // If not authenticated, just toggle local state
+            await MainActor.run {
+                self.isFavorite.toggle()
+            }
+            return
+        }
+        
+        let newFavoriteState = !isFavorite
+        
+        do {
+            let databaseService = DatabaseService.shared
+            let response = try await databaseService.toggleDailyShlokaFavorite(
+                userId: userId,
+                dailyVerseId: dailyVerseId,
+                isFavorite: newFavoriteState
+            )
+            await MainActor.run {
+                self.userResponse = response
+                self.isFavorite = response.isFavorite
+            }
+        } catch {
+            print("Error toggling favorite: \(error)")
+            // Revert on error
+            await MainActor.run {
+                self.isFavorite = !newFavoriteState
+            }
+        }
+    }
+    
+    private func saveReflection(dailyVerseId: UUID) async {
+        let authManager = DharmaAuthManager.shared
+        guard let userId = authManager.user?.id else {
+            print("Cannot save reflection: user not authenticated")
+            return
+        }
+        
+        do {
+            let databaseService = DatabaseService.shared
+            let response = try await databaseService.saveDailyShlokaResponse(
+                userId: userId,
+                dailyVerseId: dailyVerseId,
+                date: currentDate,
+                responseText: reflectionText.isEmpty ? nil : reflectionText,
+                isFavorite: isFavorite
+            )
+            await MainActor.run {
+                self.userResponse = response
+                self.isFavorite = response.isFavorite
+            }
+            print("✅ Reflection saved successfully")
+        } catch {
+            print("Error saving reflection: \(error)")
+        }
+    }
+    
+    private func navigateToAIWithContext() {
+        // Load context and navigate to AI tab
+        Task {
+            // Create context from current daily verse
+            if let verseData = dailyVerseData, let verse = dailyVerse {
+                let userName = await DharmaAuthManager.shared.fetchUserDisplayName()
+                
+                let context = DailyShlokaContext(
+                    userName: userName,
+                    verseText: verse.devanagariText,
+                    verseLocation: verseData.verseLocation ?? "Daily Shloka",
+                    devanagariText: verse.devanagariText,
+                    iastText: verse.iastText,
+                    translationEn: verse.translationEn,
+                    translationHi: verse.translationHi,
+                    commentaryShort: verse.commentaryShort,
+                    reflectionPrompt: verseData.reflectionPrompt,
+                    userResponse: userResponse?.responseText
+                )
+                
+                // Set context in ChatManager (we'll need to access it via a shared instance or notification)
+                // For now, we'll use a notification to pass the context
+                NotificationCenter.default.post(
+                    name: .switchToAITab,
+                    object: nil,
+                    userInfo: ["context": context]
+                )
+            } else {
+                // Just navigate to AI tab, context will be loaded there
+                NotificationCenter.default.post(name: .switchToAITab, object: nil)
+            }
+        }
+    }
+    
     private func loadDailyVerse() {
         Task {
             // Simulate loading
@@ -838,52 +991,31 @@ struct DailyView: View {
             do {
                 let databaseService = DatabaseService.shared
                 
-                // First try to get verse for today's date
+                // Query daily verse by date from daily_verses table
                 if let dailyVerse = try await databaseService.fetchDailyVerse(for: currentDate) {
                     await MainActor.run {
                         self.dailyVerseData = dailyVerse
                         self.dailyVerse = dailyVerse.toVerse()
                         self.isLoading = false
                     }
-                    return
-                }
-                
-                // If no verse for today, try to get by day of year (cycling through available verses)
-                let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: currentDate) ?? 1
-                if let dailyVerse = try await databaseService.fetchDailyVerseByDayOfYear(dayOfYear: dayOfYear) {
+                    // Load user response for this verse
+                    await loadUserResponse(dailyVerseId: dailyVerse.id)
+                } else {
+                    // No verse found for this date - show empty state
                     await MainActor.run {
-                        self.dailyVerseData = dailyVerse
-                        self.dailyVerse = dailyVerse.toVerse()
+                        self.dailyVerse = nil
+                        self.dailyVerseData = nil
                         self.isLoading = false
                     }
-                    return
-                }
-                
-                // If still no verse, try to get the next available verse
-                if let dailyVerse = try await databaseService.fetchNextDailyVerse() {
-                    await MainActor.run {
-                        self.dailyVerseData = dailyVerse
-                        self.dailyVerse = dailyVerse.toVerse()
-                        self.isLoading = false
-                    }
-                    return
-                }
-                
-                // Fallback to sample verse if no database verses are available
-                await MainActor.run {
-                    self.dailyVerse = createSampleVerse(dayOfYear: dayOfYear)
-                    self.dailyVerseData = nil // No database data for sample
-                    self.isLoading = false
                 }
                 
             } catch {
                 print("Error loading daily verse from database: \(error)")
                 
-                // Fallback to sample verse on error
-                let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: currentDate) ?? 1
+                // On error, show empty state
                 await MainActor.run {
-                    self.dailyVerse = createSampleVerse(dayOfYear: dayOfYear)
-                    self.dailyVerseData = nil // No database data for sample
+                    self.dailyVerse = nil
+                    self.dailyVerseData = nil
                     self.isLoading = false
                 }
             }
@@ -950,6 +1082,76 @@ struct DailyView: View {
             commentaryShort: sample.commentary,
             themes: sample.themes
         )
+    }
+    
+    private var bottomActionButtons: some View {
+        HStack(spacing: 16) {
+            // Favorite button
+            Button(action: {
+                if let verseData = dailyVerseData {
+                    Task {
+                        await toggleFavorite(dailyVerseId: verseData.id)
+                    }
+                } else {
+                    isFavorite.toggle()
+                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: isFavorite ? "heart.fill" : "heart")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text(isFavorite ? "FAVORITED" : "FAVORITE")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .tracking(1)
+                }
+                .foregroundColor(isFavorite ? Color(red: 1.0, green: 0.27, blue: 0.0) : .white.opacity(0.7))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(
+                    Capsule()
+                        .fill(isFavorite ? Color(red: 1.0, green: 0.27, blue: 0.0).opacity(0.2) : Color.white.opacity(0.1))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(isFavorite ? Color(red: 1.0, green: 0.27, blue: 0.0).opacity(0.5) : Color.white.opacity(0.2), lineWidth: 1)
+                )
+            }
+            
+            Spacer()
+            
+            // Ask AI button
+            Button(action: {
+                navigateToAIWithContext()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text("ASK AI")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .tracking(1)
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 1.0, green: 0.27, blue: 0.0), Color(red: 0.8, green: 0.2, blue: 0.0)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                )
+            }
+        }
+    }
+}
+
+// MARK: - Scroll Offset Preference Key
+struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 

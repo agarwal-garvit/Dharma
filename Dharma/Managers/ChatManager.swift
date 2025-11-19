@@ -18,6 +18,7 @@ class ChatManager: ObservableObject {
     
     private var currentConversationId: UUID?
     private let authManager = DharmaAuthManager.shared
+    private var dailyShlokaContext: DailyShlokaContext?
     
     init() {
         // Use the same Supabase client as AuthManager to ensure authentication context is shared
@@ -84,6 +85,60 @@ class ChatManager: ObservableObject {
         messages.removeAll()
         currentConversationId = nil
         errorMessage = nil
+        // Keep the context even when clearing conversation
+    }
+    
+    func setDailyShlokaContext(_ context: DailyShlokaContext?) {
+        self.dailyShlokaContext = context
+    }
+    
+    func loadTodayShlokaContext() async {
+        do {
+            let databaseService = DatabaseService.shared
+            let currentDate = Date()
+            
+            // Fetch today's daily verse
+            guard let dailyVerse = try await databaseService.fetchDailyVerse(for: currentDate) else {
+                print("No daily verse found for today")
+                return
+            }
+            
+            // Get user's name
+            let userName = await authManager.fetchUserDisplayName()
+            
+            // Get user's response if exists
+            var userResponse: String? = nil
+            if let userId = authManager.user?.id {
+                if let response = try? await databaseService.getDailyShlokaResponse(
+                    userId: userId,
+                    dailyVerseId: dailyVerse.id
+                ) {
+                    userResponse = response.responseText
+                }
+            }
+            
+            // Create context
+            let context = DailyShlokaContext(
+                userName: userName,
+                verseText: dailyVerse.devanagariText,
+                verseLocation: dailyVerse.verseLocation ?? "Daily Shloka",
+                devanagariText: dailyVerse.devanagariText,
+                iastText: dailyVerse.iastText,
+                translationEn: dailyVerse.translationEn,
+                translationHi: dailyVerse.translationHi,
+                commentaryShort: dailyVerse.commentaryShort,
+                reflectionPrompt: dailyVerse.reflectionPrompt,
+                userResponse: userResponse
+            )
+            
+            await MainActor.run {
+                self.dailyShlokaContext = context
+            }
+            
+            print("✅ Daily shloka context loaded")
+        } catch {
+            print("❌ Failed to load daily shloka context: \(error)")
+        }
     }
     
     // MARK: - Future: Load Conversation History
@@ -176,13 +231,21 @@ class ChatManager: ObservableObject {
         request.setValue("Bearer \(Config.openAIAPIKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        // Use context-aware system message if available
+        let systemMessage: String
+        if let context = dailyShlokaContext {
+            systemMessage = context.toSystemMessage()
+        } else {
+            systemMessage = "You are a wise spiritual guide specializing in the Bhagavad Gita. Provide helpful, concise responses about Hindu philosophy and the Gita's teachings."
+        }
+        
         // Simple request body
         let requestBody: [String: Any] = [
             "model": "gpt-3.5-turbo",
             "messages": [
                 [
                     "role": "system",
-                    "content": "You are a wise spiritual guide specializing in the Bhagavad Gita. Provide helpful, concise responses about Hindu philosophy and the Gita's teachings."
+                    "content": systemMessage
                 ],
                 [
                     "role": "user",
