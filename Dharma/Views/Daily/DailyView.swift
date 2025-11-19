@@ -43,17 +43,9 @@ struct DailyView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Light bright orange gradient background
-                LinearGradient(
-                    colors: [
-                        Color(red: 1.0, green: 0.9, blue: 0.75),
-                        Color(red: 1.0, green: 0.85, blue: 0.7),
-                        Color(red: 1.0, green: 0.8, blue: 0.65)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // White background
+                Color.white
+                    .ignoresSafeArea()
                 
         ScrollView {
             VStack(spacing: 0) {
@@ -115,9 +107,9 @@ struct DailyView: View {
                             VStack(spacing: 0) {
                                 LinearGradient(
                                     stops: [
-                                        .init(color: Color(red: 1.0, green: 0.9, blue: 0.75), location: 0.0), // Light bright orange
-                                        .init(color: Color(red: 1.0, green: 0.9, blue: 0.75), location: 0.9), // Keep solid until 90%
-                                        .init(color: Color(red: 1.0, green: 0.9, blue: 0.75).opacity(0.0), location: 1.0) // Fade to transparent in bottom 10%
+                                        .init(color: Color.white, location: 0.0), // White
+                                        .init(color: Color.white, location: 0.9), // Keep solid until 90%
+                                        .init(color: Color.white.opacity(0.0), location: 1.0) // Fade to transparent in bottom 10%
                                     ],
                                     startPoint: .top,
                                     endPoint: .bottom
@@ -157,19 +149,13 @@ struct DailyView: View {
                 // Date with futuristic styling
                 Text(formattedDate.uppercased())
                     .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(Color(red: 0.7, green: 0.25, blue: 0.0).opacity(0.7))
                     .tracking(2)
                 
                 // Title with bold, modern font
                 Text("DAILY SHLOKA")
                     .font(.system(size: 32, weight: .black, design: .rounded))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.white, .white.opacity(0.8)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .foregroundColor(Color(red: 0.8, green: 0.3, blue: 0.0))
                     .tracking(3)
             }
             
@@ -182,21 +168,15 @@ struct DailyView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "flame.fill")
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Color(red: 1.0, green: 0.27, blue: 0.0), Color(red: 0.8, green: 0.2, blue: 0.0)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
+                            .foregroundColor(Color(red: 0.8, green: 0.3, blue: 0.0))
                         
                         Text("\(metrics.currentStreak)")
                             .font(.system(size: 24, weight: .black, design: .rounded))
-                            .foregroundColor(.white)
+                            .foregroundColor(Color(red: 0.8, green: 0.3, blue: 0.0))
                         
                         Text("DAY")
                             .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundColor(.white.opacity(0.6))
+                            .foregroundColor(Color(red: 0.7, green: 0.25, blue: 0.0).opacity(0.7))
                             .tracking(1)
                     }
                 }
@@ -212,12 +192,12 @@ struct DailyView: View {
                             .font(.system(size: 11, weight: .bold, design: .rounded))
                             .tracking(1)
                     }
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(Color(red: 0.8, green: 0.3, blue: 0.0))
                     .padding(.horizontal, 12)
             .padding(.vertical, 8)
                     .background(
                         Capsule()
-                            .fill(Color.white.opacity(0.15))
+                            .fill(Color(red: 0.8, green: 0.3, blue: 0.0).opacity(0.1))
                     )
                 }
             }
@@ -227,11 +207,12 @@ struct DailyView: View {
     
     private var languageSettingsSheet: some View {
         ZStack {
-            // Background
+            // Light orange background
             LinearGradient(
                 colors: [
-                    Color(red: 0.05, green: 0.05, blue: 0.12),
-                    Color(red: 0.08, green: 0.08, blue: 0.18)
+                    Color(red: 1.0, green: 0.9, blue: 0.75),
+                    Color(red: 1.0, green: 0.85, blue: 0.7),
+                    Color(red: 1.0, green: 0.8, blue: 0.65)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -243,12 +224,12 @@ struct DailyView: View {
                 VStack(spacing: 8) {
                     Text("LANGUAGE PREFERENCE")
                         .font(.system(size: 24, weight: .black, design: .rounded))
-                        .foregroundColor(.white)
+                        .foregroundColor(Color(red: 0.8, green: 0.3, blue: 0.0))
                         .tracking(2)
                     
                     Text("Choose your default language")
                         .font(.system(size: 14, weight: .regular, design: .rounded))
-                        .foregroundColor(.white.opacity(0.6))
+                        .foregroundColor(Color(red: 0.7, green: 0.25, blue: 0.0).opacity(0.7))
                 }
                 .padding(.top, 40)
                 
@@ -273,30 +254,37 @@ struct DailyView: View {
                                 if preferredLanguage == language {
                                     Image(systemName: "checkmark.circle.fill")
                                         .font(.system(size: 24, weight: .bold))
-                                        .foregroundStyle(
-                                            LinearGradient(
-                                                colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
+                                        .foregroundColor(.white)
                                 }
                             }
                             .padding(20)
             .background(
                                 RoundedRectangle(cornerRadius: 16)
-                                    .fill(preferredLanguage == language ? Color.white.opacity(0.2) : Color.white.opacity(0.1))
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                Color(red: 0.8, green: 0.3, blue: 0.0),
+                                                Color(red: 0.7, green: 0.25, blue: 0.0),
+                                                Color(red: 0.6, green: 0.2, blue: 0.0)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16)
                                     .stroke(
-                                        preferredLanguage == language ?
-                LinearGradient(
-                                            colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        ) : LinearGradient(colors: [Color.white.opacity(0.1)], startPoint: .leading, endPoint: .trailing),
-                                        lineWidth: preferredLanguage == language ? 2 : 1
+                                        LinearGradient(
+                                            colors: [
+                                                Color.white.opacity(0.3),
+                                                Color.white.opacity(0.1),
+                                                Color.white.opacity(0.05)
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 2
                                     )
                             )
                         }
@@ -381,16 +369,21 @@ struct DailyView: View {
                 // Top bar with play audio, favorite star, and flip hint
                 HStack {
                     // Play audio button (top left)
-                    Button(action: {
-                        if audioManager.isPlaying && audioManager.currentVerse?.id == verse.id {
-                            audioManager.stop()
-                        } else {
-                            audioManager.playVerse(verse, language: selectedLanguage.rawValue)
+                    HStack(spacing: 6) {
+                        Button(action: {
+                            if audioManager.isPlaying && audioManager.currentVerse?.id == verse.id {
+                                audioManager.stop()
+                            } else {
+                                audioManager.playVerse(verse, language: selectedLanguage.rawValue)
+                            }
+                        }) {
+                            Image(systemName: audioManager.isPlaying && audioManager.currentVerse?.id == verse.id ? "pause.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.7))
                         }
-                    }) {
-                        Image(systemName: audioManager.isPlaying && audioManager.currentVerse?.id == verse.id ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.7))
+                        Text("audio")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundColor(.white.opacity(0.6))
                     }
                     .padding(.top, 20)
                     .padding(.leading, 20)
@@ -525,18 +518,23 @@ struct DailyView: View {
                 // Top bar with play audio, favorite star, and return hint
             HStack {
                     // Play audio button (top left)
-                    Button(action: {
-                        if audioManager.isPlaying && audioManager.currentVerse?.id == verse.id {
-                            audioManager.stop()
-                        } else {
-                            // Play the commentary text on the back of the card
-                            let commentaryText = verse.commentaryShort ?? "This verse speaks to the eternal wisdom of dharma and the path of righteousness. Through regular contemplation of these teachings, we develop clarity in our thoughts and actions."
-                            audioManager.playVerse(verse, language: "english", customText: commentaryText)
+                    HStack(spacing: 6) {
+                        Button(action: {
+                            if audioManager.isPlaying && audioManager.currentVerse?.id == verse.id {
+                                audioManager.stop()
+                            } else {
+                                // Play the commentary text on the back of the card
+                                let commentaryText = verse.commentaryShort ?? "This verse speaks to the eternal wisdom of dharma and the path of righteousness. Through regular contemplation of these teachings, we develop clarity in our thoughts and actions."
+                                audioManager.playVerse(verse, language: "english", customText: commentaryText)
+                            }
+                        }) {
+                            Image(systemName: audioManager.isPlaying && audioManager.currentVerse?.id == verse.id ? "pause.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.7))
                         }
-                    }) {
-                        Image(systemName: audioManager.isPlaying && audioManager.currentVerse?.id == verse.id ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.7))
+                        Text("audio")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundColor(.white.opacity(0.6))
                     }
                     .padding(.top, 20)
                     .padding(.leading, 20)
@@ -635,11 +633,11 @@ struct DailyView: View {
         VStack(spacing: 24) {
             ProgressView()
                 .scaleEffect(1.5)
-                .tint(.white.opacity(0.6))
+                .tint(Color(red: 0.8, green: 0.3, blue: 0.0))
             
             Text("LOADING WISDOM...")
                 .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundColor(.white.opacity(0.5))
+                .foregroundColor(Color(red: 0.7, green: 0.25, blue: 0.0).opacity(0.7))
                 .tracking(2)
         }
     }
@@ -648,11 +646,11 @@ struct DailyView: View {
         VStack(spacing: 20) {
             Image(systemName: "book.closed")
                 .font(.system(size: 60, weight: .light))
-                .foregroundColor(.white.opacity(0.4))
+                .foregroundColor(Color(red: 0.7, green: 0.25, blue: 0.0).opacity(0.5))
             
             Text("NO WISDOM AVAILABLE")
                 .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundColor(.white.opacity(0.5))
+                .foregroundColor(Color(red: 0.7, green: 0.25, blue: 0.0).opacity(0.7))
                 .tracking(2)
         }
     }
@@ -1109,7 +1107,9 @@ struct DailyView: View {
     
     private var bottomActionButtons: some View {
         HStack(spacing: 16) {
-            // Favorite button
+            // Favorite button - only enabled if user has saved a reflection
+            let hasSavedResponse = userResponse?.responseText != nil && !(userResponse?.responseText?.isEmpty ?? true)
+            
             Button(action: {
                 if let verseData = dailyVerseData {
                     Task {
@@ -1122,22 +1122,24 @@ struct DailyView: View {
                 HStack(spacing: 8) {
                     Image(systemName: isFavorite ? "star.fill" : "star")
                         .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(isFavorite ? .yellow : (hasSavedResponse ? Color(red: 0.8, green: 0.3, blue: 0.0) : Color(red: 0.8, green: 0.3, blue: 0.0).opacity(0.3)))
                     Text(isFavorite ? "FAVORITED" : "FAVORITE")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .tracking(1)
                 }
-                .foregroundColor(isFavorite ? .yellow : .white.opacity(0.7))
+                .foregroundColor(hasSavedResponse ? Color(red: 0.8, green: 0.3, blue: 0.0) : Color(red: 0.8, green: 0.3, blue: 0.0).opacity(0.3))
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
                 .background(
                     Capsule()
-                        .fill(isFavorite ? Color.yellow.opacity(0.2) : Color.white.opacity(0.1))
+                        .fill(Color(red: 0.8, green: 0.3, blue: 0.0).opacity(hasSavedResponse ? 0.1 : 0.05))
                 )
                 .overlay(
                     Capsule()
-                        .stroke(isFavorite ? Color.yellow.opacity(0.5) : Color.white.opacity(0.2), lineWidth: 1)
+                        .stroke(Color(red: 0.8, green: 0.3, blue: 0.0).opacity(hasSavedResponse ? 0.3 : 0.15), lineWidth: 1)
                 )
             }
+            .disabled(!hasSavedResponse)
             
             Spacer()
             
@@ -1152,16 +1154,16 @@ struct DailyView: View {
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .tracking(1)
                 }
-                .foregroundColor(.white)
+                .foregroundColor(Color(red: 0.8, green: 0.3, blue: 0.0))
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
                 .background(
                     Capsule()
-                        .fill(Color.white.opacity(0.2))
+                        .fill(Color(red: 0.8, green: 0.3, blue: 0.0).opacity(0.1))
                 )
                 .overlay(
                     Capsule()
-                        .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                        .stroke(Color(red: 0.8, green: 0.3, blue: 0.0).opacity(0.3), lineWidth: 1)
                 )
             }
         }
