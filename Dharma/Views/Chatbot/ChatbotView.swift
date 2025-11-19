@@ -242,29 +242,29 @@ struct ChatbotView: View {
             }
             
             // Other example questions
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(exampleQuestions, id: \.self) { question in
-                        Button(action: {
-                            sendExampleQuestion(question)
-                        }) {
-                            Text(question)
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.orange.opacity(0.1))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                                        )
-                                )
-                        }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(exampleQuestions, id: \.self) { question in
+                    Button(action: {
+                        sendExampleQuestion(question)
+                    }) {
+                        Text(question)
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.orange.opacity(0.1))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                                    )
+                            )
                     }
                 }
-                .padding(.horizontal, 16)
+            }
+            .padding(.horizontal, 16)
             }
         }
         .padding(.vertical, 8)

@@ -1684,7 +1684,7 @@ class DatabaseService: ObservableObject {
             throw error
         }
     }
-    
+
     // MARK: - Feedback Operations
     
     func submitUserFeedback(userId: UUID, type: String, message: String, context: String?) async throws -> DBUserFeedback {

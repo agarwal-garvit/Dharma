@@ -30,6 +30,9 @@ struct DailyView: View {
     @State private var isFavorite: Bool = false
     @State private var userResponse: DBDailyShlokaResponse?
     @State private var scrollOffset: CGFloat = 0
+    @State private var showCelebration = false
+    @State private var isFirstSave = false
+    @State private var showShlokaCard = false
     
     private var formattedDate: String {
         let formatter = DateFormatter()
@@ -40,12 +43,12 @@ struct DailyView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Futuristic gradient background
+                // Light bright orange gradient background
                 LinearGradient(
                     colors: [
-                        Color(red: 0.05, green: 0.05, blue: 0.12),
-                        Color(red: 0.08, green: 0.08, blue: 0.18),
-                        Color(red: 0.12, green: 0.10, blue: 0.22)
+                        Color(red: 1.0, green: 0.9, blue: 0.75),
+                        Color(red: 1.0, green: 0.85, blue: 0.7),
+                        Color(red: 1.0, green: 0.8, blue: 0.65)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -71,7 +74,7 @@ struct DailyView: View {
                                 .padding(.top, 100)
                 } else if let verse = dailyVerse {
                             VStack(spacing: 12) {
-                                // Flip Card
+                                // Flip Card - always show
                                 flipCard(verse: verse)
                                     .padding(.top, 20)
                                     .padding(.horizontal, 24)
@@ -112,9 +115,9 @@ struct DailyView: View {
                             VStack(spacing: 0) {
                                 LinearGradient(
                                     stops: [
-                                        .init(color: Color(red: 0.05, green: 0.05, blue: 0.12), location: 0.0), // Darkest color
-                                        .init(color: Color(red: 0.05, green: 0.05, blue: 0.12), location: 0.9), // Keep darkest until 90%
-                                        .init(color: Color(red: 0.05, green: 0.05, blue: 0.12).opacity(0.0), location: 1.0) // Fade to transparent in bottom 10%
+                                        .init(color: Color(red: 1.0, green: 0.9, blue: 0.75), location: 0.0), // Light bright orange
+                                        .init(color: Color(red: 1.0, green: 0.9, blue: 0.75), location: 0.9), // Keep solid until 90%
+                                        .init(color: Color(red: 1.0, green: 0.9, blue: 0.75).opacity(0.0), location: 1.0) // Fade to transparent in bottom 10%
                                     ],
                                     startPoint: .top,
                                     endPoint: .bottom
@@ -141,6 +144,10 @@ struct DailyView: View {
         .sheet(isPresented: $showLanguageSettings) {
             languageSettingsSheet
         }
+        .overlay(
+            celebrationView
+        )
+        .animation(.spring(response: 0.6, dampingFraction: 0.7), value: showCelebration)
     }
     
     private var headerSection: some View {
@@ -207,7 +214,7 @@ struct DailyView: View {
                     }
                     .foregroundColor(.white.opacity(0.8))
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+            .padding(.vertical, 8)
                     .background(
                         Capsule()
                             .fill(Color.white.opacity(0.15))
@@ -246,7 +253,7 @@ struct DailyView: View {
                 .padding(.top, 40)
                 
                 // Language options
-                VStack(spacing: 16) {
+            VStack(spacing: 16) {
                     ForEach(VerseLanguage.allCases, id: \.self) { language in
                         Button(action: {
                             Task {
@@ -276,7 +283,7 @@ struct DailyView: View {
                                 }
                             }
                             .padding(20)
-                            .background(
+            .background(
                                 RoundedRectangle(cornerRadius: 16)
                                     .fill(preferredLanguage == language ? Color.white.opacity(0.2) : Color.white.opacity(0.1))
                             )
@@ -284,7 +291,7 @@ struct DailyView: View {
                                 RoundedRectangle(cornerRadius: 16)
                                     .stroke(
                                         preferredLanguage == language ?
-                                        LinearGradient(
+                LinearGradient(
                                             colors: [Color(red: 0.6, green: 0.8, blue: 1.0), Color(red: 0.8, green: 0.6, blue: 1.0)],
                                             startPoint: .leading,
                                             endPoint: .trailing
@@ -339,14 +346,14 @@ struct DailyView: View {
     
     private func cardFront(verse: Verse) -> some View {
         ZStack {
-            // Futuristic card background with glow
+            // Dark orange card background
             RoundedRectangle(cornerRadius: 32)
                 .fill(
                 LinearGradient(
                         colors: [
-                            Color(red: 0.15, green: 0.15, blue: 0.25),
-                            Color(red: 0.20, green: 0.18, blue: 0.30),
-                            Color(red: 0.18, green: 0.16, blue: 0.28)
+                            Color(red: 0.8, green: 0.3, blue: 0.0),
+                            Color(red: 0.7, green: 0.25, blue: 0.0),
+                            Color(red: 0.6, green: 0.2, blue: 0.0)
                         ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -367,8 +374,8 @@ struct DailyView: View {
                             lineWidth: 2
                         )
                 )
-                .shadow(color: Color.purple.opacity(0.3), radius: 30, x: 0, y: 15)
-                .shadow(color: Color.blue.opacity(0.2), radius: 20, x: 0, y: 10)
+                .shadow(color: Color.orange.opacity(0.3), radius: 30, x: 0, y: 15)
+                .shadow(color: Color.orange.opacity(0.2), radius: 20, x: 0, y: 10)
             
             VStack(spacing: 0) {
                 // Top bar with play audio, favorite star, and flip hint
@@ -394,11 +401,11 @@ struct DailyView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 10, weight: .semibold))
-                        Text("TAP TO FLIP")
+                        Text("TAP TO SEE EXPLANATION")
                             .font(.system(size: 9, weight: .bold, design: .rounded))
                     .tracking(1)
                     }
-                    .foregroundColor(.white.opacity(0.4))
+                    .foregroundColor(.white.opacity(0.6))
                     .padding(.top, 20)
                     .padding(.trailing, 20)
                 }
@@ -434,31 +441,27 @@ struct DailyView: View {
                 }) {
                     Text(language.rawValue.uppercased())
                         .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .foregroundColor(selectedLanguage == language ? .white : .white.opacity(0.5))
+                        .foregroundColor(selectedLanguage == language ? .white : .white.opacity(0.6))
                         .tracking(0.5)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
+                .padding(.vertical, 8)
                         .background(
                             selectedLanguage == language ?
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.6, green: 0.8, blue: 1.0).opacity(0.3),
-                                    Color(red: 0.8, green: 0.6, blue: 1.0).opacity(0.3)
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ) : LinearGradient(colors: [Color.clear], startPoint: .leading, endPoint: .trailing)
+                            Capsule()
+                                .fill(Color.white.opacity(0.2)) :
+                            nil
                         )
                 }
             }
         }
+        .padding(2)
         .background(
             Capsule()
-                .fill(Color.white.opacity(0.1))
+                .fill(Color.white.opacity(0.2))
         )
         .overlay(
             Capsule()
-                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                .stroke(Color.white.opacity(0.4), lineWidth: 1)
         )
     }
     
@@ -487,14 +490,14 @@ struct DailyView: View {
     
     private func cardBack(verse: Verse) -> some View {
         ZStack {
-            // Back card background
+            // Dark orange back card background
             RoundedRectangle(cornerRadius: 32)
                 .fill(
             LinearGradient(
                         colors: [
-                            Color(red: 0.20, green: 0.18, blue: 0.30),
-                            Color(red: 0.15, green: 0.15, blue: 0.25),
-                            Color(red: 0.18, green: 0.16, blue: 0.28)
+                            Color(red: 0.8, green: 0.3, blue: 0.0),
+                            Color(red: 0.7, green: 0.25, blue: 0.0),
+                            Color(red: 0.6, green: 0.2, blue: 0.0)
                         ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -515,12 +518,12 @@ struct DailyView: View {
                             lineWidth: 2
                         )
                 )
-                .shadow(color: Color.purple.opacity(0.3), radius: 30, x: 0, y: 15)
-                .shadow(color: Color.blue.opacity(0.2), radius: 20, x: 0, y: 10)
+                .shadow(color: Color.orange.opacity(0.3), radius: 30, x: 0, y: 15)
+                .shadow(color: Color.orange.opacity(0.2), radius: 20, x: 0, y: 10)
             
             VStack(spacing: 0) {
                 // Top bar with play audio, favorite star, and return hint
-                HStack {
+            HStack {
                     // Play audio button (top left)
                     Button(action: {
                         if audioManager.isPlaying && audioManager.currentVerse?.id == verse.id {
@@ -544,7 +547,7 @@ struct DailyView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 10, weight: .semibold))
-                        Text("TAP TO RETURN")
+                        Text("TAP TO SEE SHLOKA")
                             .font(.system(size: 9, weight: .bold, design: .rounded))
                             .tracking(1)
                     }
@@ -561,31 +564,25 @@ struct DailyView: View {
                                 if let sacredText = verseData.sacredText, !sacredText.isEmpty {
                                     Text(sacredText.uppercased())
                                         .font(.system(size: 24, weight: .black, design: .rounded))
-                                        .foregroundStyle(
-                                            LinearGradient(
-                                                colors: [Color(red: 1.0, green: 0.27, blue: 0.0), Color(red: 0.8, green: 0.2, blue: 0.0)],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
+                                        .foregroundColor(.white)
                                 }
                                 
                                 if let verseLocation = verseData.verseLocation, !verseLocation.isEmpty {
                                     Text(verseLocation)
                                         .font(.system(size: 12, weight: .black, design: .rounded))
-                                        .foregroundColor(.white.opacity(0.6))
+                                        .foregroundColor(.white.opacity(0.7))
                                         .tracking(3)
                                 } else {
                                     Text("Daily Shloka")
                                         .font(.system(size: 12, weight: .black, design: .rounded))
-                                        .foregroundColor(.white.opacity(0.6))
+                                        .foregroundColor(.white.opacity(0.7))
                                         .tracking(3)
                                 }
                             } else {
                                 // Fallback if no verse data
                                 Text("Daily Shloka")
                                     .font(.system(size: 12, weight: .black, design: .rounded))
-                                    .foregroundColor(.white.opacity(0.6))
+                                    .foregroundColor(.white.opacity(0.7))
                                     .tracking(3)
                             }
                         }
@@ -593,33 +590,33 @@ struct DailyView: View {
                         .padding(.top, 20)
                     
                     Divider()
-                        .background(Color.white.opacity(0.2))
+                        .background(Color.white.opacity(0.3))
                         .padding(.horizontal, 32)
                     
                     // Explanation/Commentary
-                    if let commentary = verse.commentaryShort, !commentary.isEmpty {
+            if let commentary = verse.commentaryShort, !commentary.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("EXPLANATION")
                                 .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .foregroundColor(.white.opacity(0.5))
+                                .foregroundColor(.white.opacity(0.7))
                                 .tracking(2)
                             
-                            Text(commentary)
+                Text(commentary)
                                 .font(.system(size: 17, weight: .regular, design: .default))
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundColor(.white)
                                 .lineSpacing(8)
                         }
                         .padding(.horizontal, 32)
-                    } else {
+            } else {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("EXPLANATION")
                                 .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .foregroundColor(.white.opacity(0.5))
+                                .foregroundColor(.white.opacity(0.7))
                                 .tracking(2)
                             
-                            Text("This verse speaks to the eternal wisdom of dharma and the path of righteousness. Through regular contemplation of these teachings, we develop clarity in our thoughts and actions.")
+                Text("This verse speaks to the eternal wisdom of dharma and the path of righteousness. Through regular contemplation of these teachings, we develop clarity in our thoughts and actions.")
                                 .font(.system(size: 17, weight: .regular, design: .default))
-                                .foregroundColor(.white.opacity(0.9))
+                                .foregroundColor(.white)
                                 .lineSpacing(8)
                         }
                         .padding(.horizontal, 32)
@@ -683,7 +680,7 @@ struct DailyView: View {
             // Prompt
             Text(prompt)
                 .font(.system(size: 17, weight: .regular, design: .default))
-                .foregroundColor(.white.opacity(0.9))
+                .foregroundColor(.white)
                 .lineSpacing(6)
             
             // Text input
@@ -691,7 +688,7 @@ struct DailyView: View {
                 if reflectionText.isEmpty {
                     Text("Share your thoughts...")
                         .font(.system(size: 15, weight: .regular, design: .default))
-                        .foregroundColor(.white.opacity(0.4))
+                        .foregroundColor(.white.opacity(0.5))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                 }
@@ -703,13 +700,13 @@ struct DailyView: View {
                     .frame(minHeight: 120)
                     .padding(8)
             }
-            .background(
+        .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color.white.opacity(0.1))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
             )
             
             // Save button
@@ -732,13 +729,11 @@ struct DailyView: View {
                 .padding(.vertical, 12)
                 .background(
                     Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 1.0, green: 0.27, blue: 0.0), Color(red: 0.8, green: 0.2, blue: 0.0)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .fill(Color.white.opacity(0.2))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.4), lineWidth: 1)
                 )
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -747,16 +742,16 @@ struct DailyView: View {
         .background(
             RoundedRectangle(cornerRadius: 32)
                 .fill(
-                    LinearGradient(
+            LinearGradient(
                         colors: [
-                            Color(red: 0.15, green: 0.15, blue: 0.25),
-                            Color(red: 0.20, green: 0.18, blue: 0.30),
-                            Color(red: 0.18, green: 0.16, blue: 0.28)
+                            Color(red: 0.8, green: 0.3, blue: 0.0),
+                            Color(red: 0.7, green: 0.25, blue: 0.0),
+                            Color(red: 0.6, green: 0.2, blue: 0.0)
                         ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 32)
@@ -773,8 +768,8 @@ struct DailyView: View {
                     lineWidth: 2
                 )
         )
-        .shadow(color: Color.purple.opacity(0.3), radius: 30, x: 0, y: 15)
-        .shadow(color: Color.blue.opacity(0.2), radius: 20, x: 0, y: 10)
+        .shadow(color: Color.orange.opacity(0.3), radius: 30, x: 0, y: 15)
+        .shadow(color: Color.orange.opacity(0.2), radius: 20, x: 0, y: 10)
     }
     
     private func loadUserMetrics() {
@@ -861,25 +856,28 @@ struct DailyView: View {
                 self.isFavorite = false
                 self.userResponse = nil
                 self.reflectionText = ""
+                self.showShlokaCard = true
             }
             return
         }
-        
-        do {
-            let databaseService = DatabaseService.shared
+            
+            do {
+                let databaseService = DatabaseService.shared
             if let response = try await databaseService.getDailyShlokaResponse(userId: userId, dailyVerseId: dailyVerseId) {
                 await MainActor.run {
                     self.userResponse = response
                     self.isFavorite = response.isFavorite
                     self.reflectionText = response.responseText ?? ""
+                    self.showShlokaCard = true
                 }
             } else {
-                // No response yet
-                await MainActor.run {
-                    self.isFavorite = false
-                    self.userResponse = nil
-                    self.reflectionText = ""
-                }
+            // No response yet
+            await MainActor.run {
+                self.isFavorite = false
+                self.userResponse = nil
+                self.reflectionText = ""
+                self.showShlokaCard = true
+            }
             }
         } catch {
             print("Error loading user response: \(error)")
@@ -887,6 +885,7 @@ struct DailyView: View {
                 self.isFavorite = false
                 self.userResponse = nil
                 self.reflectionText = ""
+                self.showShlokaCard = true
             }
         }
     }
@@ -895,12 +894,12 @@ struct DailyView: View {
         let authManager = DharmaAuthManager.shared
         guard let userId = authManager.user?.id else {
             // If not authenticated, just toggle local state
-            await MainActor.run {
+                    await MainActor.run {
                 self.isFavorite.toggle()
-            }
-            return
-        }
-        
+                    }
+                    return
+                }
+                
         let newFavoriteState = !isFavorite
         
         do {
@@ -910,7 +909,7 @@ struct DailyView: View {
                 dailyVerseId: dailyVerseId,
                 isFavorite: newFavoriteState
             )
-            await MainActor.run {
+                    await MainActor.run {
                 self.userResponse = response
                 self.isFavorite = response.isFavorite
             }
@@ -927,8 +926,11 @@ struct DailyView: View {
         let authManager = DharmaAuthManager.shared
         guard let userId = authManager.user?.id else {
             print("Cannot save reflection: user not authenticated")
-            return
-        }
+                    return
+                }
+                
+        // Check if this is the first save (no existing response text)
+        let wasFirstSave = userResponse?.responseText == nil || userResponse?.responseText?.isEmpty == true
         
         do {
             let databaseService = DatabaseService.shared
@@ -939,9 +941,26 @@ struct DailyView: View {
                 responseText: reflectionText.isEmpty ? nil : reflectionText,
                 isFavorite: isFavorite
             )
-            await MainActor.run {
+                    await MainActor.run {
                 self.userResponse = response
                 self.isFavorite = response.isFavorite
+                
+                // Close keyboard
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                
+                // Show celebration if first save
+                if wasFirstSave && !reflectionText.isEmpty {
+                    self.isFirstSave = true
+                    self.showCelebration = true
+                    
+                    // Auto-dismiss after 3 seconds
+                    Task {
+                        try? await Task.sleep(nanoseconds: 3_000_000_000)
+                        await MainActor.run {
+                            self.showCelebration = false
+                        }
+                    }
+                }
             }
             print("✅ Reflection saved successfully")
         } catch {
@@ -1000,12 +1019,16 @@ struct DailyView: View {
                     }
                     // Load user response for this verse
                     await loadUserResponse(dailyVerseId: dailyVerse.id)
+                    // Always show the card
+                    await MainActor.run {
+                        self.showShlokaCard = true
+                    }
                 } else {
                     // No verse found for this date - show empty state
-                    await MainActor.run {
+                await MainActor.run {
                         self.dailyVerse = nil
                         self.dailyVerseData = nil
-                        self.isLoading = false
+                    self.isLoading = false
                     }
                 }
                 
@@ -1097,22 +1120,22 @@ struct DailyView: View {
                 }
             }) {
                 HStack(spacing: 8) {
-                    Image(systemName: isFavorite ? "heart.fill" : "heart")
+                    Image(systemName: isFavorite ? "star.fill" : "star")
                         .font(.system(size: 18, weight: .semibold))
                     Text(isFavorite ? "FAVORITED" : "FAVORITE")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .tracking(1)
                 }
-                .foregroundColor(isFavorite ? Color(red: 1.0, green: 0.27, blue: 0.0) : .white.opacity(0.7))
+                .foregroundColor(isFavorite ? .yellow : .white.opacity(0.7))
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
                 .background(
                     Capsule()
-                        .fill(isFavorite ? Color(red: 1.0, green: 0.27, blue: 0.0).opacity(0.2) : Color.white.opacity(0.1))
+                        .fill(isFavorite ? Color.yellow.opacity(0.2) : Color.white.opacity(0.1))
                 )
                 .overlay(
                     Capsule()
-                        .stroke(isFavorite ? Color(red: 1.0, green: 0.27, blue: 0.0).opacity(0.5) : Color.white.opacity(0.2), lineWidth: 1)
+                        .stroke(isFavorite ? Color.yellow.opacity(0.5) : Color.white.opacity(0.2), lineWidth: 1)
                 )
             }
             
@@ -1134,16 +1157,71 @@ struct DailyView: View {
                 .padding(.vertical, 14)
                 .background(
                     Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 1.0, green: 0.27, blue: 0.0), Color(red: 0.8, green: 0.2, blue: 0.0)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .fill(Color.white.opacity(0.2))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.4), lineWidth: 1)
                 )
             }
         }
+    }
+    
+    private var celebrationView: some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 24) {
+                // Celebration icon
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.yellow, Color.orange],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 120, height: 120)
+                        .shadow(color: .yellow.opacity(0.5), radius: 20)
+                    
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 50, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                .scaleEffect(showCelebration ? 1.0 : 0.5)
+                .opacity(showCelebration ? 1.0 : 0.0)
+                
+                VStack(spacing: 8) {
+                    Text("Daily Shloka Complete! 🎉")
+                        .font(.system(size: 24, weight: .black, design: .rounded))
+                        .foregroundColor(.white)
+                    
+                    Text("You've completed your reflection for today")
+                        .font(.system(size: 16, weight: .regular, design: .default))
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding(40)
+            .background(
+                RoundedRectangle(cornerRadius: 32)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 1.0, green: 0.27, blue: 0.0),
+                                Color(red: 0.9, green: 0.25, blue: 0.0)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .shadow(color: .black.opacity(0.3), radius: 30, x: 0, y: 15)
+        }
+        .opacity(showCelebration ? 1.0 : 0.0)
+        .scaleEffect(showCelebration ? 1.0 : 0.8)
     }
 }
 
